@@ -1,0 +1,6 @@
+{
+  "name": "Royal Epic Interior & Furniture",
+  "description": "Premium Interior Design, Manufacturing & E-Commerce Platform with AI Voice Consultant, 3D Showcase and Custom Quotation Engine",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

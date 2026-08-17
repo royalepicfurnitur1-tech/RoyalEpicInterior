@@ -1,0 +1,12 @@
+# Robots.txt for Royal Epic Interior & Furniture (https://royalepicfurniture.com)
+User-agent: *
+Allow: /
+
+# Disallow private administrative & user dashboard paths from search engine indexing
+Disallow: /admin
+Disallow: /developer
+Disallow: /customer-dashboard
+Disallow: /api/
+
+# Sitemap location for Search Engine Crawlers (Googlebot, Bingbot, etc.)
+Sitemap: https://royalepicfurniture.com/sitemap.xml
