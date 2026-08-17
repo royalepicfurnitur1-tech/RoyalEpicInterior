@@ -27,7 +27,20 @@ import { Footer } from './components/Footer';
 import { ShieldCheck, Award, Wrench, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('home');
+  // Subdomain & Path-based detection for Admin and Dev workspaces
+  const isDedicatedAdmin = typeof window !== 'undefined' && (
+    window.location.hostname.startsWith('admin.') || 
+    window.location.pathname.startsWith('/admin')
+  );
+
+  const isDedicatedDev = typeof window !== 'undefined' && (
+    window.location.hostname.startsWith('dev.') || 
+    window.location.pathname.startsWith('/dev')
+  );
+
+  const initialTab: ActiveTab = isDedicatedAdmin ? 'admin' : (isDedicatedDev ? 'developer' : 'home');
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>(['prod-1', 'prod-2']);
@@ -197,6 +210,24 @@ export default function App() {
   };
 
   const wishlistProducts = PRODUCTS_DATA.filter((p) => wishlistIds.includes(p.id));
+
+  // If visiting dedicated Admin subdomain/path or activeTab is admin
+  if (isDedicatedAdmin || activeTab === 'admin') {
+    return (
+      <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-gold selection:text-black antialiased">
+        <AdminDashboard products={products} onProductsUpdated={fetchProducts} />
+      </div>
+    );
+  }
+
+  // If visiting dedicated Dev subdomain/path or activeTab is developer
+  if (isDedicatedDev || activeTab === 'developer') {
+    return (
+      <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-emerald-500 selection:text-black antialiased">
+        <DeveloperDashboard />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-white text-neutral-900 font-sans selection:bg-neutral-900 selection:text-white antialiased">
