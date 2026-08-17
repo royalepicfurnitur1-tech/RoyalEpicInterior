@@ -4,6 +4,8 @@ import {
   MapPin, Coins, Sparkles, Download
 } from 'lucide-react';
 import { generateQuotePdf } from '../utils/pdfGenerator';
+import { submitLeadToSupabase } from '../lib/supabase';
+
 
 interface QuoteModalProps {
   isOpen: boolean;
@@ -42,18 +44,34 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const generatedQuoteId = `RE-QT-${Math.floor(100000 + Math.random() * 900000)}`;
+    setQuoteId(generatedQuoteId);
+
     try {
-      const response = await fetch('/api/quote', {
+      // 1. Submit directly to Supabase PostgreSQL
+      await submitLeadToSupabase({
+        full_name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        city: formData.city,
+        service_type: formData.projectType,
+        estimated_budget: formData.budget,
+        project_scope: formData.message,
+        drawing_name: formData.drawingName,
+        source: 'Quote Modal Estimator',
+        status: 'new'
+      });
+
+      // 2. Also ping internal quote endpoint
+      fetch('/api/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
-      });
-      const res = await response.json();
-      setQuoteId(res.quoteId || `RE-QT-${Math.floor(100000 + Math.random() * 900000)}`);
+      }).catch(() => {});
+
       setIsSubmitted(true);
     } catch (err) {
       console.error(err);
-      setQuoteId(`RE-QT-${Math.floor(100000 + Math.random() * 900000)}`);
       setIsSubmitted(true);
     }
   };

@@ -23,14 +23,25 @@ import { InquiryPopup } from './components/InquiryPopup';
 import { FloatingActions } from './components/FloatingActions';
 import { SearchModal } from './components/SearchModal';
 import { AiConsultantModal } from './components/AiConsultantModal';
+import { CustomersSubdomainPortal } from './components/CustomersSubdomainPortal';
 import { Footer } from './components/Footer';
 import { ShieldCheck, Award, Wrench, Sparkles } from 'lucide-react';
+import { submitLeadToSupabase } from './lib/supabase';
+
 
 export default function App() {
-  // Subdomain & Path-based detection for Admin and Dev workspaces
+  // Subdomain & Path-based detection for Admin, Customers, and Dev workspaces
   const isDedicatedAdmin = typeof window !== 'undefined' && (
     window.location.hostname.startsWith('admin.') || 
     window.location.pathname.startsWith('/admin')
+  );
+
+  const isDedicatedCustomers = typeof window !== 'undefined' && (
+    window.location.hostname.startsWith('customers.') || 
+    window.location.hostname.startsWith('customer.') || 
+    window.location.hostname.startsWith('portal.') || 
+    window.location.pathname.startsWith('/customers') ||
+    window.location.pathname.startsWith('/customer-portal')
   );
 
   const isDedicatedDev = typeof window !== 'undefined' && (
@@ -38,7 +49,9 @@ export default function App() {
     window.location.pathname.startsWith('/dev')
   );
 
-  const initialTab: ActiveTab = isDedicatedAdmin ? 'admin' : (isDedicatedDev ? 'developer' : 'home');
+  const initialTab: ActiveTab = isDedicatedAdmin 
+    ? 'admin' 
+    : (isDedicatedCustomers ? 'customers' : (isDedicatedDev ? 'developer' : 'home'));
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/');
@@ -150,6 +163,10 @@ export default function App() {
       developer: {
         title: 'Developer Console | Royal Epic Architecture',
         description: 'Technical developer console and system metrics.'
+      },
+      customers: {
+        title: 'Customers & Leads Workspace | Royal Epic Portal',
+        description: 'Marketing executive workstation and client customer intelligence directory.'
       }
     };
 
@@ -215,7 +232,24 @@ export default function App() {
   if (isDedicatedAdmin || activeTab === 'admin') {
     return (
       <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-gold selection:text-black antialiased">
-        <AdminDashboard products={products} onProductsUpdated={fetchProducts} />
+        <AdminDashboard 
+          products={products} 
+          onProductsUpdated={fetchProducts} 
+          onBackToWebsite={() => setActiveTab('home')}
+          onNavigateToCustomers={() => setActiveTab('customers')}
+        />
+      </div>
+    );
+  }
+
+  // If visiting dedicated Customers subdomain/path or activeTab is customers
+  if (isDedicatedCustomers || activeTab === 'customers') {
+    return (
+      <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-gold selection:text-black antialiased">
+        <CustomersSubdomainPortal 
+          onBackToWebsite={() => setActiveTab('home')}
+          onNavigateToAdmin={() => setActiveTab('admin')}
+        />
       </div>
     );
   }
@@ -477,7 +511,16 @@ export default function App() {
         <InquiryPopup
           onClose={() => setShowInquiryPopup(false)}
           onSubmitLead={(name, phone, email, description, projectType, budget) => {
-            console.log('Lead generated:', { name, phone, email, description, projectType, budget });
+            submitLeadToSupabase({
+              full_name: name,
+              phone: phone,
+              email: email,
+              project_scope: description,
+              service_type: projectType,
+              estimated_budget: budget,
+              source: 'Auto Inquiry Modal',
+              status: 'new'
+            });
           }}
         />
       )}

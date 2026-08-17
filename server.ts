@@ -29,6 +29,157 @@ async function startServer() {
     res.json({ status: "ok", app: "Royal Epic Interior & Furniture" });
   });
 
+  // Supabase Connection Diagnostic Endpoint
+  app.get("/api/supabase/check", async (req, res) => {
+    const supabaseUrl = 
+      process.env.VITE_SUPABASE_URL || 
+      process.env.SUPABASE_URL || 
+      "https://lwrfoztfsyffgtybesia.supabase.co";
+    const supabaseKey = 
+      process.env.VITE_SUPABASE_ANON_KEY || 
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+      process.env.SUPABASE_ANON_KEY || 
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc";
+
+    const hasUrl = Boolean(supabaseUrl && supabaseUrl.startsWith("https://") && !supabaseUrl.includes("your-project-id"));
+    const hasKey = Boolean(supabaseKey && supabaseKey.length > 10 && !supabaseKey.includes("your-supabase-anon-key"));
+
+    if (!hasUrl || !hasKey) {
+      return res.json({
+        connected: false,
+        status: "Missing or Placeholder Credentials",
+        hasUrl,
+        hasKey,
+        hint: "Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment variables.",
+        urlPreview: hasUrl ? `${supabaseUrl.slice(0, 18)}...` : "Not configured"
+      });
+    }
+
+    try {
+      // Test REST ping to Supabase health / rest endpoint
+      const response = await fetch(`${supabaseUrl.replace(/\/+$/, '')}/rest/v1/leads_and_inquiries?select=*&limit=1`, {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`
+        }
+      });
+
+      if (response.ok) {
+        const rows = await response.json();
+        return res.json({
+          connected: true,
+          status: "Connected & Verified",
+          hasUrl: true,
+          hasKey: true,
+          tableStatus: "leads_and_inquiries table found and accessible",
+          sampleCount: Array.isArray(rows) ? rows.length : 0,
+          url: `${supabaseUrl.slice(0, 24)}...`
+        });
+      } else {
+        const errorText = await response.text();
+        return res.json({
+          connected: false,
+          statusCode: response.status,
+          status: `Credentials valid, but table check returned HTTP ${response.status}`,
+          errorDetail: errorText,
+          hasUrl: true,
+          hasKey: true,
+          hint: response.status === 404 || errorText.includes("relation") || errorText.includes("42P01")
+            ? "Table 'leads_and_inquiries' does not exist yet in Supabase! Please execute supabase_schema.sql in the Supabase SQL Editor." 
+            : errorText.includes("row-level security") || response.status === 401 || response.status === 403
+            ? "Row Level Security policy blocked access. Run the RLS policy in supabase_schema.sql to allow anon inserts."
+            : "Check table permissions or schema."
+        });
+      }
+    } catch (err: any) {
+      return res.json({
+        connected: false,
+        status: "Connection Failed",
+        error: err.message || "Failed to reach Supabase URL",
+        hasUrl: true,
+        hasKey: true
+      });
+    }
+  });
+
+  // Supabase Direct Lead Submission & Validation Endpoint
+  app.post("/api/supabase/submit-lead", async (req, res) => {
+    const supabaseUrl = 
+      process.env.VITE_SUPABASE_URL || 
+      process.env.SUPABASE_URL || 
+      "https://lwrfoztfsyffgtybesia.supabase.co";
+    const supabaseKey = 
+      process.env.VITE_SUPABASE_ANON_KEY || 
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+      process.env.SUPABASE_ANON_KEY || 
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc";
+
+    const payload = req.body;
+    const generatedId = `LEAD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+
+    const leadRecord = {
+      id: payload.id || generatedId,
+      full_name: payload.full_name || payload.name || 'Anonymous Inquiry',
+      phone: payload.phone || 'N/A',
+      email: payload.email || null,
+      city: payload.city || payload.location || 'Bengaluru',
+      service_type: payload.service_type || payload.projectType || 'Interior Consultation',
+      estimated_budget: payload.estimated_budget || payload.budget || 'Custom Quote',
+      project_scope: payload.project_scope || payload.notes || payload.message || '',
+      source: payload.source || 'Website Form',
+      status: payload.status || 'new',
+      preferred_date: payload.preferred_date || payload.date || null,
+      drawing_name: payload.drawing_name || null,
+      notes: payload.notes || null,
+      raw_details: payload.raw_details || payload.discoveredInfo || {},
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      const response = await fetch(`${supabaseUrl.replace(/\/+$/, '')}/rest/v1/leads_and_inquiries`, {
+        method: "POST",
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(leadRecord)
+      });
+
+      if (response.ok) {
+        const insertedData = await response.json();
+        console.log("✅ Successfully inserted lead into Supabase:", leadRecord.id);
+        return res.json({
+          success: true,
+          id: leadRecord.id,
+          data: insertedData,
+          message: "Lead inserted successfully into Supabase PostgreSQL"
+        });
+      } else {
+        const errorText = await response.text();
+        console.error("❌ Supabase POST /leads_and_inquiries returned error:", response.status, errorText);
+        return res.status(response.status).json({
+          success: false,
+          statusCode: response.status,
+          error: errorText,
+          leadRecord,
+          hint: errorText.includes("42P01") || response.status === 404
+            ? "Table 'leads_and_inquiries' does not exist in Supabase yet. Please run the table creation SQL in Supabase SQL editor."
+            : errorText.includes("row-level security")
+            ? "Row Level Security (RLS) policy is preventing insertion. Run: CREATE POLICY \"Public can insert leads\" ON public.leads_and_inquiries FOR INSERT TO anon WITH CHECK (true);"
+            : "Supabase rejected the insert."
+        });
+      }
+    } catch (err: any) {
+      console.error("Supabase submit fetch error:", err);
+      return res.status(500).json({
+        success: false,
+        error: err.message || "Failed to reach Supabase"
+      });
+    }
+  });
+
   // STEP 1: Razorpay Create Order Endpoint
   app.post("/api/create-order", async (req, res) => {
     try {
@@ -176,12 +327,68 @@ async function startServer() {
     }
   ];
 
-  // CRM GET Leads
-  app.get("/api/crm/leads", (req, res) => {
+  // CRM GET Leads (Sync with Supabase PostgreSQL)
+  app.get("/api/crm/leads", async (req, res) => {
+    const supabaseUrl = 
+      process.env.VITE_SUPABASE_URL || 
+      process.env.SUPABASE_URL || 
+      "https://lwrfoztfsyffgtybesia.supabase.co";
+    const supabaseKey = 
+      process.env.VITE_SUPABASE_ANON_KEY || 
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+      process.env.SUPABASE_ANON_KEY || 
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc";
+
+    let combinedLeads: any[] = [...crmLeads];
+
+    try {
+      const response = await fetch(`${supabaseUrl.replace(/\/+$/, '')}/rest/v1/leads_and_inquiries?select=*&order=created_at.desc`, {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`
+        }
+      });
+
+      if (response.ok) {
+        const supabaseRows = await response.json();
+        if (Array.isArray(supabaseRows) && supabaseRows.length > 0) {
+          const mappedRows = supabaseRows.map((r: any) => {
+            let mappedStatus: "New" | "Contacted" | "Site Visit Scheduled" | "BOQ Sent" | "Closed" = "New";
+            if (r.status === 'site_visit_scheduled') mappedStatus = "Site Visit Scheduled";
+            else if (r.status === 'boq_sent') mappedStatus = "BOQ Sent";
+            else if (r.status === 'converted' || r.status === 'archived') mappedStatus = "Closed";
+            else if (r.status === 'contacted') mappedStatus = "Contacted";
+
+            return {
+              id: r.id,
+              name: r.full_name,
+              phone: r.phone,
+              email: r.email || "N/A",
+              location: r.city || "Bengaluru",
+              budget: r.estimated_budget || "Custom Quote",
+              projectType: r.service_type || "Turnkey Interior",
+              preferredDate: r.preferred_date || new Date().toISOString().split('T')[0],
+              discoveredInfo: r.raw_details || {},
+              status: mappedStatus,
+              createdAt: r.created_at || new Date().toISOString(),
+              source: r.source || "Supabase DB"
+            };
+          });
+
+          // Merge without duplicates by ID
+          const existingIds = new Set(mappedRows.map((m: any) => m.id));
+          const nonDuplicateInMemory = crmLeads.filter(l => !existingIds.has(l.id));
+          combinedLeads = [...mappedRows, ...nonDuplicateInMemory];
+        }
+      }
+    } catch (err) {
+      console.warn("Supabase CRM leads fetch fallback:", err);
+    }
+
     res.json({
       success: true,
-      count: crmLeads.length,
-      leads: crmLeads
+      count: combinedLeads.length,
+      leads: combinedLeads
     });
   });
 
@@ -222,6 +429,58 @@ async function startServer() {
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // CRM PATCH / UPDATE Lead Status & Notes
+  app.patch("/api/crm/leads/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, notes, preferredDate } = req.body;
+
+      const leadIndex = crmLeads.findIndex(l => l.id === id);
+      if (leadIndex !== -1) {
+        if (status) crmLeads[leadIndex].status = status;
+        if (notes !== undefined) (crmLeads[leadIndex] as any).notes = notes;
+        if (preferredDate) (crmLeads[leadIndex] as any).preferredDate = preferredDate;
+      }
+
+      // Also forward update to Supabase if configured
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://lwrfoztfsyffgtybesia.supabase.co";
+      const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc";
+
+      try {
+        let dbStatus = 'new';
+        if (status === 'Site Visit Scheduled') dbStatus = 'site_visit_scheduled';
+        else if (status === 'BOQ Sent') dbStatus = 'boq_sent';
+        else if (status === 'Closed') dbStatus = 'converted';
+        else if (status === 'Contacted') dbStatus = 'contacted';
+
+        await fetch(`${supabaseUrl.replace(/\/+$/, '')}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            status: dbStatus,
+            notes: notes || undefined,
+            preferred_date: preferredDate || undefined,
+            updated_at: new Date().toISOString()
+          })
+        });
+      } catch (sbErr) {
+        console.warn("Supabase lead patch warning:", sbErr);
+      }
+
+      res.json({
+        success: true,
+        message: "Lead successfully updated."
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

@@ -7,6 +7,8 @@ import {
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { useNotifications } from '../context/NotificationContext';
+import { fetchLeadsFromSupabase, updateLeadInSupabase, submitLeadToSupabase, isSupabaseConfigured } from '../lib/supabase';
+
 
 export interface LeadItem {
   id: string;
@@ -149,50 +151,85 @@ export const CrmKanbanBoard: React.FC = () => {
   // Edit Lead Modal State
   const [editingLead, setEditingLead] = useState<LeadItem | null>(null);
 
-  // Sync / Fetch leads from Firebase Firestore
-  const fetchLeadsFromFirebase = async () => {
+  // Sync / Fetch leads from Supabase PostgreSQL & Firebase Firestore
+  const fetchAllLeads = async () => {
     setLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, 'leads'));
-      if (!querySnapshot.empty) {
-        const fetchedList: LeadItem[] = [];
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          // Normalize status
-          let normStatus: LeadItem['status'] = 'New';
-          if (data.status === 'Qualified' || data.status === 'Qualified Lead') normStatus = 'Qualified';
-          else if (data.status === 'Site Visit' || data.status === 'Site Visit Scheduled') normStatus = 'Site Visit';
-          else if (data.status === 'Quotation' || data.status === 'Quotation Sent') normStatus = 'Quotation';
+      const fetchedList: LeadItem[] = [];
 
-          fetchedList.push({
-            id: docSnap.id,
-            name: data.name || 'Anonymous Inquiry',
-            phone: data.phone || 'N/A',
-            email: data.email || '',
-            projectType: data.projectType || 'Interior Project',
-            location: data.location || 'Bangalore',
-            budget: data.budget || '₹10.0 Lakhs',
-            status: normStatus,
-            source: data.source || 'Website Inbound',
-            notes: data.notes || '',
-            createdAt: data.createdAt || new Date().toISOString()
+      // 1. Try fetching from Supabase PostgreSQL first
+      try {
+        const supaLeads = await fetchLeadsFromSupabase();
+        if (supaLeads && supaLeads.length > 0) {
+          supaLeads.forEach((item: any) => {
+            let normStatus: LeadItem['status'] = 'New';
+            if (item.status === 'qualified' || item.status === 'Qualified') normStatus = 'Qualified';
+            else if (item.status === 'site_visit_scheduled' || item.status === 'Site Visit') normStatus = 'Site Visit';
+            else if (item.status === 'boq_sent' || item.status === 'Quotation') normStatus = 'Quotation';
+
+            fetchedList.push({
+              id: item.id || `LD-${Math.floor(Math.random() * 1000)}`,
+              name: item.full_name || item.name || 'Inquiry Client',
+              phone: item.phone || 'N/A',
+              email: item.email || '',
+              projectType: item.service_type || item.projectType || 'Interior Consultation',
+              location: item.city || item.location || 'Bengaluru',
+              budget: item.estimated_budget || item.budget || 'Custom Quote',
+              status: normStatus,
+              source: item.source || 'Supabase PostgreSQL DB',
+              notes: item.notes || item.project_scope || '',
+              createdAt: item.created_at || item.createdAt || new Date().toISOString()
+            });
           });
-        });
-
-        // Merge with initial mock leads so board is always populated cleanly
-        const existingIds = new Set(fetchedList.map(l => l.id));
-        const combined = [...fetchedList, ...INITIAL_MOCK_LEADS.filter(m => !existingIds.has(m.id))];
-        setLeads(combined);
+        }
+      } catch (supaErr) {
+        console.warn('Supabase fetch notice:', supaErr);
       }
+
+      // 2. Fetch from Firebase
+      try {
+        const querySnapshot = await getDocs(collection(db, 'leads'));
+        if (!querySnapshot.empty) {
+          querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            let normStatus: LeadItem['status'] = 'New';
+            if (data.status === 'Qualified' || data.status === 'Qualified Lead') normStatus = 'Qualified';
+            else if (data.status === 'Site Visit' || data.status === 'Site Visit Scheduled') normStatus = 'Site Visit';
+            else if (data.status === 'Quotation' || data.status === 'Quotation Sent') normStatus = 'Quotation';
+
+            fetchedList.push({
+              id: docSnap.id,
+              name: data.name || 'Anonymous Inquiry',
+              phone: data.phone || 'N/A',
+              email: data.email || '',
+              projectType: data.projectType || 'Interior Project',
+              location: data.location || 'Bangalore',
+              budget: data.budget || '₹10.0 Lakhs',
+              status: normStatus,
+              source: data.source || 'Website Inbound',
+              notes: data.notes || '',
+              createdAt: data.createdAt || new Date().toISOString()
+            });
+          });
+        }
+      } catch (fbErr) {
+        // Firebase offline fallback
+      }
+
+      // Merge with initial mock leads so board is always populated cleanly
+      const existingIds = new Set(fetchedList.map(l => l.id));
+      const combined = [...fetchedList, ...INITIAL_MOCK_LEADS.filter(m => !existingIds.has(m.id))];
+      setLeads(combined);
     } catch (err) {
-      console.warn('Firebase leads fetch fallback to local cache:', err);
+      console.warn('Leads fetch fallback to local cache:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLeadsFromFirebase();
+    fetchAllLeads();
+
 
     // Setup Firestore real-time listener if available
     let unsubscribe: () => void;
@@ -271,7 +308,18 @@ export const CrmKanbanBoard: React.FC = () => {
       });
     }
 
-    // 3. Sync to Firebase Firestore
+    // 3. Sync to Supabase PostgreSQL
+    try {
+      const supaStatusMap: Record<LeadItem['status'], any> = {
+        'New': 'new',
+        'Qualified': 'contacted',
+        'Site Visit': 'site_visit_scheduled',
+        'Quotation': 'boq_sent'
+      };
+      updateLeadInSupabase(leadId, { status: supaStatusMap[newStage] });
+    } catch (_) {}
+
+    // 4. Sync to Firebase Firestore
     try {
       const leadRef = doc(db, 'leads', leadId);
       await setDoc(leadRef, {
@@ -326,6 +374,22 @@ export const CrmKanbanBoard: React.FC = () => {
 
     setLeads(prev => [fullLead, ...prev]);
     setIsAddModalOpen(false);
+
+    // Save to Supabase PostgreSQL
+    try {
+      submitLeadToSupabase({
+        id: newId,
+        full_name: newLead.name,
+        phone: newLead.phone,
+        email: newLead.email,
+        service_type: newLead.projectType,
+        city: newLead.location,
+        estimated_budget: newLead.budget,
+        source: newLead.source || 'Manual Admin Entry',
+        status: 'new',
+        notes: newLead.notes
+      });
+    } catch (_) {}
 
     // Save to Firestore
     try {
@@ -396,26 +460,26 @@ export const CrmKanbanBoard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/40 text-[10px] font-mono font-bold uppercase tracking-wider">
-              Drag & Drop Firebase CRM
+              Supabase PostgreSQL CRM
             </span>
             <span className="text-xs text-neutral-400 font-mono flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Firestore Synced
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {isSupabaseConfigured() ? 'Supabase Connected' : 'Local / Offline Sync'}
             </span>
           </div>
           <h2 className="text-2xl font-serif font-bold text-white mt-1 flex items-center gap-2">
             <Users className="w-6 h-6 text-gold" /> CRM Lead Kanban Board
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
-            Drag lead cards across stages to automatically update lead status in real-time.
+            Real-time lead pipeline synced with Supabase PostgreSQL and local storage.
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           <button
-            onClick={fetchLeadsFromFirebase}
+            onClick={fetchAllLeads}
             disabled={loading}
             className="p-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-gold border border-gold/30 transition-all cursor-pointer"
-            title="Refresh Leads from Firestore"
+            title="Refresh Leads from Supabase & Firestore"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>

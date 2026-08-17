@@ -3,6 +3,7 @@ import {
   Phone, Mail, MapPin, Send, MessageSquare, Clock, CheckCircle2, Building,
   Instagram, Facebook, Linkedin, Youtube, Star, ExternalLink, Globe
 } from 'lucide-react';
+import { submitLeadToSupabase } from '../lib/supabase';
 
 export const ContactSection: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -16,11 +17,32 @@ export const ContactSection: React.FC = () => {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setIsSubmitting(true);
+
+    try {
+      await submitLeadToSupabase({
+        full_name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        city: formData.city,
+        service_type: formData.projectType,
+        estimated_budget: formData.budget,
+        project_scope: formData.message,
+        source: 'Contact Page Section',
+        status: 'new'
+      });
+    } catch (err) {
+      console.warn('Inquiry submission error:', err);
+    } finally {
+      setIsSubmitting(false);
+      setSubmitted(true);
+    }
   };
+
 
   return (
     <section className="py-20 bg-neutral-950 text-white relative overflow-hidden" id="contact">

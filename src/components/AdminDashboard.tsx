@@ -15,13 +15,22 @@ import { CrmKanbanBoard } from './CrmKanbanBoard';
 import { AdminActivityLogger } from './AdminActivityLogger';
 import { SeoManager } from './SeoManager';
 import { AccessControlPanel } from './AccessControlPanel';
+import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supabase';
+
 
 interface AdminDashboardProps {
   products?: Product[];
   onProductsUpdated?: () => void;
+  onBackToWebsite?: () => void;
+  onNavigateToCustomers?: () => void;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ products = [], onProductsUpdated }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+  products = [], 
+  onProductsUpdated, 
+  onBackToWebsite,
+  onNavigateToCustomers
+}) => {
   const { user, profile, isAdmin, loginWithEmail, loginAsDemoAdmin, logout } = useAuth();
 
   // Admin Auth Form State
@@ -78,6 +87,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ products = [], o
   // API Data States
   const [apiLeads, setApiLeads] = useState<any[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+  const [supabaseDiagnostic, setSupabaseDiagnostic] = useState<{ testing: boolean; result?: any } | null>(null);
 
   const [cmsProducts, setCmsProducts] = useState<Product[]>(products);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -423,6 +433,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ products = [], o
                 Sign Out Session
               </button>
             )}
+
+            {onBackToWebsite && (
+              <button
+                type="button"
+                onClick={onBackToWebsite}
+                className="w-full py-2 text-center text-xs text-neutral-400 hover:text-gold transition-colors cursor-pointer flex items-center justify-center gap-1.5 font-medium"
+              >
+                ← Back to Main Public Website
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -573,6 +593,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ products = [], o
               >
                 <Plus className="w-4 h-4 text-gold" /> Add Company
               </button>
+
+              {onNavigateToCustomers && (
+                <button
+                  onClick={onNavigateToCustomers}
+                  className="px-3.5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-gold border border-gold/40 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="Open Customers & Marketing Executive Portal"
+                >
+                  <Users className="w-4 h-4 text-gold" /> Customers Portal
+                </button>
+              )}
+
+              {onBackToWebsite && (
+                <button
+                  onClick={onBackToWebsite}
+                  className="px-3.5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-white/10 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="View Public Customer Website"
+                >
+                  <Globe className="w-4 h-4 text-amber-400" /> Back to Website
+                </button>
+              )}
 
               <button
                 onClick={() => logout()}
@@ -1312,6 +1352,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ products = [], o
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                 {[
+                  { 
+                    name: "Supabase PostgreSQL Database", 
+                    status: isSupabaseConfigured() ? "Connected & Synchronized" : "Local / Offline Fallback Ready", 
+                    color: isSupabaseConfigured() ? "text-emerald-400" : "text-amber-400" 
+                  },
                   { name: "Google Analytics 4", status: "Connected & Tracking", color: "text-emerald-400" },
                   { name: "Google Search Console", status: "Sitemap Submitted", color: "text-emerald-400" },
                   { name: "Google Maps Embed API", status: "Active Pin in Thanisandra", color: "text-emerald-400" },
@@ -1324,6 +1369,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ products = [], o
                     <span className={`text-[11px] font-mono font-bold ${ig.color}`}>{ig.status}</span>
                   </div>
                 ))}
+              </div>
+
+              {/* Supabase Database Details Box */}
+              <div className="p-5 rounded-2xl bg-black/70 border border-gold/30 space-y-4 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <h4 className="font-bold text-white flex items-center gap-2 text-sm">
+                    <Database className="w-4 h-4 text-gold" /> Supabase PostgreSQL Database Integration
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        setSupabaseDiagnostic({ testing: true });
+                        const res = await checkSupabaseLiveConnection();
+                        setSupabaseDiagnostic({ testing: false, result: res });
+                      }}
+                      disabled={supabaseDiagnostic?.testing}
+                      className="px-3 py-1.5 rounded-lg bg-gold/20 hover:bg-gold/30 text-gold border border-gold/40 font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${supabaseDiagnostic?.testing ? 'animate-spin' : ''}`} />
+                      {supabaseDiagnostic?.testing ? 'Testing...' : 'Test Connection'}
+                    </button>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold ${isSupabaseConfigured() ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' : 'bg-amber-950 text-amber-300 border border-amber-500/40'}`}>
+                      {isSupabaseConfigured() ? '● Configured in Client' : '○ Standby / Awaiting Keys'}
+                    </span>
+                  </div>
+                </div>
+
+                {supabaseDiagnostic?.result && (
+                  <div className={`p-3.5 rounded-xl border ${supabaseDiagnostic.result.connected ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' : 'bg-amber-950/40 border-amber-500/40 text-amber-200'} text-xs space-y-1`}>
+                    <div className="flex items-center gap-2 font-bold">
+                      {supabaseDiagnostic.result.connected ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-amber-400" />}
+                      <span>{supabaseDiagnostic.result.connected ? 'Connection Succeeded' : 'Diagnostic Status'}</span>
+                    </div>
+                    <p className="text-neutral-300 text-[11px]">{supabaseDiagnostic.result.message}</p>
+                  </div>
+                )}
+
+                <p className="text-neutral-400 leading-relaxed">
+                  The client inquiry pipeline is wired to persist leads directly to the Supabase <code className="text-gold font-mono">leads_and_inquiries</code> table. When environment keys (<code className="text-neutral-300 font-mono">VITE_SUPABASE_URL</code> & <code className="text-neutral-300 font-mono">VITE_SUPABASE_ANON_KEY</code>) are configured, leads sync instantly with PostgreSQL.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
+                  <div className="p-2.5 rounded-xl bg-neutral-900 border border-white/10">
+                    <span className="text-neutral-500 block text-[10px]">TABLE 1</span>
+                    <span className="text-white font-bold">leads_and_inquiries</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-neutral-900 border border-white/10">
+                    <span className="text-neutral-500 block text-[10px]">TABLE 2</span>
+                    <span className="text-white font-bold">catalog_products</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-neutral-900 border border-white/10">
+                    <span className="text-neutral-500 block text-[10px]">TABLE 3</span>
+                    <span className="text-white font-bold">client_projects</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

@@ -182,6 +182,29 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
             >
               Get Free Quote
             </button>
+
+            <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  setActiveTab('customers');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="text-[11px] text-neutral-400 hover:text-gold transition-colors flex items-center gap-1 cursor-pointer font-mono"
+                title="Customer & Executive Leads Portal"
+              >
+                <Sparkles className="w-3 h-3 text-gold" /> Customers & Leads Portal
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="text-[11px] text-neutral-500 hover:text-gold transition-colors flex items-center gap-1 cursor-pointer font-mono"
+                title="Management Portal Login"
+              >
+                <ShieldCheck className="w-3 h-3 text-gold/70" /> Admin ERP
+              </button>
+            </div>
           </div>
 
         </div>

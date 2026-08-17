@@ -7,6 +7,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { submitLeadToSupabase } from '../lib/supabase';
+
 
 interface AiConsultantModalProps {
   isOpen: boolean;
@@ -624,8 +626,23 @@ export const AiConsultantModal: React.FC<AiConsultantModalProps> = ({
       const data = await res.json();
 
       if (data.success) {
+        // Also persist to Supabase PostgreSQL database
+        submitLeadToSupabase({
+          full_name: leadName,
+          phone: leadPhone,
+          email: leadEmail,
+          city: leadLocation,
+          estimated_budget: leadBudget,
+          service_type: leadProjectType,
+          preferred_date: leadPreferredDate,
+          raw_details: discovery,
+          source: 'Royal Epic AI Consultant',
+          status: 'site_visit_scheduled'
+        });
+
         try {
           addDoc(collection(db, "leads"), {
+
             leadId: data.leadId,
             name: leadName,
             phone: leadPhone,

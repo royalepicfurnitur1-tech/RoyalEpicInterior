@@ -139,4 +139,5 @@ export type ActiveTab =
   | 'contact' 
   | 'dashboard' 
   | 'admin'
-  | 'developer';
+  | 'developer'
+  | 'customers';
