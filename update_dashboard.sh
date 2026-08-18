@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNER_EOF' > src/components/CustomerDashboard.tsx
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { 
@@ -28,24 +30,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'orders' | 'quotes' | 'wishlist'>('orders');
-  const [authMode, setAuthMode] = useState<'login' | 'register'>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('mode') === 'register' ? 'register' : 'login';
-  });
-
-  useEffect(() => {
-    const handleAuthChange = (e: any) => {
-      if (e.detail === 'register') setAuthMode('register');
-      if (e.detail === 'login') setAuthMode('login');
-    };
-    window.addEventListener('auth-mode-change', handleAuthChange);
-    return () => window.removeEventListener('auth-mode-change', handleAuthChange);
-  }, []);
-
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,12 +52,6 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (authMode === 'register' && password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
-    }
-    
     setIsSubmitting(true);
     try {
       if (authMode === 'login') {
@@ -106,9 +88,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 ? 'Access your orders and project history.' 
                 : 'Register to start tracking your premium interior journey.'}
             </p>
+
             {error && (
-              <div className={`mb-6 p-4 border rounded-xl text-sm flex items-start gap-2 ${error.includes('successful') ? 'bg-green-950/50 border-green-500/50 text-green-200' : 'bg-red-950/50 border-red-500/50 text-red-200'}`}>
-                <span className="mt-0.5">{error.includes('successful') ? '✅' : '⚠️'}</span>
+              <div className="mb-6 p-4 bg-red-950/50 border border-red-500/50 rounded-xl text-red-200 text-sm flex items-start gap-2">
+                <span className="mt-0.5">⚠️</span>
                 <span>{error}</span>
               </div>
             )}
@@ -144,7 +127,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   />
                 </div>
               </div>
-              <div className="mb-4">
+
+              <div>
                 <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Password</label>
                 <input
                   type="password"
@@ -155,19 +139,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   placeholder="Enter your password"
                 />
               </div>
-              {authMode === 'register' && (
-                <div className="mb-4">
-                  <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => { setConfirmPassword(e.target.value); clearError(); }}
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors"
-                    placeholder="Confirm your password"
-                  />
-                </div>
-              )}
+
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -402,3 +374,4 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     </section>
   );
 };
+INNER_EOF

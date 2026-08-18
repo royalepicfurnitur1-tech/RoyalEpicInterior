@@ -131,8 +131,6 @@ export type ActiveTab =
   | 'services' 
   | 'products' 
   | 'portfolio' 
-  | 'ai-design' 
-  | 'estimator'
   | 'custom-quote'
   | 'gallery'
   | 'blog' 

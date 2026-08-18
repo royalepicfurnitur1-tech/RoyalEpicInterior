@@ -9,8 +9,6 @@ import { ServicesSection } from './components/ServicesSection';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { PortfolioSection } from './components/PortfolioSection';
-import { CustomAiDesign } from './components/CustomAiDesign';
-import { ProjectEstimator } from './components/ProjectEstimator';
 import { QuoteModal } from './components/QuoteModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
@@ -409,10 +407,8 @@ export default function App() {
                 <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
 
                 {/* Custom AI Interior Design Generator */}
-                <CustomAiDesign onRequestQuote={(title, budget) => handleOpenQuote(title, budget)} />
 
                 {/* Instant Project Estimator & BOQ Calculator */}
-                <ProjectEstimator onRequestQuote={(title, budget) => handleOpenQuote(title, budget)} />
 
                 {/* Blog Section */}
                 <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} />
@@ -439,14 +435,6 @@ export default function App() {
 
             {activeTab === 'portfolio' && (
               <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
-            )}
-
-            {activeTab === 'ai-design' && (
-              <CustomAiDesign onRequestQuote={(title, budget) => handleOpenQuote(title, budget)} />
-            )}
-
-            {activeTab === 'estimator' && (
-              <ProjectEstimator onRequestQuote={(title, budget) => handleOpenQuote(title, budget)} />
             )}
 
             {activeTab === 'gallery' && (

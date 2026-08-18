@@ -14,7 +14,6 @@ interface HeaderProps {
   onOpenCart: () => void;
   onOpenQuote: () => void;
   onOpenSearch: () => void;
-  onOpenAiConsultant?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,7 +24,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCart,
   onOpenQuote,
   onOpenSearch,
-  onOpenAiConsultant,
 }) => {
   const { user, profile, isAdmin, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,8 +33,6 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'services', label: 'Services' },
     { id: 'products', label: 'Products' },
     { id: 'portfolio', label: 'Portfolio' },
-    { id: 'ai-design', label: 'AI Design', badge: 'New' },
-    { id: 'estimator', label: 'Estimator', badge: 'AI' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'blog', label: 'Blog' },
     { id: 'contact', label: 'Contact' },
@@ -58,25 +54,41 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-xl border-b border-neutral-200 text-neutral-900 transition-all shadow-sm">
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-        {/* Brand Logo */}
-        <div 
-          onClick={() => handleNavClick('home')}
-          className="flex items-center gap-3 cursor-pointer group"
-        >
-          <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center shadow-md group-hover:bg-black transition-all">
-            <Crown className="w-6 h-6 text-amber-400 group-hover:scale-110 transition-transform" />
+        {/* Left Side: Brand Logo & Auth */}
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div 
+            onClick={() => handleNavClick('home')}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center shadow-md group-hover:bg-black transition-all">
+              <Crown className="w-6 h-6 text-amber-400 group-hover:scale-110 transition-transform" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-xl font-serif font-bold tracking-tight text-neutral-900 group-hover:text-black transition-colors">
+                ROYAL EPIC
+              </h1>
+              <p className="text-[9px] uppercase tracking-widest text-neutral-600 font-sans font-bold">
+                Interior & Furniture
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-serif font-bold tracking-tight text-neutral-900 group-hover:text-black transition-colors">
-              ROYAL EPIC
-            </h1>
-            <p className="text-[9px] uppercase tracking-widest text-neutral-600 font-sans font-bold">
-              Interior & Furniture
-            </p>
-          </div>
+          {!user && (
+            <div className="hidden sm:flex items-center gap-2 border-l border-neutral-200 pl-4 sm:pl-6">
+              <button 
+                onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'login' })), 50); }}
+                className="text-xs font-bold text-neutral-600 hover:text-black px-2 transition-colors"
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'register' })), 50); }}
+                className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-xs font-bold hover:bg-black transition-colors shadow-sm"
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* Desktop Navigation Links */}
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
@@ -104,18 +116,6 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 relative">
           
-          {/* AI Voice Consultant Button */}
-          {onOpenAiConsultant && (
-            <button
-              onClick={onOpenAiConsultant}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black border border-amber-500 hover:shadow-lg shadow-gold/20 hover:scale-105 transition-all cursor-pointer flex items-center gap-2 text-xs font-bold font-serif"
-            >
-              <div className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
-              <span>AI Consultant</span>
-            </button>
-          )}
-
-          {/* Mobile Menu Trigger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2.5 rounded-xl bg-[#f8f5ee] border border-gold/40 text-neutral-900 cursor-pointer hover:bg-gold transition-colors"
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all ${
+                className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all ${ 
                   activeTab === item.id
                     ? 'bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black shadow-md'
                     : 'bg-[#f8f5ee] text-neutral-800 hover:bg-neutral-200 border border-gold/20'
@@ -143,8 +143,25 @@ export const Header: React.FC<HeaderProps> = ({
                 <ChevronRight className="w-4 h-4 text-neutral-600" />
               </button>
             ))}
+            {!user && (
+              <>
+                <button
+                  onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'login' })), 50); }}
+                  className="flex items-center justify-between p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all bg-[#f8f5ee] text-neutral-800 hover:bg-neutral-200 border border-gold/20"
+                >
+                  <span>Sign In</span>
+                  <ChevronRight className="w-4 h-4 text-neutral-600" />
+                </button>
+                <button
+                  onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'register' })), 50); }}
+                  className="flex items-center justify-between p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all bg-neutral-900 text-white shadow-md"
+                >
+                  <span>Sign Up</span>
+                  <ChevronRight className="w-4 h-4 text-neutral-400" />
+                </button>
+              </>
+            )}
           </div>
-
           <div className="pt-2 border-t border-neutral-200 flex flex-col gap-2">
             <button
               onClick={() => {
@@ -169,4 +186,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-

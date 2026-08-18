@@ -1,0 +1,3 @@
+sed -i 's/window.dispatchEvent(new CustomEvent('"'"'auth-mode-change'"'"', { detail: '"'"'login'"'"' })); handleNavClick('"'"'dashboard'"'"');/handleNavClick('"'"'dashboard'"'"'); setTimeout(() => window.dispatchEvent(new CustomEvent('"'"'auth-mode-change'"'"', { detail: '"'"'login'"'"' })), 50);/g' src/components/Header.tsx
+
+sed -i 's/window.dispatchEvent(new CustomEvent('"'"'auth-mode-change'"'"', { detail: '"'"'register'"'"' })); handleNavClick('"'"'dashboard'"'"');/handleNavClick('"'"'dashboard'"'"'); setTimeout(() => window.dispatchEvent(new CustomEvent('"'"'auth-mode-change'"'"', { detail: '"'"'register'"'"' })), 50);/g' src/components/Header.tsx

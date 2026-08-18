@@ -9,6 +9,7 @@ import {
   HelpCircle, Eye, Cpu, Radio, ChevronRight, CheckSquare, ShieldX, Sparkle, Upload
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { AdminOrdersManagement } from "./AdminOrdersManagement";
 import { Product, PortfolioProject } from '../types';
 import { DashboardReports } from './DashboardReports';
 import { CrmKanbanBoard } from './CrmKanbanBoard';
@@ -634,6 +635,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const moduleTabs = [
+    { id: "orders", label: "🛒 Orders Management", icon: ShoppingCart },
     { id: 'overview', label: '📊 Dashboard Overview', icon: LayoutDashboard },
     { id: 'cms', label: '🌐 Website CMS', icon: Globe },
     { id: 'ai-manager', label: '🤖 AI Voice Manager', icon: Bot },
@@ -1011,6 +1013,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {/* 4. CRM LEAD PIPELINE KANBAN BOARD */}
+          {activeTab === 'orders' && (
+            <AdminOrdersManagement />
+          )}
+
           {activeTab === 'crm' && (
             <CrmKanbanBoard />
           )}

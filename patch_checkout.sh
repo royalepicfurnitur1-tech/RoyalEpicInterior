@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > src/components/CheckoutModal.tsx
 import React, { useState } from 'react';
 import { CartItem } from '../types';
 import { 
@@ -233,3 +234,4 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     </div>
   );
 };
+INNER_EOF

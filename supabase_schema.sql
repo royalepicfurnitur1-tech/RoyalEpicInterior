@@ -176,3 +176,41 @@ VALUES
 ('LEAD-1001', 'Vikramaditya Sharma', '+91 98450 12345', 'vikram.sharma@example.com', 'Bengaluru (Hebbal)', '3BHK Luxury Turnkey Interior', '₹25 Lakhs - ₹35 Lakhs', 'site_visit_scheduled', 'AI Voice Consultant'),
 ('LEAD-1002', 'Dr. Meenakshi Sundaram', '+91 99001 88765', 'meenakshi.s@gmail.com', 'Bengaluru (Thanisandra)', 'Modular Kitchen & Wardrobes', '₹12 Lakhs - ₹18 Lakhs', 'new', 'Quote Calculator')
 ON CONFLICT (id) DO NOTHING;
+
+-- 5. ORDERS TABLE (Customer Orders)
+CREATE TABLE IF NOT EXISTS public.orders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    items JSONB DEFAULT '[]'::jsonb,
+    total_amount NUMERIC NOT NULL DEFAULT 0,
+    status TEXT DEFAULT 'Order Placed',
+    payment_status TEXT DEFAULT 'Pending',
+    delivery_address JSONB DEFAULT '{}'::jsonb,
+    expected_delivery_date TEXT,
+    courier_name TEXT,
+    tracking_number TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at DESC);
+
+-- 6. PROFILES TABLE (User profiles)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id TEXT PRIMARY KEY,
+    email TEXT,
+    name TEXT,
+    phone TEXT,
+    role TEXT DEFAULT 'customer',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can insert their own orders" ON public.orders FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Users can select their own orders" ON public.orders FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "Users can update their own orders" ON public.orders FOR UPDATE TO authenticated, anon USING (true);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public profiles select" ON public.profiles FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "Public profiles insert" ON public.profiles FOR INSERT TO authenticated, anon WITH CHECK (true);
+CREATE POLICY "Public profiles update" ON public.profiles FOR UPDATE TO authenticated, anon USING (true);

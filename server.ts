@@ -1,3 +1,5 @@
+import bcrypt from "bcryptjs";
+import { createClient } from "@supabase/supabase-js";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -25,8 +27,118 @@ async function startServer() {
   app.use(express.json({ limit: "25mb" }));
 
   // API Routes
-  app.get("/api/health", (req, res) => {
+    app.get("/api/health", (req, res) => {
     res.json({ status: "ok", app: "Royal Epic Interior & Furniture" });
+  });
+
+  // Custom Auth Endpoints (No Supabase Auth)
+  let supabaseAdmin: any = null;
+  try {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+    if (supabaseUrl && supabaseUrl.startsWith("https://") && supabaseKey && supabaseKey.length > 10) {
+      supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    }
+  } catch (e) {}
+
+  const localUsersDB: any[] = []; // In-memory fallback if app_users table is missing
+
+  app.post("/api/auth/register", async (req, res) => {
+    const { name, email, password, phone } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: "Email and password are required" });
+    }
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const userRecord = {
+        id: crypto.randomUUID(),
+        email: email.toLowerCase().trim(),
+        password_hash: hashedPassword,
+        name: name || "Customer",
+        phone: phone || "",
+        role: 'customer',
+        created_at: new Date().toISOString()
+      };
+      
+      let dbSuccess = false;
+      if (supabaseAdmin) {
+        try {
+          const { error } = await supabaseAdmin.from('app_users').insert([userRecord]);
+          if (!error) {
+            dbSuccess = true;
+          } else if (error.code === '23505') {
+            return res.status(400).json({ success: false, error: "Email is already registered" });
+          } else {
+            console.warn("Supabase app_users table note:", error.message);
+          }
+        } catch (dbErr: any) {
+          console.warn("Supabase app_users insert error:", dbErr.message);
+        }
+      }
+      
+      if (!dbSuccess) {
+        if (localUsersDB.find(u => u.email === userRecord.email)) {
+          return res.status(400).json({ success: false, error: "Email is already registered" });
+        }
+        localUsersDB.push(userRecord);
+      }
+      
+      const safeUser = { 
+        uid: userRecord.id, 
+        email: userRecord.email, 
+        name: userRecord.name, 
+        phone: userRecord.phone, 
+        role: userRecord.role,
+        createdAt: userRecord.created_at
+      };
+      return res.json({ success: true, user: safeUser });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: "Email and password are required" });
+    }
+    try {
+      let userRecord = null;
+      if (supabaseAdmin) {
+        try {
+          const { data, error } = await supabaseAdmin.from('app_users').select('*').eq('email', email.toLowerCase().trim()).single();
+          if (!error && data) {
+            userRecord = data;
+          }
+        } catch (dbErr: any) {
+          console.warn("Supabase app_users select error:", dbErr.message);
+        }
+      }
+      if (!userRecord) {
+        userRecord = localUsersDB.find(u => u.email === email.toLowerCase().trim());
+      }
+      
+      if (!userRecord) {
+        return res.status(401).json({ success: false, error: "Invalid email or password" });
+      }
+      
+      const isValid = await bcrypt.compare(password, userRecord.password_hash);
+      if (!isValid) {
+        return res.status(401).json({ success: false, error: "Invalid email or password" });
+      }
+      
+      const safeUser = { 
+        uid: userRecord.id, 
+        email: userRecord.email, 
+        name: userRecord.name, 
+        phone: userRecord.phone, 
+        role: userRecord.role,
+        createdAt: userRecord.created_at 
+      };
+      return res.json({ success: true, user: safeUser });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || "Login failed" });
+    }
   });
 
   // Supabase Connection Diagnostic Endpoint
