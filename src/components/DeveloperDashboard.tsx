@@ -340,6 +340,97 @@ export const DeveloperDashboard: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'database' && (
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4 font-mono text-xs">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Database className="w-4 h-4 text-emerald-400" /> Supabase SQL Schema for Products & Leads
+                </h3>
+                <p className="text-neutral-400 text-[11px] mt-0.5">
+                  Execute this SQL in your Supabase SQL Editor. It creates the dedicated <code className="text-emerald-300">products</code> table with safety checks so it will NEVER affect your existing tables.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const sql = `-- Safe Products Table Creation for Royal Epic
+CREATE TABLE IF NOT EXISTS public.products (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  category_slug TEXT,
+  price NUMERIC NOT NULL,
+  original_price NUMERIC,
+  discount NUMERIC DEFAULT 0,
+  rating NUMERIC DEFAULT 4.9,
+  reviews_count NUMERIC DEFAULT 12,
+  image TEXT NOT NULL,
+  gallery_images JSONB DEFAULT '[]'::jsonb,
+  description TEXT,
+  specifications JSONB DEFAULT '{}'::jsonb,
+  features JSONB DEFAULT '[]'::jsonb,
+  is_hot BOOLEAN DEFAULT false,
+  is_new BOOLEAN DEFAULT false,
+  has_3d_viewer BOOLEAN DEFAULT false,
+  in_stock BOOLEAN DEFAULT true,
+  brochure_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'products' AND policyname = 'Allow public read products') THEN
+    CREATE POLICY "Allow public read products" ON public.products FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'products' AND policyname = 'Allow manage products') THEN
+    CREATE POLICY "Allow manage products" ON public.products FOR ALL USING (true);
+  END IF;
+END $$;`;
+                  navigator.clipboard.writeText(sql);
+                  alert('📋 Supabase SQL Schema copied to clipboard!');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-bold text-xs cursor-pointer transition-colors"
+              >
+                Copy SQL Script
+              </button>
+            </div>
+
+            <div className="bg-black/90 p-4 rounded-xl border border-white/10 text-emerald-400 overflow-x-auto text-[11px] leading-relaxed">
+              <pre>{`-- 1. Create Products Table (Safe: will not affect existing tables)
+CREATE TABLE IF NOT EXISTS public.products (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  category_slug TEXT,
+  price NUMERIC NOT NULL,
+  original_price NUMERIC,
+  discount NUMERIC DEFAULT 0,
+  rating NUMERIC DEFAULT 4.9,
+  reviews_count NUMERIC DEFAULT 12,
+  image TEXT NOT NULL,
+  gallery_images JSONB DEFAULT '[]'::jsonb,
+  description TEXT,
+  specifications JSONB DEFAULT '{}'::jsonb,
+  features JSONB DEFAULT '[]'::jsonb,
+  is_hot BOOLEAN DEFAULT false,
+  is_new BOOLEAN DEFAULT false,
+  has_3d_viewer BOOLEAN DEFAULT false,
+  in_stock BOOLEAN DEFAULT true,
+  brochure_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. Enable Security Policies
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read products" ON public.products FOR SELECT USING (true);
+CREATE POLICY "Allow manage products" ON public.products FOR ALL USING (true);`}</pre>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'endpoints' && (
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-3 font-mono text-xs">
             <h3 className="text-sm font-bold text-white mb-3">Backend Server Endpoint Matrix (/api/*)</h3>

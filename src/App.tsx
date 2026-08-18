@@ -27,6 +27,7 @@ import { CustomersSubdomainPortal } from './components/CustomersSubdomainPortal'
 import { Footer } from './components/Footer';
 import { ShieldCheck, Award, Wrench, Sparkles } from 'lucide-react';
 import { submitLeadToSupabase } from './lib/supabase';
+import { getProducts } from './services/productService';
 
 
 export default function App() {
@@ -59,13 +60,12 @@ export default function App() {
   const [wishlistIds, setWishlistIds] = useState<string[]>(['prod-1', 'prod-2']);
   const [products, setProducts] = useState<Product[]>(PRODUCTS_DATA);
 
-  // Fetch products from CMS API
+  // Fetch products from Supabase CMS / Local Storage
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/cms/products');
-      const data = await res.json();
-      if (data.success && data.products) {
-        setProducts(data.products);
+      const res = await getProducts();
+      if (res.products && res.products.length > 0) {
+        setProducts(res.products);
       }
     } catch (e) {
       console.error("Failed to load CMS products:", e);

@@ -16,6 +16,7 @@ import { AdminActivityLogger } from './AdminActivityLogger';
 import { SeoManager } from './SeoManager';
 import { AccessControlPanel } from './AccessControlPanel';
 import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supabase';
+import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 
 
 interface AdminDashboardProps {
@@ -175,14 +176,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Fetch CMS Products
+  // Fetch CMS Products from Supabase / Resilient Store
   const fetchCmsProducts = async () => {
     setIsLoadingProducts(true);
     try {
-      const res = await fetch('/api/cms/products');
-      const data = await res.json();
-      if (data.success && data.products) {
-        setCmsProducts(data.products);
+      const res = await getProducts();
+      if (res.products) {
+        setCmsProducts(res.products);
         if (onProductsUpdated) onProductsUpdated();
       }
     } catch (e) {
@@ -506,23 +506,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!editingProduct?.name || !editingProduct?.price) return;
     setIsSavingProduct(true);
     try {
-      const isEdit = Boolean(editingProduct.id);
-      const url = isEdit ? `/api/cms/products/${editingProduct.id}` : '/api/cms/products';
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingProduct)
-      });
-
-      const data = await res.json();
-      if (data.success) {
+      const res = await saveProduct(editingProduct);
+      if (res.success) {
         setIsModalOpen(false);
         setEditingProduct(null);
         await fetchCmsProducts();
       } else {
-        alert('Failed to save product: ' + data.error);
+        alert('Failed to save product: ' + res.error);
       }
     } catch (err: any) {
       alert('Error saving product: ' + err.message);
@@ -533,9 +523,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleDeleteProduct = async (id: string) => {
     try {
-      const res = await fetch(`/api/cms/products/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
+      const res = await deleteProductById(id);
+      if (res.success) {
         setDeletingProductId(null);
         await fetchCmsProducts();
       }
@@ -1136,11 +1125,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-xs text-neutral-400 mt-1">Add, edit, update inventory, or delete furniture and interior product listings.</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button onClick={fetchCmsProducts} className="px-3 py-2 bg-neutral-800 text-gold text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Sync and backup the default catalog into your Supabase database table? This will not erase existing data.')) {
+                        const res = await seedProductsToSupabase();
+                        if (res.success) {
+                          alert(`✅ Successfully synced ${res.count} products to Supabase!`);
+                          await fetchCmsProducts();
+                        } else {
+                          alert(`⚠️ Note: ${res.error || 'Ensure the "products" table exists in Supabase SQL editor.'}`);
+                        }
+                      }
+                    }} 
+                    className="px-3 py-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Database className="w-3.5 h-3.5" /> Sync Catalog to Supabase
+                  </button>
+                  <button onClick={fetchCmsProducts} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-gold text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors">
                     <RefreshCw className="w-3.5 h-3.5" /> Refresh
                   </button>
-                  <button onClick={handleOpenAddProduct} className="px-4 py-2 bg-gold text-black text-xs font-bold uppercase rounded-xl flex items-center gap-1 cursor-pointer shadow-md">
+                  <button onClick={handleOpenAddProduct} className="px-4 py-2 bg-gold hover:bg-amber-400 text-black text-xs font-bold uppercase rounded-xl flex items-center gap-1 cursor-pointer shadow-md transition-colors">
                     <Plus className="w-4 h-4" /> Add Product
                   </button>
                 </div>
