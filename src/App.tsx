@@ -24,6 +24,7 @@ import { FloatingActions } from './components/FloatingActions';
 import { SearchModal } from './components/SearchModal';
 import { AiConsultantModal } from './components/AiConsultantModal';
 import { CustomersSubdomainPortal } from './components/CustomersSubdomainPortal';
+import { ProductManagerPortal } from './components/ProductManagerPortal';
 import { Footer } from './components/Footer';
 import { ShieldCheck, Award, Wrench, Sparkles } from 'lucide-react';
 import { submitLeadToSupabase } from './lib/supabase';
@@ -50,9 +51,18 @@ export default function App() {
     window.location.pathname.startsWith('/dev')
   );
 
-  const initialTab: ActiveTab = isDedicatedAdmin 
-    ? 'admin' 
-    : (isDedicatedCustomers ? 'customers' : (isDedicatedDev ? 'developer' : 'home'));
+  const isDedicatedProducts = typeof window !== 'undefined' && (
+    window.location.hostname.startsWith('products.') || 
+    window.location.hostname.startsWith('product.') || 
+    window.location.pathname.startsWith('/products-hub') ||
+    window.location.pathname.startsWith('/product-manager')
+  );
+
+  const initialTab: ActiveTab = isDedicatedProducts
+    ? 'product-manager'
+    : (isDedicatedAdmin 
+        ? 'admin' 
+        : (isDedicatedCustomers ? 'customers' : (isDedicatedDev ? 'developer' : 'home')));
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/');
@@ -167,6 +177,10 @@ export default function App() {
       customers: {
         title: 'Customers & Leads Workspace | Royal Epic Portal',
         description: 'Marketing executive workstation and client customer intelligence directory.'
+      },
+      'product-manager': {
+        title: 'Product Catalog Management Hub | Royal Epic Products',
+        description: 'Authorized Product Manager portal for updating inventory, prices, specifications, and photography.'
       }
     };
 
@@ -237,6 +251,7 @@ export default function App() {
           onProductsUpdated={fetchProducts} 
           onBackToWebsite={() => setActiveTab('home')}
           onNavigateToCustomers={() => setActiveTab('customers')}
+          onNavigateToProducts={() => setActiveTab('product-manager')}
         />
       </div>
     );
@@ -259,6 +274,18 @@ export default function App() {
     return (
       <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-emerald-500 selection:text-black antialiased">
         <DeveloperDashboard />
+      </div>
+    );
+  }
+
+  // If visiting dedicated Products subdomain/path or activeTab is product-manager
+  if (isDedicatedProducts || activeTab === 'product-manager') {
+    return (
+      <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-gold selection:text-black antialiased">
+        <ProductManagerPortal 
+          onBackToWebsite={() => setActiveTab('home')}
+          onNavigateToAdmin={() => setActiveTab('admin')}
+        />
       </div>
     );
   }

@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Image as ImageIcon, Sparkles, Flame, Tag, X, Save,
   Globe, LayoutDashboard, Database, Smartphone, Wrench, Share2, Mail, Phone,
   FileSpreadsheet, Download, Send, Clock, AlertTriangle, Building, Briefcase,
-  HelpCircle, Eye, Cpu, Radio, ChevronRight, CheckSquare, ShieldX, Sparkle
+  HelpCircle, Eye, Cpu, Radio, ChevronRight, CheckSquare, ShieldX, Sparkle, Upload
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Product } from '../types';
@@ -24,13 +24,15 @@ interface AdminDashboardProps {
   onProductsUpdated?: () => void;
   onBackToWebsite?: () => void;
   onNavigateToCustomers?: () => void;
+  onNavigateToProducts?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
   products = [], 
   onProductsUpdated, 
   onBackToWebsite,
-  onNavigateToCustomers
+  onNavigateToCustomers,
+  onNavigateToProducts
 }) => {
   const { user, profile, isAdmin, loginWithEmail, loginAsDemoAdmin, logout } = useAuth();
 
@@ -613,6 +615,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               >
                 <Plus className="w-4 h-4 text-gold" /> Add Company
               </button>
+
+              {onNavigateToProducts && (
+                <button
+                  onClick={onNavigateToProducts}
+                  className="px-3.5 py-2.5 rounded-xl bg-gold/20 hover:bg-gold/30 text-gold border border-gold/40 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="Open Dedicated Product Manager Subdomain Hub"
+                >
+                  <Package className="w-4 h-4 text-gold" /> Products Hub
+                </button>
+              )}
 
               {onNavigateToCustomers && (
                 <button
@@ -1510,61 +1522,279 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* MODAL: ADD / EDIT PRODUCT */}
       {isModalOpen && editingProduct && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-neutral-900 border border-gold/40 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white shadow-2xl relative my-8">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-neutral-400 p-2"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-neutral-900 border border-gold/50 rounded-3xl p-6 sm:p-8 max-w-3xl w-full text-white shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setIsModalOpen(false)} 
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 cursor-pointer transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-            <h3 className="text-xl font-serif font-bold text-white mb-2">
-              {editingProduct.id ? 'Edit Product Listing' : 'Add New Product Listing'}
-            </h3>
+            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-gold/15 border border-gold/40 flex items-center justify-center text-gold">
+                <Package className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-serif font-bold text-white">
+                  {editingProduct.id ? 'Edit Product Listing' : 'Add New Product Listing'}
+                </h3>
+                <p className="text-xs text-neutral-400">Manage pricing, specifications, and upload PNG / JPG photos directly to Supabase.</p>
+              </div>
+            </div>
 
             <form onSubmit={handleSaveProduct} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Product Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingProduct.name || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-gold"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Category</label>
+              
+              {/* Basic Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Product Title / Name *</label>
                   <input
                     type="text"
-                    value={editingProduct.category || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-gold"
+                    required
+                    placeholder="e.g. Royal Imperial Italian Marble Dining Set"
+                    value={editingProduct.name || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Price (₹)</label>
-                  <input
-                    type="number"
-                    value={editingProduct.price || 0}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
-                    className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-gold"
-                  />
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Category</label>
+                  <select
+                    value={editingProduct.category || 'Living Room Luxury'}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                  >
+                    <option>Living Room Luxury</option>
+                    <option>Dining & Crockery</option>
+                    <option>Master Bedroom Suites</option>
+                    <option>Modular Kitchens</option>
+                    <option>WPC Waterproof Doors</option>
+                    <option>Accent Chairs & Loungers</option>
+                    <option>Luxury Sofas & Sectionals</option>
+                    <option>Commercial & Spa Interiors</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Selling Price (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="95000"
+                      value={editingProduct.price || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
+                      className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">MRP Price (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="120000"
+                      value={editingProduct.originalPrice || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, originalPrice: Number(e.target.value) })}
+                      className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none font-mono"
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* IMAGE UPLOADER: DIRECT PNG / JPG UPLOAD + URL OPTION */}
+              <div className="bg-black/50 border border-gold/30 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-gold uppercase flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5" /> Product Image (PNG / JPG / WebP / URL)
+                  </label>
+                  <span className="text-[10px] text-neutral-400 font-mono">Direct File Upload or Web URL</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  {/* File Upload Box */}
+                  <label className="border-2 border-dashed border-white/20 hover:border-gold/60 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer bg-neutral-950/60 hover:bg-neutral-900 transition-all text-center">
+                    <Upload className="w-5 h-5 text-gold mb-1" />
+                    <span className="text-[11px] font-bold text-neutral-200">Click to Upload PNG / JPG</span>
+                    <span className="text-[9px] text-neutral-500 mt-0.5">Supports high-res PNG from your computer</span>
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 8 * 1024 * 1024) {
+                            alert('Please select an image smaller than 8MB.');
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            const base64Url = reader.result as string;
+                            setEditingProduct({
+                              ...editingProduct,
+                              image: base64Url,
+                              galleryImages: [base64Url, ...(editingProduct.galleryImages || []).slice(1)]
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+
+                  {/* Or Enter Image URL */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-mono text-neutral-400">Or Paste Image URL:</label>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/photo-..."
+                      value={editingProduct.image || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
+                      className="w-full bg-black/80 border border-white/15 focus:border-gold rounded-xl p-2.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Preview Thumbnail */}
+                {editingProduct.image && (
+                  <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+                    <img 
+                      src={editingProduct.image} 
+                      alt="Preview" 
+                      className="w-16 h-16 rounded-xl object-cover border border-gold/40 shadow-md" 
+                    />
+                    <div className="text-[11px] text-neutral-300">
+                      <span className="font-bold text-emerald-400 block">✓ Image Ready for Catalog</span>
+                      <span className="text-[10px] text-neutral-400">This photo will appear in product listings, 3D modals, and quotes.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
               <div>
-                <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Image URL</label>
-                <input
-                  type="text"
-                  value={editingProduct.image || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
-                  className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-gold"
+                <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Product Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Describe craftsmanship, wood species, finish, and design highlights..."
+                  value={editingProduct.description || ''}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                  className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
                 />
               </div>
 
+              {/* Specifications */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Core Material</label>
+                  <input
+                    type="text"
+                    placeholder="Solid Burma Teak / HDHMR"
+                    value={editingProduct.specifications?.material || ''}
+                    onChange={(e) => setEditingProduct({
+                      ...editingProduct,
+                      specifications: {
+                        ...(editingProduct.specifications || {}),
+                        material: e.target.value
+                      }
+                    })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-2.5 text-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Dimensions / Size</label>
+                  <input
+                    type="text"
+                    placeholder="84 x 42 x 30 inches"
+                    value={editingProduct.specifications?.size || ''}
+                    onChange={(e) => setEditingProduct({
+                      ...editingProduct,
+                      specifications: {
+                        ...(editingProduct.specifications || {}),
+                        size: e.target.value
+                      }
+                    })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-2.5 text-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Factory Warranty</label>
+                  <input
+                    type="text"
+                    placeholder="10 Years Factory Guarantee"
+                    value={editingProduct.specifications?.warranty || ''}
+                    onChange={(e) => setEditingProduct({
+                      ...editingProduct,
+                      specifications: {
+                        ...(editingProduct.specifications || {}),
+                        warranty: e.target.value
+                      }
+                    })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-2.5 text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Inventory & Badge Flags */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10">
+                <label className="flex items-center gap-2 p-2.5 bg-black/40 rounded-xl border border-white/10 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingProduct.inStock !== false}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, inStock: e.target.checked })}
+                    className="rounded text-gold focus:ring-gold"
+                  />
+                  <span className="text-[11px] text-neutral-200">In Stock</span>
+                </label>
+
+                <label className="flex items-center gap-2 p-2.5 bg-black/40 rounded-xl border border-white/10 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingProduct.isHot)}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, isHot: e.target.checked })}
+                    className="rounded text-gold focus:ring-gold"
+                  />
+                  <span className="text-[11px] text-neutral-200">🔥 Hot / Trending</span>
+                </label>
+
+                <label className="flex items-center gap-2 p-2.5 bg-black/40 rounded-xl border border-white/10 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingProduct.isNew)}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, isNew: e.target.checked })}
+                    className="rounded text-gold focus:ring-gold"
+                  />
+                  <span className="text-[11px] text-neutral-200">✨ New Arrival</span>
+                </label>
+
+                <label className="flex items-center gap-2 p-2.5 bg-black/40 rounded-xl border border-white/10 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingProduct.has3dViewer)}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, has3dViewer: e.target.checked })}
+                    className="rounded text-gold focus:ring-gold"
+                  />
+                  <span className="text-[11px] text-neutral-200">🧊 3D Viewer</span>
+                </label>
+              </div>
+
+              {/* Submit Buttons */}
               <div className="flex items-center gap-3 pt-4 border-t border-white/10 justify-end">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 rounded-xl bg-neutral-800 text-neutral-300 font-bold">Cancel</button>
-                <button type="submit" disabled={isSavingProduct} className="px-6 py-2.5 rounded-xl bg-gold text-black font-bold uppercase">
-                  {isSavingProduct ? 'Saving...' : 'Save Product'}
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSavingProduct} 
+                  className="px-6 py-2.5 rounded-xl bg-gold hover:bg-amber-400 text-black font-bold uppercase cursor-pointer transition-colors shadow-lg flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSavingProduct ? 'Saving to Database...' : 'Save Product to Supabase'}
                 </button>
               </div>
             </form>

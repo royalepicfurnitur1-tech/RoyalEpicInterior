@@ -140,4 +140,5 @@ export type ActiveTab =
   | 'dashboard' 
   | 'admin'
   | 'developer'
-  | 'customers';
+  | 'customers'
+  | 'product-manager';

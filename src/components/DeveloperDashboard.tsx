@@ -278,7 +278,7 @@ export const DeveloperDashboard: React.FC = () => {
                 <span>Role-Based Access Control System Architecture</span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-xs font-mono">
                 <div className="p-3 bg-black/60 border border-white/10 rounded-xl">
                   <span className="text-neutral-400 block text-[10px] uppercase font-bold">Portal 1</span>
                   <span className="text-gold font-bold block mt-1">Public Website</span>
@@ -287,15 +287,20 @@ export const DeveloperDashboard: React.FC = () => {
                 <div className="p-3 bg-black/60 border border-white/10 rounded-xl">
                   <span className="text-neutral-400 block text-[10px] uppercase font-bold">Portal 2</span>
                   <span className="text-gold font-bold block mt-1">Client Portal</span>
-                  <span className="text-[10px] text-amber-400 font-bold block mt-1">🔒 Auth Required Every Session</span>
+                  <span className="text-[10px] text-amber-400 font-bold block mt-1">🔒 Auth Required</span>
                 </div>
                 <div className="p-3 bg-black/60 border border-white/10 rounded-xl">
                   <span className="text-neutral-400 block text-[10px] uppercase font-bold">Portal 3</span>
-                  <span className="text-gold font-bold block mt-1">Admin SAS Panel</span>
+                  <span className="text-gold font-bold block mt-1">Admin Suite</span>
                   <span className="text-[10px] text-purple-400 font-bold block mt-1">👑 Role: Admin</span>
                 </div>
-                <div className="p-3 bg-black/60 border border-emerald-500/40 rounded-xl bg-emerald-950/20">
+                <div className="p-3 bg-black/60 border border-gold/40 rounded-xl bg-gold/10">
                   <span className="text-neutral-400 block text-[10px] uppercase font-bold">Portal 4</span>
+                  <span className="text-gold font-bold block mt-1">Products Hub</span>
+                  <span className="text-[10px] text-gold font-bold block mt-1">📦 Role: Product Mgr</span>
+                </div>
+                <div className="p-3 bg-black/60 border border-emerald-500/40 rounded-xl bg-emerald-950/20">
+                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Portal 5</span>
                   <span className="text-emerald-400 font-bold block mt-1">Developer Console</span>
                   <span className="text-[10px] text-emerald-400 font-bold block mt-1">⚡ Role: Developer</span>
                 </div>
