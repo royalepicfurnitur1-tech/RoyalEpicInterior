@@ -18,6 +18,13 @@ export interface SubCategoryItem {
   createdAt?: string;
 }
 
+export interface AttributeGroupItem {
+  id: string;
+  name: string; // e.g. "Color", "Texture", "Finish", "Material"
+  values: string[]; // e.g. ["Wooden Color", "Teak Wood Color", "Plain", "Textured"]
+  createdAt?: string;
+}
+
 export interface ProductItem {
   id: string;
   name: string;
@@ -32,12 +39,14 @@ export interface ProductItem {
   stock: number;
   coverImage: string;
   galleryImages: string[];
+  selectedAttributes?: Record<string, string[]>; // { "Color": ["Wooden Color", "Teak Wood Color"], "Texture": ["Plain"] }
   status: 'Active' | 'Inactive' | 'Draft';
   createdAt?: string;
 }
 
 const CATEGORIES_KEY = 'royalepic_categories_store';
 const SUBCATEGORIES_KEY = 'royalepic_subcategories_store';
+const ATTRIBUTES_KEY = 'royalepic_attributes_store';
 const PRODUCTS_KEY = 'royalepic_addon_products_store';
 
 // Default initial category seeds
@@ -61,6 +70,30 @@ export const DEFAULT_SUBCATEGORIES: SubCategoryItem[] = [
   { id: 'sub-9', categoryId: 'cat-5', name: '8-Seater Onyx Marble Tables', slug: 'onyx-dining' }
 ];
 
+// Default Attribute Groups
+export const DEFAULT_ATTRIBUTES: AttributeGroupItem[] = [
+  {
+    id: 'attr-1',
+    name: 'Color',
+    values: ['Wooden Color', 'Teak Wood Color', 'Walnut Brown', 'Smoked Ash', 'Classic Honey', 'Natural Rosewood', 'Pearl White', 'Matte Charcoal']
+  },
+  {
+    id: 'attr-2',
+    name: 'Texture',
+    values: ['Plain', 'Textured', 'Vertical Fluted', 'Grooved Slat', 'Hand-Distressed']
+  },
+  {
+    id: 'attr-3',
+    name: 'Finish',
+    values: ['PU Matte', 'High Gloss Polyester', 'Open Grain Satin', 'Anti-Scratch Acrylic', 'Suede Finish']
+  },
+  {
+    id: 'attr-4',
+    name: 'Material',
+    values: ['100% Solid Burma Teak', 'Indian Sheesham (Rosewood)', 'American Walnut', '18mm BWP Marine Plywood', 'High-Density Virgin WPC']
+  }
+];
+
 export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
   {
     id: 'prod-addon-1',
@@ -79,6 +112,12 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
       'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1200&q=80'
     ],
+    selectedAttributes: {
+      'Color': ['Teak Wood Color', 'Pearl White'],
+      'Texture': ['Plain'],
+      'Finish': ['Anti-Scratch Acrylic', 'High Gloss Polyester'],
+      'Material': ['18mm BWP Marine Plywood']
+    },
     status: 'Active',
     createdAt: new Date().toISOString()
   },
@@ -98,6 +137,12 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
     galleryImages: [
       'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80'
     ],
+    selectedAttributes: {
+      'Color': ['Wooden Color', 'Walnut Brown'],
+      'Texture': ['Plain'],
+      'Finish': ['PU Matte'],
+      'Material': ['100% Solid Burma Teak']
+    },
     status: 'Active',
     createdAt: new Date().toISOString()
   },
@@ -117,6 +162,12 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
     galleryImages: [
       'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80'
     ],
+    selectedAttributes: {
+      'Color': ['Wooden Color', 'Teak Wood Color'],
+      'Texture': ['Textured'],
+      'Finish': ['Open Grain Satin'],
+      'Material': ['High-Density Virgin WPC']
+    },
     status: 'Active',
     createdAt: new Date().toISOString()
   }
@@ -317,6 +368,99 @@ export async function deleteSubCategory(id: string): Promise<{ success: boolean;
   }
 }
 
+// ATTRIBUTE OPERATIONS
+export async function getAttributes(): Promise<AttributeGroupItem[]> {
+  try {
+    const sb = getSupabase();
+    if (sb) {
+      const { data, error } = await sb.from('product_attributes').select('*').order('name');
+      if (!error && data && data.length > 0) {
+        const items: AttributeGroupItem[] = data.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          values: Array.isArray(d.values) ? d.values : (typeof d.values === 'string' ? JSON.parse(d.values) : []),
+          createdAt: d.created_at
+        }));
+        localStorage.setItem(ATTRIBUTES_KEY, JSON.stringify(items));
+        return items;
+      }
+    }
+  } catch (e) {
+    console.warn('Supabase attributes fetch notice:', e);
+  }
+
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(ATTRIBUTES_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+  }
+  return DEFAULT_ATTRIBUTES;
+}
+
+export async function saveAttribute(attr: Partial<AttributeGroupItem>): Promise<{ success: boolean; attribute?: AttributeGroupItem; error?: string }> {
+  try {
+    const fullAttr: AttributeGroupItem = {
+      id: attr.id || `attr-${Date.now()}`,
+      name: attr.name?.trim() || 'New Attribute',
+      values: Array.isArray(attr.values) ? attr.values.filter(v => v && v.trim()) : [],
+      createdAt: attr.createdAt || new Date().toISOString()
+    };
+
+    try {
+      const sb = getSupabase();
+      if (sb) {
+        await sb.from('product_attributes').upsert({
+          id: fullAttr.id,
+          name: fullAttr.name,
+          values: fullAttr.values
+        });
+      }
+    } catch (e) {
+      console.warn('Supabase attribute save notice:', e);
+    }
+
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(ATTRIBUTES_KEY);
+      let list: AttributeGroupItem[] = cached ? JSON.parse(cached) : [...DEFAULT_ATTRIBUTES];
+      const idx = list.findIndex(a => a.id === fullAttr.id);
+      if (idx >= 0) list[idx] = fullAttr;
+      else list.push(fullAttr);
+      localStorage.setItem(ATTRIBUTES_KEY, JSON.stringify(list));
+    }
+
+    return { success: true, attribute: fullAttr };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function deleteAttribute(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    try {
+      const sb = getSupabase();
+      if (sb) {
+        await sb.from('product_attributes').delete().eq('id', id);
+      }
+    } catch (e) {
+      console.warn('Supabase attribute delete notice:', e);
+    }
+
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(ATTRIBUTES_KEY);
+      let list: AttributeGroupItem[] = cached ? JSON.parse(cached) : [...DEFAULT_ATTRIBUTES];
+      list = list.filter(a => a.id !== id);
+      localStorage.setItem(ATTRIBUTES_KEY, JSON.stringify(list));
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 // PRODUCT OPERATIONS
 export async function getAddonProducts(): Promise<ProductItem[]> {
   try {
@@ -338,6 +482,7 @@ export async function getAddonProducts(): Promise<ProductItem[]> {
           stock: Number(d.stock) || 0,
           coverImage: d.cover_image || d.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
           galleryImages: Array.isArray(d.gallery_images) ? d.gallery_images : (d.galleryImages || []),
+          selectedAttributes: d.selected_attributes || d.selectedAttributes || {},
           status: (d.status as 'Active' | 'Inactive' | 'Draft') || 'Active',
           createdAt: d.created_at
         }));
@@ -377,6 +522,7 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
       stock: Number(prod.stock) || 0,
       coverImage: prod.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
       galleryImages: Array.isArray(prod.galleryImages) ? prod.galleryImages : [],
+      selectedAttributes: prod.selectedAttributes || {},
       status: prod.status || 'Active',
       createdAt: prod.createdAt || new Date().toISOString()
     };
@@ -398,6 +544,7 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
           stock: fullProd.stock,
           cover_image: fullProd.coverImage,
           gallery_images: fullProd.galleryImages,
+          selected_attributes: fullProd.selectedAttributes,
           status: fullProd.status,
           updated_at: new Date().toISOString()
         });
