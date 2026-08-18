@@ -427,15 +427,15 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
 
             <button
               onClick={handleOpenAdd}
-              className="px-4 py-1.5 rounded-xl bg-gold hover:bg-amber-400 text-black text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-lg transition-all"
+              className="px-5 py-2.5 rounded-xl bg-gold hover:bg-amber-400 text-black text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg shadow-gold/25 transition-all hover:scale-105"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add New Product</span>
+              <Plus className="w-4 h-4 text-black stroke-[3]" />
+              <span>+ Add New Product</span>
             </button>
 
             <button
               onClick={() => logout()}
-              className="px-3 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900 border border-red-500/40 text-red-300 text-xs font-bold cursor-pointer transition-colors"
+              className="px-3 py-2 rounded-xl bg-red-950/60 hover:bg-red-900 border border-red-500/40 text-red-300 text-xs font-bold cursor-pointer transition-colors"
             >
               Logout
             </button>
@@ -550,6 +550,15 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
               title="Refresh from Supabase"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+
+            {/* Add New Product Primary Button in Toolbar */}
+            <button
+              onClick={handleOpenAdd}
+              className="px-4 py-2.5 bg-gradient-to-r from-gold to-amber-400 hover:from-amber-400 hover:to-yellow-300 text-black font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 cursor-pointer shadow-lg shadow-gold/20 transition-all hover:scale-105"
+            >
+              <Plus className="w-4 h-4 text-black stroke-[3]" />
+              <span>+ Add New Product</span>
             </button>
 
             {/* Sync to Supabase button */}

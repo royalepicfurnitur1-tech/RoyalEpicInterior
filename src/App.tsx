@@ -25,6 +25,7 @@ import { SearchModal } from './components/SearchModal';
 import { AiConsultantModal } from './components/AiConsultantModal';
 import { CustomersSubdomainPortal } from './components/CustomersSubdomainPortal';
 import { ProductManagerPortal } from './components/ProductManagerPortal';
+import { ProductManagementModule } from './components/ProductManagementModule';
 import { Footer } from './components/Footer';
 import { ShieldCheck, Award, Wrench, Sparkles } from 'lucide-react';
 import { submitLeadToSupabase } from './lib/supabase';
@@ -51,18 +52,25 @@ export default function App() {
     window.location.pathname.startsWith('/dev')
   );
 
+  const isDedicatedProductModule = typeof window !== 'undefined' && (
+    window.location.hostname.startsWith('product.') ||
+    window.location.pathname.startsWith('/product-management') ||
+    window.location.pathname === '/product'
+  );
+
   const isDedicatedProducts = typeof window !== 'undefined' && (
     window.location.hostname.startsWith('products.') || 
-    window.location.hostname.startsWith('product.') || 
     window.location.pathname.startsWith('/products-hub') ||
     window.location.pathname.startsWith('/product-manager')
   );
 
-  const initialTab: ActiveTab = isDedicatedProducts
-    ? 'product-manager'
-    : (isDedicatedAdmin 
-        ? 'admin' 
-        : (isDedicatedCustomers ? 'customers' : (isDedicatedDev ? 'developer' : 'home')));
+  const initialTab: ActiveTab = isDedicatedProductModule
+    ? 'product-management'
+    : (isDedicatedProducts
+        ? 'product-manager'
+        : (isDedicatedAdmin 
+            ? 'admin' 
+            : (isDedicatedCustomers ? 'customers' : (isDedicatedDev ? 'developer' : 'home'))));
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/');
@@ -181,6 +189,10 @@ export default function App() {
       'product-manager': {
         title: 'Product Catalog Management Hub | Royal Epic Products',
         description: 'Authorized Product Manager portal for updating inventory, prices, specifications, and photography.'
+      },
+      'product-management': {
+        title: 'Product Management Module | product.royalepic.com',
+        description: 'Dedicated Add-on Product Management module for managing categories, subcategories, and product catalog items.'
       }
     };
 
@@ -274,6 +286,17 @@ export default function App() {
     return (
       <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-emerald-500 selection:text-black antialiased">
         <DeveloperDashboard />
+      </div>
+    );
+  }
+
+  // If visiting dedicated Product Management module on product.royalepic.com or activeTab is product-management
+  if (isDedicatedProductModule || activeTab === 'product-management') {
+    return (
+      <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-gold selection:text-black antialiased">
+        <ProductManagementModule 
+          onBackToWebsite={() => setActiveTab('home')}
+        />
       </div>
     );
   }

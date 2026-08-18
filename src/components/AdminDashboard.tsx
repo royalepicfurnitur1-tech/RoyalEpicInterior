@@ -9,7 +9,7 @@ import {
   HelpCircle, Eye, Cpu, Radio, ChevronRight, CheckSquare, ShieldX, Sparkle, Upload
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Product } from '../types';
+import { Product, PortfolioProject } from '../types';
 import { DashboardReports } from './DashboardReports';
 import { CrmKanbanBoard } from './CrmKanbanBoard';
 import { AdminActivityLogger } from './AdminActivityLogger';
@@ -17,6 +17,7 @@ import { SeoManager } from './SeoManager';
 import { AccessControlPanel } from './AccessControlPanel';
 import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supabase';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
+import { getPortfolioProjects, savePortfolioProject, deletePortfolioProject, seedPortfolioToSupabase } from '../services/portfolioService';
 
 
 interface AdminDashboardProps {
@@ -113,6 +114,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+
+  // Portfolio Projects State
+  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Partial<PortfolioProject> | null>(null);
+  const [isSavingProject, setIsSavingProject] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 
   // CMS Content State
   const [cmsContent, setCmsContent] = useState<any>({
@@ -249,9 +258,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Fetch Portfolio Projects from Supabase / Resilient Store
+  const fetchPortfolioProjects = async () => {
+    setIsLoadingProjects(true);
+    try {
+      const res = await getPortfolioProjects();
+      if (res.projects) {
+        setPortfolioProjects(res.projects);
+      }
+    } catch (e) {
+      console.error('Failed to fetch portfolio projects:', e);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
   useEffect(() => {
     fetchTenants();
     fetchCmsProducts();
+    fetchPortfolioProjects();
     fetchCrmLeads();
     fetchMaterials();
     fetchAiConfig();
@@ -532,6 +557,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
     } catch (err: any) {
       console.error('Delete error:', err);
+    }
+  };
+
+  // Handle Add/Edit Portfolio Project
+  const handleOpenAddProject = () => {
+    setEditingProject({
+      title: '',
+      category: 'Residential',
+      location: 'Thanisandra, Bengaluru',
+      areaSqFt: 3200,
+      completionTime: '8 Weeks',
+      beforeImage: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80',
+      afterImage: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80',
+      clientName: '',
+      clientReview: 'Exceptional turnkey finish by Royal Epic craftsmen!',
+      clientRating: 5.0,
+      has3dWalkthrough: true,
+      gallery: []
+    });
+    setIsProjectModalOpen(true);
+  };
+
+  const handleOpenEditProject = (p: PortfolioProject) => {
+    setEditingProject({ ...p, gallery: [...(p.gallery || [])] });
+    setIsProjectModalOpen(true);
+  };
+
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject?.title || !editingProject?.clientName) {
+      alert('Please fill out the Project Title and Client Name.');
+      return;
+    }
+    setIsSavingProject(true);
+    try {
+      const res = await savePortfolioProject(editingProject);
+      if (res.success) {
+        setIsProjectModalOpen(false);
+        setEditingProject(null);
+        await fetchPortfolioProjects();
+      } else {
+        alert('Failed to save project: ' + res.error);
+      }
+    } catch (err: any) {
+      alert('Error saving project: ' + err.message);
+    } finally {
+      setIsSavingProject(false);
+    }
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    try {
+      const res = await deletePortfolioProject(id);
+      if (res.success) {
+        setDeletingProjectId(null);
+        await fetchPortfolioProjects();
+      }
+    } catch (err: any) {
+      console.error('Project delete error:', err);
     }
   };
 
@@ -1086,43 +1170,195 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           )}
 
-          {/* 6. INTERIOR PROJECT MANAGEMENT */}
+          {/* 6. INTERIOR PROJECT MANAGEMENT & PORTFOLIO CMS */}
           {activeTab === 'projects' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
                 <div>
                   <h2 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-                    <Briefcase className="w-6 h-6 text-gold" /> Turnkey Interior Project Management Engine
+                    <Briefcase className="w-6 h-6 text-gold" /> Turnkey Interior Projects & Showcase CMS ({portfolioProjects.length})
                   </h2>
-                  <p className="text-xs text-neutral-400 mt-1">Monitor factory CNC cutting schedules, site installation progress, 3D design sign-offs, and snag lists.</p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Manage client turnkey projects, milestone progress, real site photography, and showcase entries published to the public Portfolio & Gallery.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Sync default portfolio showcase projects to your Supabase table?')) {
+                        const res = await seedPortfolioToSupabase();
+                        if (res.success) {
+                          alert(`✅ Synced ${res.count} projects to Supabase!`);
+                          await fetchPortfolioProjects();
+                        } else {
+                          alert(`⚠️ Note: ${res.error || 'Ensure portfolio_projects table exists in Supabase SQL editor.'}`);
+                        }
+                      }
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+                    title="Sync Projects to Supabase"
+                  >
+                    <Database className="w-4 h-4 text-emerald-400" />
+                    <span>Sync to Supabase</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenAddProject}
+                    className="px-5 py-2.5 rounded-xl bg-gold text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-amber-400 cursor-pointer shadow-lg shadow-gold/20 transition-all"
+                  >
+                    <Plus className="w-4 h-4 text-black" />
+                    <span>+ Add New Project</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { name: "Villa Turnkey Project - Prestige Golfshire", client: "Dr. Ramesh Babu", status: "Factory CNC Cutting", progress: 65, engineer: "Er. Karthik" },
-                  { name: "3BHK Premium Modular Interior - Sobha Dream Acres", client: "Vikram Malhotra", status: "Site Hardware Installation", progress: 82, engineer: "Er. Suresh" },
-                  { name: "2BHK Minimalist Interior - Godrej Eternity", client: "Priya Sharma", status: "3D VR Design Approved", progress: 25, engineer: "Des. Ananya" },
-                  { name: "Commercial Office Interior - Manyata Tech Park", client: "Apex Tech Solutions", status: "Glass Partition Assembly", progress: 90, engineer: "Er. Rajesh" }
-                ].map((p, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl bg-black/60 border border-white/10 hover:border-gold/40 transition-colors space-y-3 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white text-sm">{p.name}</span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/40 font-mono text-[10px]">{p.status}</span>
-                    </div>
-                    <p className="text-neutral-400">Client: <strong className="text-white">{p.client}</strong> • Engineer: <span className="text-amber-300">{p.engineer}</span></p>
-                    <div>
-                      <div className="flex justify-between text-[11px] mb-1 font-mono text-neutral-300">
-                        <span>Milestone Progress</span>
-                        <span>{p.progress}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-gold to-yellow-400 rounded-full" style={{ width: `${p.progress}%` }} />
-                      </div>
-                    </div>
+              {isLoadingProjects ? (
+                <div className="p-12 text-center text-neutral-400">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto text-gold mb-2" />
+                  <p className="text-xs font-mono">Loading real-time projects database...</p>
+                </div>
+              ) : portfolioProjects.length === 0 ? (
+                <div className="p-12 rounded-2xl bg-black/40 border border-white/10 text-center space-y-4">
+                  <Briefcase className="w-12 h-12 mx-auto text-neutral-600" />
+                  <div>
+                    <h3 className="text-base font-bold text-white">No Projects Found</h3>
+                    <p className="text-xs text-neutral-400 max-w-md mx-auto mt-1">
+                      Start by adding your first luxury turnkey interior project or sync the default portfolio projects to showcase your work.
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <button
+                    onClick={handleOpenAddProject}
+                    className="px-5 py-2.5 rounded-xl bg-gold text-black font-bold text-xs uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer hover:bg-amber-400"
+                  >
+                    <Plus className="w-4 h-4" /> Add First Project
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {portfolioProjects.map((p) => (
+                    <div 
+                      key={p.id} 
+                      className="rounded-2xl bg-neutral-900/90 border border-white/10 hover:border-gold/40 transition-all overflow-hidden flex flex-col justify-between group shadow-lg"
+                    >
+                      <div>
+                        {/* Project Images Header */}
+                        <div className="relative h-48 w-full bg-neutral-950 overflow-hidden">
+                          <img 
+                            src={p.afterImage} 
+                            alt={p.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-black/40 pointer-events-none" />
+                          
+                          <div className="absolute top-3 left-3 flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md text-gold border border-gold/40 text-[10px] font-bold uppercase tracking-wider">
+                              {p.category}
+                            </span>
+                            {p.has3dWalkthrough && (
+                              <span className="px-2 py-1 rounded-lg bg-blue-900/80 backdrop-blur-md text-blue-300 border border-blue-400/40 text-[10px] font-bold flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" /> 3D VR Ready
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                            <div>
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 block">{p.location}</span>
+                              <h3 className="font-serif font-bold text-white text-base leading-tight drop-shadow-md">{p.title}</h3>
+                            </div>
+                            <span className="text-[11px] font-mono text-neutral-300 bg-black/70 px-2 py-0.5 rounded border border-white/10 shrink-0">
+                              {p.areaSqFt} Sq.Ft • {p.completionTime}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Project Details */}
+                        <div className="p-5 space-y-3 text-xs">
+                          <div className="flex items-center justify-between pb-2 border-b border-white/10 text-neutral-300">
+                            <div>
+                              <span className="text-[10px] text-neutral-500 uppercase font-bold block">Client Name</span>
+                              <span className="font-bold text-white text-sm">{p.clientName}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] text-neutral-500 uppercase font-bold block">Rating</span>
+                              <span className="text-amber-400 font-bold flex items-center gap-1 justify-end">
+                                ★ {p.clientRating?.toFixed(1) || '5.0'} / 5.0
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-neutral-400 italic text-[11px] line-clamp-2 bg-black/40 p-2.5 rounded-xl border border-white/5">
+                            "{p.clientReview}"
+                          </p>
+
+                          {/* Gallery Thumbnail Preview */}
+                          {p.gallery && p.gallery.length > 0 && (
+                            <div className="flex items-center gap-2 pt-1">
+                              <span className="text-[10px] text-neutral-500 uppercase font-bold">Gallery ({p.gallery.length}):</span>
+                              <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                                {p.gallery.slice(0, 4).map((imgUrl, gIdx) => (
+                                  <img 
+                                    key={gIdx}
+                                    src={imgUrl}
+                                    alt={`Thumbnail ${gIdx + 1}`}
+                                    className="w-7 h-7 rounded-lg object-cover border border-white/10 shrink-0"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ))}
+                                {p.gallery.length > 4 && (
+                                  <span className="text-[10px] text-gold font-bold px-1.5 py-0.5 rounded bg-neutral-800 border border-white/10">
+                                    +{p.gallery.length - 4}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="p-4 bg-black/40 border-t border-white/10 flex items-center justify-between gap-3">
+                        <span className="text-[10px] font-mono text-neutral-500">ID: {p.id}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditProject(p)}
+                            className="px-3.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-gold border border-gold/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                          >
+                            <Edit className="w-3.5 h-3.5" /> Edit Project
+                          </button>
+
+                          {deletingProjectId === p.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleDeleteProject(p.id)}
+                                className="px-2.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeletingProjectId(null)}
+                                className="px-2 py-1.5 rounded-xl bg-neutral-800 text-neutral-400 text-xs cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeletingProjectId(p.id)}
+                              className="p-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-500/20 cursor-pointer transition-colors"
+                              title="Delete Project"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1795,6 +2031,243 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 >
                   <Save className="w-4 h-4" />
                   {isSavingProduct ? 'Saving to Database...' : 'Save Product to Supabase'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / EDIT PORTFOLIO PROJECT */}
+      {isProjectModalOpen && editingProject && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-neutral-900 border border-gold/40 rounded-3xl p-6 sm:p-8 max-w-3xl w-full text-white shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+              <div>
+                <span className="text-[10px] font-mono text-gold uppercase tracking-wider font-bold">Turnkey Showcase CMS</span>
+                <h3 className="text-xl font-serif font-bold text-white mt-0.5">
+                  {editingProject.id?.startsWith('port-') && !editingProject.title ? '+ Add New Turnkey Interior Project' : `Edit Project: ${editingProject.title || 'Untitled'}`}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setIsProjectModalOpen(false)}
+                className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProject} className="space-y-4 text-xs">
+              {/* Project Title & Category */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Project Title *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. The Sky Villa Penthouse"
+                    value={editingProject.title || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, title: e.target.value })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Project Category *</label>
+                  <select
+                    value={editingProject.category || 'Residential'}
+                    onChange={(e) => setEditingProject({ ...editingProject, category: e.target.value as any })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                  >
+                    <option>Residential</option>
+                    <option>Commercial</option>
+                    <option>Modular Kitchen</option>
+                    <option>Hospitality</option>
+                    <option>Architectural</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Location, Area, Completion */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Location / Society</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Prestige Golfshire, Bengaluru"
+                    value={editingProject.location || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, location: e.target.value })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Carpet Area (Sq.Ft)</label>
+                  <input
+                    type="number"
+                    placeholder="3500"
+                    value={editingProject.areaSqFt || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, areaSqFt: Number(e.target.value) })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Execution Timeline</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 8 Weeks"
+                    value={editingProject.completionTime || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, completionTime: e.target.value })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Client Details & Review */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Client Name / Owner *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Dr. Vikramaditya & Family"
+                    value={editingProject.clientName || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, clientName: e.target.value })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Client Rating (1.0 to 5.0)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    value={editingProject.clientRating || 5.0}
+                    onChange={(e) => setEditingProject({ ...editingProject, clientRating: Number(e.target.value) })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Client Testimonial & Review</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Royal Epic transformed our raw slab shell into a world-class luxury home..."
+                  value={editingProject.clientReview || ''}
+                  onChange={(e) => setEditingProject({ ...editingProject, clientReview: e.target.value })}
+                  className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                />
+              </div>
+
+              {/* Main Project Finished Photo (PNG / JPG / WebP / URL) */}
+              <div className="bg-black/50 border border-gold/30 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-gold uppercase flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5" /> Project Finished Photo (PNG / JPG / URL) *
+                  </label>
+                  <span className="text-[10px] text-neutral-400 font-mono">Main Showcase Image</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  <div>
+                    <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gold/40 hover:border-gold rounded-xl bg-gold/5 cursor-pointer text-center group transition-colors">
+                      <Upload className="w-6 h-6 text-gold mb-1 group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-bold text-gold">Upload PNG / JPG Photo</span>
+                      <span className="text-[10px] text-neutral-400">Direct from Computer / Phone</span>
+                      <input 
+                        type="file" 
+                        accept="image/png, image/jpeg, image/webp" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setEditingProject({
+                                ...editingProject,
+                                afterImage: reader.result as string
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }} 
+                      />
+                    </label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[10px] text-neutral-400 block font-bold uppercase">Or Web Image URL</span>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/photo-..."
+                      value={editingProject.afterImage || ''}
+                      onChange={(e) => setEditingProject({ ...editingProject, afterImage: e.target.value })}
+                      className="w-full bg-black/80 border border-white/15 focus:border-gold rounded-xl p-2.5 text-xs text-white focus:outline-none"
+                    />
+                    {editingProject.afterImage && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <img 
+                          src={editingProject.afterImage} 
+                          alt="Preview" 
+                          className="w-12 h-12 object-cover rounded-lg border border-gold/40" 
+                          referrerPolicy="no-referrer"
+                        />
+                        <span className="text-[10px] text-emerald-400 font-bold">✓ Ready for Public Showcase</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Before Image & 3D Walkthrough Toggle */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Before Site / Raw Shell Photo URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://images.unsplash.com/photo-..."
+                    value={editingProject.beforeImage || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, beforeImage: e.target.value })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-2.5 text-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <label className="flex items-center gap-2 p-3 bg-black/40 rounded-xl border border-white/10 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editingProject.has3dWalkthrough)}
+                      onChange={(e) => setEditingProject({ ...editingProject, has3dWalkthrough: e.target.checked })}
+                      className="rounded text-gold focus:ring-gold"
+                    />
+                    <div>
+                      <span className="text-[11px] text-neutral-200 font-bold block">✨ Enable 3D Virtual Walkthrough Badge</span>
+                      <span className="text-[10px] text-neutral-400">Shows 3D VR icon on public portfolio</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center gap-3 pt-4 border-t border-white/10 justify-end">
+                <button 
+                  type="button" 
+                  onClick={() => setIsProjectModalOpen(false)} 
+                  className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSavingProject} 
+                  className="px-6 py-2.5 rounded-xl bg-gold hover:bg-amber-400 text-black font-bold uppercase cursor-pointer transition-colors shadow-lg flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSavingProject ? 'Saving to Database...' : 'Save & Publish Project'}
                 </button>
               </div>
             </form>

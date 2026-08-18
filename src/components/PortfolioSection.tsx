@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { PORTFOLIO_PROJECTS } from '../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { PORTFOLIO_PROJECTS as DEFAULT_PROJECTS } from '../data/mockData';
 import { PortfolioProject } from '../types';
+import { getPortfolioProjects } from '../services/portfolioService';
 import { 
   Sparkles, MapPin, Calendar, Maximize2, Star, Quote, 
   Rotate3d, ArrowLeftRight, Check, Eye
@@ -12,16 +13,26 @@ interface PortfolioSectionProps {
 }
 
 export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuote }) => {
+  const [projectsList, setProjectsList] = useState<PortfolioProject[]>(DEFAULT_PROJECTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [sliderPosition, setSliderPosition] = useState<number>(50); // percentage 0 to 100
-  const [activeProject, setActiveProject] = useState<PortfolioProject>(PORTFOLIO_PROJECTS[0]);
+  const [activeProject, setActiveProject] = useState<PortfolioProject>(DEFAULT_PROJECTS[0]);
   const [activeTab, setActiveTab] = useState<'before-after' | 'walkthrough' | 'gallery'>('before-after');
 
-  const categories = ['All', 'Residential', 'Commercial', 'Modular Kitchen', 'Hospitality'];
+  useEffect(() => {
+    getPortfolioProjects().then(res => {
+      if (res.projects && res.projects.length > 0) {
+        setProjectsList(res.projects);
+        setActiveProject(res.projects[0]);
+      }
+    });
+  }, []);
+
+  const categories = ['All', 'Residential', 'Commercial', 'Modular Kitchen', 'Hospitality', 'Architectural'];
 
   const filteredProjects = selectedCategory === 'All'
-    ? PORTFOLIO_PROJECTS
-    : PORTFOLIO_PROJECTS.filter(p => p.category === selectedCategory);
+    ? projectsList
+    : projectsList.filter(p => p.category === selectedCategory);
 
   const handleSliderMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -55,7 +66,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
               key={cat}
               onClick={() => {
                 setSelectedCategory(cat);
-                const firstMatch = PORTFOLIO_PROJECTS.find(p => cat === 'All' || p.category === cat);
+                const firstMatch = projectsList.find(p => cat === 'All' || p.category === cat);
                 if (firstMatch) setActiveProject(firstMatch);
               }}
               className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
