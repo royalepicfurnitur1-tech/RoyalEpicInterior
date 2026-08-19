@@ -34,7 +34,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
   const { user, profile, isAdmin, loginWithEmail, loginAsDemoAdmin, logout } = useAuth();
 
   // Authentication & Role Checking
-  const isProductManager = isAdmin || profile?.role === 'admin' || profile?.role === 'product_manager' || (user?.email && (
+  const isProductManager = isAdmin || profile?.role === 'admin' || (user?.email && (
     user.email.includes('admin') || 
     user.email.includes('product') || 
     user.email.includes('manager') ||

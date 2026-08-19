@@ -35,13 +35,16 @@ export interface Product {
   dimensions?: string;
   material?: string;
   finish?: string;
-  specifications: {
-    material: string;
-    size: string;
-    finish: string;
-    warranty: string;
-    brand: string;
-    origin: string;
+  specifications?: {
+    material?: string;
+    size?: string;
+    finish?: string;
+    warranty?: string;
+    brand?: string;
+    origin?: string;
+    hardware?: string;
+    dimensions?: string;
+    [key: string]: any;
   };
   features: string[];
   attributes?: Record<string, string[]>;

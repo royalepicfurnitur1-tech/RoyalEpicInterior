@@ -175,20 +175,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   if (!product) return null;
 
   // Current effective price and SKU
-  const currentPrice = selectedVariation ? (selectedVariation.discountPrice || selectedVariation.price) : product.price;
-  const currentOriginalPrice = selectedVariation ? selectedVariation.price : product.originalPrice;
+  const currentPrice = selectedVariation ? (selectedVariation.discountPrice || selectedVariation.price) : (product.price || 0);
+  const currentOriginalPrice = selectedVariation ? selectedVariation.price : (product.originalPrice || currentPrice);
   const currentSku = selectedVariation?.sku || product.sku || `RE-SKU-${product.id}`;
   const currentStock = selectedVariation?.stock !== undefined ? selectedVariation.stock : (product.stockQuantity || 10);
 
   const handleDownloadBrochure = () => {
     const blob = new Blob(
-      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ₹${currentPrice}\nMaterial: ${product.specifications.material}\nWarranty: ${product.specifications.warranty}\nContact: +91 99166 33338`],
+      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ₹${(currentPrice || 0).toLocaleString('en-IN')}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Royal_Epic_${product.name.replace(/\s+/g, '_')}_Brochure.txt`;
+    a.download = `Royal_Epic_${(product.name || 'product').replace(/\s+/g, '_')}_Brochure.txt`;
     a.click();
   };
 

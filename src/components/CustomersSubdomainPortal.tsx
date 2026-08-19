@@ -31,11 +31,13 @@ export interface CustomerLeadRecord {
 interface CustomersSubdomainPortalProps {
   onBackToWebsite?: () => void;
   onNavigateToAdmin?: () => void;
+  onOpenQuote?: (title?: string) => void;
 }
 
 export const CustomersSubdomainPortal: React.FC<CustomersSubdomainPortalProps> = ({
   onBackToWebsite,
   onNavigateToAdmin,
+  onOpenQuote,
 }) => {
   // Auth state
   const [currentUser, setCurrentUser] = useState<{

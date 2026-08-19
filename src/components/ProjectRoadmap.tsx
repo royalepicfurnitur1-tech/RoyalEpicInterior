@@ -23,7 +23,7 @@ export interface RoadmapPhase {
 }
 
 export const ProjectRoadmap: React.FC = () => {
-  const { userProject } = useAuth();
+  const { profile } = useAuth();
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>('phase-3');
 
   const defaultPhases: RoadmapPhase[] = [
@@ -145,10 +145,10 @@ export const ProjectRoadmap: React.FC = () => {
               <span className="px-3 py-1 rounded-full bg-gold/15 text-gold border border-gold/30 text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-gold" /> Executive Project Roadmap
               </span>
-              <span className="text-xs text-neutral-400 font-mono">Ref: {userProject?.id || 'RE-PROJ-8812'}</span>
+              <span className="text-xs text-neutral-400 font-mono">Ref: {profile?.companyName || 'RE-PROJ-8812'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-tight">
-              {userProject?.name || 'Villa Horizon Luxury Interior Architecture'}
+              {profile?.companyName ? `${profile.companyName} Luxury Interior Architecture` : 'Villa Horizon Luxury Interior Architecture'}
             </h2>
             <p className="text-xs text-neutral-400 mt-1 max-w-2xl">
               Real-time milestone tracking across design, precision factory manufacturing, white-glove site installation, and final handover.

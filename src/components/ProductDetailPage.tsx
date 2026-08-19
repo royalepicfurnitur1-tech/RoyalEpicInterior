@@ -207,8 +207,8 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   }
 
   // Active Effective Pricing & SKU
-  const currentPrice = selectedVariation ? (selectedVariation.discountPrice || selectedVariation.price) : product.price;
-  const currentOriginalPrice = selectedVariation ? selectedVariation.price : product.originalPrice;
+  const currentPrice = selectedVariation ? (selectedVariation.discountPrice || selectedVariation.price) : (product.price || 0);
+  const currentOriginalPrice = selectedVariation ? selectedVariation.price : (product.originalPrice || currentPrice);
   const currentSku = selectedVariation?.sku || product.sku || `RE-SKU-${product.id}`;
   const currentStock = selectedVariation?.stock !== undefined ? selectedVariation.stock : (product.stockQuantity || 10);
   const galleryImages = product.galleryImages && product.galleryImages.length > 0 ? product.galleryImages : [product.image];
@@ -216,13 +216,13 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const handleDownloadBrochure = () => {
     const blob = new Blob(
-      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ₹${currentPrice.toLocaleString('en-IN')}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338\nAddress: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru`],
+      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ₹${(currentPrice || 0).toLocaleString('en-IN')}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338\nAddress: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Royal_Epic_${product.name.replace(/\s+/g, '_')}_Brochure.txt`;
+    a.download = `Royal_Epic_${(product.name || 'product').replace(/\s+/g, '_')}_Brochure.txt`;
     a.click();
   };
 
@@ -241,8 +241,8 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     }
   };
 
-  const relatedProducts = allProducts
-    .filter((p) => p.id !== product.id && p.category === product.category)
+  const relatedProducts = (Array.isArray(allProducts) ? allProducts : [])
+    .filter((p) => p && p.id !== product.id && p.category === product.category)
     .slice(0, 3);
 
   return (
@@ -462,7 +462,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex items-center gap-1 text-amber-500">
                   <Star className="w-4 h-4 fill-amber-500" />
-                  <span className="text-xs font-bold text-neutral-900">{product.rating}</span>
+                  <span className="text-xs font-bold text-neutral-900">{product.rating || 4.9}</span>
                 </div>
                 <span className="text-xs text-neutral-400">•</span>
                 <span className="text-xs text-neutral-500 font-mono">SKU: {currentSku}</span>
@@ -477,16 +477,16 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200">
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl sm:text-4xl font-mono font-bold text-neutral-900">
-                  ₹{currentPrice.toLocaleString('en-IN')}
+                  ₹{(currentPrice || 0).toLocaleString('en-IN')}
                 </span>
                 {currentOriginalPrice && currentOriginalPrice > currentPrice && (
                   <span className="text-base font-mono text-neutral-400 line-through">
-                    ₹{currentOriginalPrice.toLocaleString('en-IN')}
+                    ₹{(currentOriginalPrice || 0).toLocaleString('en-IN')}
                   </span>
                 )}
                 {currentOriginalPrice && currentOriginalPrice > currentPrice && (
                   <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-                    Save ₹{(currentOriginalPrice - currentPrice).toLocaleString('en-IN')}
+                    Save ₹{((currentOriginalPrice || 0) - (currentPrice || 0)).toLocaleString('en-IN')}
                   </span>
                 )}
               </div>
@@ -703,7 +703,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       </div>
                       <div className="flex items-center justify-between mt-4 pt-3 border-t border-neutral-100">
                         <span className="font-mono font-bold text-sm text-neutral-900">
-                          ₹{rel.price.toLocaleString('en-IN')}
+                          ₹{(rel.price || 0).toLocaleString('en-IN')}
                         </span>
                         <span className="text-[11px] font-bold text-neutral-900 group-hover:translate-x-1 transition-transform flex items-center gap-0.5">
                           View Details <ChevronRight className="w-3 h-3" />

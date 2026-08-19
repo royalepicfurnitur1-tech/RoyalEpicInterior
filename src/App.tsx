@@ -118,17 +118,7 @@ export default function App() {
   });
 
   // Modals state
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const path = window.location.pathname;
-    if (path.startsWith('/products/')) {
-      const slug = path.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
-      if (slug && !findCategoryBySlug(slug)) {
-        return findProductBySlug(PRODUCTS_DATA, slug) || null;
-      }
-    }
-    return null;
-  });
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isQuoteOpen, setIsQuoteOpen] = useState<boolean>(false);
   const [quotePrefill, setQuotePrefill] = useState({ title: '', budget: '' });
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
@@ -221,7 +211,7 @@ export default function App() {
         const productMatch = findProductBySlug(products, slug);
         if (productMatch) {
           setActiveTab('products');
-          setSelectedProduct(productMatch);
+          setSelectedProduct(null);
           updateProductSeo(productMatch);
           return;
         }
@@ -376,24 +366,11 @@ export default function App() {
   // Handle Product Selection with URL synchronization
   const handleSelectProduct = (product: Product) => {
     const slug = getProductSlug(product);
-    window.history.pushState({}, '', `/products/${slug}`);
-    setCurrentPath(`/products/${slug}`);
-    setSelectedProduct(product);
-    updateProductSeo(product);
+    navigateTo(`/products/${slug}`);
   };
 
   const handleCloseProduct = () => {
     setSelectedProduct(null);
-    if (window.location.pathname.startsWith('/products/')) {
-      window.history.pushState({}, '', '/products');
-      setCurrentPath('/products');
-      updatePageHead({
-        title: 'Luxury Modular Kitchens, Wardrobes & Custom Furniture | Royal Epic Interior',
-        description: 'Browse direct factory-crafted interior products: modular kitchens, sliding wardrobes, teak wood main entrance doors, WPC bathroom doors, dining tables, and commercial kitchen equipment.',
-        canonicalPath: '/products',
-        type: 'website'
-      });
-    }
   };
 
   // Auto trigger inquiry popup after 15s if not closed
@@ -738,7 +715,7 @@ export default function App() {
 
             {activeTab === 'contact' && <ContactSection />}
 
-            {(activeTab === 'dashboard' || activeTab === 'track-order' || activeTab === 'customers') && (
+            {(activeTab === 'dashboard' || activeTab === 'track-order') && (
               <CustomerDashboard
                 wishlistProducts={wishlistProducts}
                 onRequestQuote={(title) => handleOpenQuote(title)}
@@ -747,10 +724,6 @@ export default function App() {
 
             {activeTab === 'admin' && (
               <AdminDashboard products={products} onProductsUpdated={fetchProducts} />
-            )}
-
-            {activeTab === 'developer' && (
-              <DeveloperDashboard />
             )}
           </>
         )}
@@ -784,22 +757,24 @@ export default function App() {
       />
 
       {/* Modals & Overlays */}
-      <ProductDetailModal
-        product={selectedProduct}
-        onClose={handleCloseProduct}
-        onAddToCart={(p, q) => handleAddToCart(p, q)}
-        onBuyNow={(p) => {
-          handleAddToCart(p, 1);
-          handleCloseProduct();
-          setIsCheckoutOpen(true);
-        }}
-        onRequestQuote={(pTitle) => {
-          handleCloseProduct();
-          handleOpenQuote(pTitle);
-        }}
-        isWishlisted={selectedProduct ? wishlistIds.includes(selectedProduct.id) : false}
-        onToggleWishlist={(p) => handleToggleWishlist(p)}
-      />
+      {selectedProduct && !currentPath.startsWith('/products/') && (
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={handleCloseProduct}
+          onAddToCart={(p, q) => handleAddToCart(p, q)}
+          onBuyNow={(p) => {
+            handleAddToCart(p, 1);
+            handleCloseProduct();
+            setIsCheckoutOpen(true);
+          }}
+          onRequestQuote={(pTitle) => {
+            handleCloseProduct();
+            handleOpenQuote(pTitle);
+          }}
+          isWishlisted={selectedProduct ? wishlistIds.includes(selectedProduct.id) : false}
+          onToggleWishlist={(p) => handleToggleWishlist(p)}
+        />
+      )}
 
       <QuoteModal
         isOpen={isQuoteOpen}

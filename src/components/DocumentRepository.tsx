@@ -30,7 +30,7 @@ export interface RepositoryDocument {
 }
 
 export const DocumentRepository: React.FC = () => {
-  const { user, userProject } = useAuth();
+  const { user, profile } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [previewDoc, setPreviewDoc] = useState<RepositoryDocument | null>(null);
@@ -171,9 +171,9 @@ export const DocumentRepository: React.FC = () => {
         // Trigger live PDF generation for BOQ
         generateBoqPdf({
           quoteId: docItem.id,
-          clientName: user?.displayName || 'Valued Client',
-          clientPhone: user?.phoneNumber || '+91 99166 33338',
-          clientEmail: user?.email || 'client@royalepic.com',
+          clientName: profile?.name || user?.user_metadata?.name || 'Valued Client',
+          clientPhone: profile?.phone || user?.phone || '+91 99166 33338',
+          clientEmail: profile?.email || user?.email || 'client@royalepic.com',
           cityLocation: 'Whitefield, Bangalore',
           propertyType: '4BHK Villa',
           areaSqFt: 3850,
@@ -238,7 +238,7 @@ export const DocumentRepository: React.FC = () => {
               <span className="px-3 py-1 rounded-full bg-gold/15 text-gold border border-gold/30 text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-1.5">
                 <FolderDown className="w-3.5 h-3.5 text-gold" /> Encrypted Vault
               </span>
-              <span className="text-xs text-neutral-400 font-mono">Ref: {userProject?.id || 'RE-PROJ-8812'}</span>
+              <span className="text-xs text-neutral-400 font-mono">Ref: {profile?.companyName || 'RE-PROJ-8812'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-tight">
               Client Document Repository
