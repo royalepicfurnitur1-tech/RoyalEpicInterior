@@ -164,6 +164,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (_) {}
     }
 
+    // Try server database login
+    try {
+      const srvRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail, password: pass })
+      });
+      if (srvRes.ok) {
+        const srvData = await srvRes.json();
+        if (srvData.success && srvData.user && srvData.profile) {
+          setLocalSession(srvData.user, srvData.profile);
+          return;
+        }
+      }
+    } catch (_) {}
+
     // Check local registered accounts
     try {
       const regUsersStr = localStorage.getItem('royal_epic_registered_users') || '[]';
@@ -283,18 +299,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Seamless registration fallback: create verified local profile
-    const userId = `usr_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+    // Register in server database
+    let serverUser: any = null;
+    let serverProfile: UserProfile | null = null;
+    try {
+      const regRes = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email: normalizedEmail, password: pass, phone })
+      });
+      if (regRes.ok) {
+        const regData = await regRes.json();
+        if (regData.success) {
+          serverUser = regData.user;
+          serverProfile = regData.profile;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback ID if server call was offline
+    const userId = serverUser?.id || `usr_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
     const role: 'customer' | 'admin' = (normalizedEmail.includes('admin') || normalizedEmail === 'royalepicfurnitur1@gmail.com') ? 'admin' : 'customer';
 
-    const localUser: any = {
+    const localUser: any = serverUser || {
       id: userId,
       email: normalizedEmail,
       created_at: new Date().toISOString(),
       user_metadata: { name, phone }
     };
 
-    const localProfile: UserProfile = {
+    const localProfile: UserProfile = serverProfile || {
       uid: userId,
       email: normalizedEmail,
       name: name || 'Customer',

@@ -214,3 +214,45 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public profiles select" ON public.profiles FOR SELECT TO authenticated, anon USING (true);
 CREATE POLICY "Public profiles insert" ON public.profiles FOR INSERT TO authenticated, anon WITH CHECK (true);
 CREATE POLICY "Public profiles update" ON public.profiles FOR UPDATE TO authenticated, anon USING (true);
+
+-- 7. PERSISTENT SHOPPING CARTS TABLE (Per-User Cart Store)
+CREATE TABLE IF NOT EXISTS public.carts (
+    id TEXT PRIMARY KEY DEFAULT ('cart_' || floor(random() * 900000 + 100000)::text),
+    user_id TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_carts_user_id ON public.carts(user_id);
+
+-- 8. PERSISTENT CART ITEMS TABLE (Items in User's Cart)
+CREATE TABLE IF NOT EXISTS public.cart_items (
+    id TEXT PRIMARY KEY DEFAULT ('item_' || floor(random() * 900000 + 100000)::text),
+    cart_id TEXT NOT NULL REFERENCES public.carts(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    variation_id TEXT,
+    product_name_snapshot TEXT NOT NULL,
+    product_image_snapshot TEXT NOT NULL,
+    selected_attributes JSONB DEFAULT '{}'::jsonb,
+    selected_variation JSONB DEFAULT '{}'::jsonb,
+    quantity INT NOT NULL DEFAULT 1,
+    unit_price NUMERIC NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cart_items_cart_id ON public.cart_items(cart_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_id ON public.cart_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_product_id ON public.cart_items(product_id);
+
+ALTER TABLE public.carts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public carts select" ON public.carts FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "Public carts insert" ON public.carts FOR INSERT TO authenticated, anon WITH CHECK (true);
+CREATE POLICY "Public carts update" ON public.carts FOR UPDATE TO authenticated, anon USING (true);
+CREATE POLICY "Public carts delete" ON public.carts FOR DELETE TO authenticated, anon USING (true);
+
+ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public cart items select" ON public.cart_items FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "Public cart items insert" ON public.cart_items FOR INSERT TO authenticated, anon WITH CHECK (true);
+CREATE POLICY "Public cart items update" ON public.cart_items FOR UPDATE TO authenticated, anon USING (true);
+CREATE POLICY "Public cart items delete" ON public.cart_items FOR DELETE TO authenticated, anon USING (true);
+

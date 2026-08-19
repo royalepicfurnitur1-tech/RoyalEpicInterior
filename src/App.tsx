@@ -28,6 +28,15 @@ import { Footer } from './components/Footer';
 import { ShieldCheck, Award, Wrench, Sparkles } from 'lucide-react';
 import { submitLeadToSupabase } from './lib/supabase';
 import { getProducts } from './services/productService';
+import { useAuth } from './context/AuthContext';
+import { 
+  fetchDbCart, 
+  addToDbCart, 
+  updateDbCartQuantity, 
+  removeDbCartItem, 
+  mergeGuestCartToDb, 
+  clearDbCart 
+} from './services/cartService';
 
 
 export default function App() {
@@ -70,11 +79,45 @@ export default function App() {
             ? 'admin' 
             : (isDedicatedCustomers ? 'customers' : (isDedicatedDev ? 'developer' : 'home'))));
 
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>(['prod-1', 'prod-2']);
   const [products, setProducts] = useState<Product[]>(PRODUCTS_DATA);
+
+  // Sync Cart with Server Database upon Authentication / User Change
+  useEffect(() => {
+    let isMounted = true;
+
+    async function syncUserCart() {
+      if (user?.id) {
+        try {
+          if (cartItems.length > 0) {
+            // Merge guest items with database cart
+            const merged = await mergeGuestCartToDb(user.id, cartItems);
+            if (isMounted) {
+              setCartItems(merged);
+            }
+          } else {
+            // Fetch persistent database cart
+            const dbItems = await fetchDbCart(user.id);
+            if (isMounted) {
+              setCartItems(dbItems);
+            }
+          }
+        } catch (err) {
+          console.error("Cart sync error:", err);
+        }
+      }
+    }
+
+    syncUserCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   // Fetch products from Supabase CMS / Local Storage
   const fetchProducts = async () => {
@@ -213,28 +256,101 @@ export default function App() {
     }
   }, [activeTab, currentPath]);
 
-  // Cart operations
-  const handleAddToCart = (product: Product, quantity = 1) => {
-    setCartItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + quantity } : i
-        );
+  // Database-backed Persistent Cart operations
+  const handleAddToCart = async (
+    product: Product, 
+    quantity = 1, 
+    variation?: any, 
+    selectedAttributes?: Record<string, string>
+  ) => {
+    if (user?.id) {
+      try {
+        const updated = await addToDbCart(user.id, product, quantity, variation, selectedAttributes);
+        if (updated && updated.length > 0) {
+          setCartItems(updated);
+        } else {
+          // Fallback optimistic
+          setCartItems((prev) => {
+            const varId = variation?.id || null;
+            const existing = prev.find((i) => 
+              i.product.id === product.id && 
+              (varId ? i.selectedVariation?.id === varId : JSON.stringify(i.selectedAttributes || {}) === JSON.stringify(selectedAttributes || {}))
+            );
+            if (existing) {
+              return prev.map((i) =>
+                i === existing ? { ...i, quantity: i.quantity + quantity } : i
+              );
+            }
+            return [...prev, { product, quantity, selectedVariation: variation, selectedAttributes, unitPrice: variation?.price || product.price }];
+          });
+        }
+      } catch (e) {
+        console.error("Failed to add to database cart:", e);
       }
-      return [...prev, { product, quantity }];
-    });
+    } else {
+      setCartItems((prev) => {
+        const varId = variation?.id || null;
+        const existing = prev.find((i) => 
+          i.product.id === product.id && 
+          (varId ? i.selectedVariation?.id === varId : JSON.stringify(i.selectedAttributes || {}) === JSON.stringify(selectedAttributes || {}))
+        );
+        if (existing) {
+          return prev.map((i) =>
+            i === existing ? { ...i, quantity: i.quantity + quantity } : i
+          );
+        }
+        return [...prev, { product, quantity, selectedVariation: variation, selectedAttributes, unitPrice: variation?.price || product.price }];
+      });
+    }
     setIsCartOpen(true);
   };
 
-  const handleUpdateQuantity = (productId: string, quantity: number) => {
-    setCartItems((prev) =>
-      prev.map((i) => (i.product.id === productId ? { ...i, quantity } : i))
-    );
+  const handleUpdateQuantity = async (productId: string, quantity: number, variationId?: string, itemId?: string) => {
+    if (user?.id) {
+      try {
+        const updated = await updateDbCartQuantity(user.id, productId, quantity, variationId, itemId);
+        setCartItems(updated);
+      } catch (e) {
+        console.error("Failed to update database cart quantity:", e);
+      }
+    } else {
+      if (quantity <= 0) {
+        setCartItems((prev) => prev.filter((i) => {
+          if (itemId && i.id) return i.id !== itemId;
+          if (i.product.id !== productId) return true;
+          if (variationId) return i.selectedVariation?.id !== variationId;
+          return false;
+        }));
+      } else {
+        setCartItems((prev) =>
+          prev.map((i) => {
+            if (itemId && i.id === itemId) return { ...i, quantity };
+            if (i.product.id === productId && (!variationId || i.selectedVariation?.id === variationId)) {
+              return { ...i, quantity };
+            }
+            return i;
+          })
+        );
+      }
+    }
   };
 
-  const handleRemoveCartItem = (productId: string) => {
-    setCartItems((prev) => prev.filter((i) => i.product.id !== productId));
+  const handleRemoveCartItem = async (productId: string, variationId?: string, itemId?: string) => {
+    if (user?.id) {
+      try {
+        const updated = await removeDbCartItem(user.id, productId, variationId, itemId);
+        setCartItems(updated);
+      } catch (e) {
+        console.error("Failed to remove from database cart:", e);
+      }
+    } else {
+      setCartItems((prev) => prev.filter((i) => {
+        if (itemId && i.id) return i.id !== itemId;
+        if (i.product.id !== productId) return true;
+        if (variationId) return i.selectedVariation?.id !== variationId;
+        return false;
+      }));
+    }
   };
 
   const handleToggleWishlist = (product: Product) => {
@@ -534,9 +650,12 @@ export default function App() {
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         cartItems={cartItems}
-        subtotal={cartItems.reduce((acc, i) => acc + i.product.price * i.quantity, 0)}
+        subtotal={cartItems.reduce((acc, i) => acc + (i.unitPrice || i.selectedVariation?.price || i.product.price) * i.quantity, 0)}
         discountAmount={0}
-        onOrderSuccess={() => {
+        onOrderSuccess={async () => {
+          if (user?.id) {
+            await clearDbCart(user.id);
+          }
           setCartItems([]);
         }}
         onNavigateToAuth={() => {

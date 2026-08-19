@@ -9,8 +9,8 @@ interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   cartItems: CartItem[];
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
+  onUpdateQuantity: (productId: string, quantity: number, variationId?: string, itemId?: string) => void;
+  onRemoveItem: (productId: string, variationId?: string, itemId?: string) => void;
   onProceedCheckout: (finalSubtotal: number, discountAmount: number) => void;
   onNavigateToAuth?: () => void;
 }
@@ -32,7 +32,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((acc, item) => {
+    const itemPrice = item.unitPrice || item.selectedVariation?.price || item.product.price;
+    return acc + itemPrice * item.quantity;
+  }, 0);
   const discountAmount = Math.round((subtotal * appliedDiscount) / 100);
   const finalTotal = subtotal - discountAmount;
 
@@ -86,59 +89,87 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <p className="text-xs text-neutral-500 mt-1">Explore our product catalog to add luxury doors, kitchens & sofas.</p>
             </div>
           ) : (
-            cartItems.map((item) => (
-              <div
-                key={item.product.id}
-                className="p-3.5 rounded-2xl bg-black/50 border border-white/10 flex items-center gap-3 relative group"
-              >
-                <img
-                  src={item.product.image}
-                  alt={item.product.name}
-                  referrerPolicy="no-referrer"
-                  className="w-16 h-16 rounded-xl object-cover shrink-0 border border-white/10"
-                />
+            cartItems.map((item, idx) => {
+              const itemKey = item.id || `${item.product.id}-${item.selectedVariation?.id || idx}-${JSON.stringify(item.selectedAttributes || {})}`;
+              const itemPrice = item.unitPrice || item.selectedVariation?.price || item.product.price;
+              const itemImage = item.selectedVariation?.image || item.product.image;
 
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-white line-clamp-1">
-                    {item.product.name}
-                  </h4>
-                  <p className="text-[10px] text-gold font-mono uppercase mt-0.5">
-                    {item.product.category}
-                  </p>
+              return (
+                <div
+                  key={itemKey}
+                  className="p-3.5 rounded-2xl bg-black/50 border border-white/10 flex items-start gap-3 relative group"
+                >
+                  <img
+                    src={itemImage}
+                    alt={item.product.name}
+                    referrerPolicy="no-referrer"
+                    className="w-16 h-16 rounded-xl object-cover shrink-0 border border-white/10"
+                  />
 
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs font-mono font-bold text-white">
-                      ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-white line-clamp-1">
+                      {item.product.name}
+                    </h4>
 
-                    {/* Quantity controls */}
-                    <div className="flex items-center gap-1.5 bg-neutral-800 rounded-lg p-0.5 border border-white/10">
-                      <button
-                        onClick={() => onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
-                        className="w-5 h-5 rounded text-xs font-bold text-neutral-300 hover:bg-white/10 cursor-pointer"
-                      >
-                        -
-                      </button>
-                      <span className="text-[11px] font-mono font-bold px-1">{item.quantity}</span>
-                      <button
-                        onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                        className="w-5 h-5 rounded text-xs font-bold text-neutral-300 hover:bg-white/10 cursor-pointer"
-                      >
-                        +
-                      </button>
+                    {/* Variations & Selected Attributes Tag */}
+                    {(item.selectedVariation || item.selectedAttributes) && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {item.selectedVariation?.size && (
+                          <span className="text-[10px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-neutral-300">
+                            {item.selectedVariation.size}
+                          </span>
+                        )}
+                        {item.selectedVariation?.finish && (
+                          <span className="text-[10px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-neutral-300">
+                            {item.selectedVariation.finish}
+                          </span>
+                        )}
+                        {item.selectedAttributes && Object.entries(item.selectedAttributes).map(([k, v]) => (
+                          <span key={k} className="text-[10px] bg-gold/10 border border-gold/20 px-1.5 py-0.5 rounded text-gold">
+                            {k}: {v}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-gold font-mono uppercase mt-1">
+                      {item.product.category}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs font-mono font-bold text-white">
+                        ₹{(itemPrice * item.quantity).toLocaleString('en-IN')}
+                      </span>
+
+                      {/* Quantity controls */}
+                      <div className="flex items-center gap-1.5 bg-neutral-800 rounded-lg p-0.5 border border-white/10">
+                        <button
+                          onClick={() => onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedVariation?.id, item.id)}
+                          className="w-5 h-5 rounded text-xs font-bold text-neutral-300 hover:bg-white/10 cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="text-[11px] font-mono font-bold px-1">{item.quantity}</span>
+                        <button
+                          onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1, item.selectedVariation?.id, item.id)}
+                          className="w-5 h-5 rounded text-xs font-bold text-neutral-300 hover:bg-white/10 cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <button
-                  onClick={() => onRemoveItem(item.product.id)}
-                  className="p-1.5 text-neutral-500 hover:text-red-400 cursor-pointer transition-colors"
-                  title="Remove Item"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))
+                  <button
+                    onClick={() => onRemoveItem(item.product.id, item.selectedVariation?.id, item.id)}
+                    className="p-1.5 text-neutral-500 hover:text-red-400 cursor-pointer transition-colors"
+                    title="Remove Item"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
 

@@ -81,12 +81,38 @@ export interface PortfolioProject {
 }
 
 export interface CartItem {
+  id?: string;
+  cartId?: string;
   product: Product;
   quantity: number;
   selectedColor?: string;
   customSize?: string;
   selectedVariation?: ProductVariation;
   selectedAttributes?: Record<string, string>;
+  unitPrice?: number;
+}
+
+export interface DbCart {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbCartItem {
+  id: string;
+  cart_id: string;
+  user_id: string;
+  product_id: string;
+  variation_id?: string | null;
+  product_name_snapshot: string;
+  product_image_snapshot: string;
+  selected_attributes?: Record<string, string>;
+  selected_variation?: ProductVariation | null;
+  quantity: number;
+  unit_price: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OrderTimelineStep {
