@@ -82,36 +82,40 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
 
 export function generateSitemapXml(): string {
   const today = new Date().toISOString().split('T')[0];
+  const seenUrls = new Set<string>();
+  const urlNodes: string[] = [];
 
-  // Base routes
-  const baseNodes = SITEMAP_ROUTES.map(
-    (route) => `  <url>
-    <loc>${SITE_URL}${route.path}</loc>
+  // Helper to add unique URL node
+  const addUrlNode = (loc: string, changefreq: string, priority: string) => {
+    // Clean trailing slashes except for root domain
+    const cleanLoc = loc.endsWith('/') && loc !== `${SITE_URL}/` ? loc.slice(0, -1) : loc;
+    if (seenUrls.has(cleanLoc)) return;
+    seenUrls.add(cleanLoc);
+
+    urlNodes.push(`  <url>
+    <loc>${cleanLoc}</loc>
     <lastmod>${today}</lastmod>
-    <changefreq>${route.changefreq}</changefreq>
-    <priority>${route.priority.toFixed(2)}</priority>
-  </url>`
-  );
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`);
+  };
 
-  // Individual product URLs
-  const productNodes = PRODUCTS_DATA.map((product) => {
+  // 1. Base public routes
+  for (const route of SITEMAP_ROUTES) {
+    const fullLoc = route.path === '/' ? `${SITE_URL}/` : `${SITE_URL}${route.path.startsWith('/') ? route.path : `/${route.path}`}`;
+    addUrlNode(fullLoc, route.changefreq, route.priority.toFixed(2));
+  }
+
+  // 2. Individual product URLs
+  for (const product of PRODUCTS_DATA) {
     const slug = getProductSlug(product);
-    return `  <url>
-    <loc>${SITE_URL}/products/${slug}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>`;
-  });
-
-  const allNodes = [...baseNodes, ...productNodes].join('\n');
+    const fullLoc = `${SITE_URL}/products/${slug}`;
+    addUrlNode(fullLoc, 'weekly', '0.85');
+  }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-                            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-${allNodes}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlNodes.join('\n')}
 </urlset>`;
 }
 

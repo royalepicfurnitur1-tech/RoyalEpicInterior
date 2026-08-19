@@ -210,6 +210,25 @@ async function startServer() {
 
   app.use(express.json({ limit: "25mb" }));
 
+  // =========================================================================
+  // 1. PRIMARY SEO DISCOVERY ROUTES (MUST BE FIRST BEFORE ANY OTHER ROUTES/SPA)
+  // =========================================================================
+  app.get("/robots.txt", (req, res) => {
+    const robotsTxt = generateRobotsTxt();
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.status(200).send(robotsTxt);
+  });
+
+  app.get("/sitemap.xml", (req, res) => {
+    const sitemapXml = generateSitemapXml();
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.status(200).send(sitemapXml);
+  });
+
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", app: "Royal Epic Interior & Furniture" });
@@ -929,18 +948,6 @@ async function startServer() {
         error: error.message || "Error verifying payment signature"
       });
     }
-  });
-
-  // SEO Robots.txt
-  app.get("/robots.txt", (req, res) => {
-    res.type("text/plain");
-    res.send(generateRobotsTxt());
-  });
-
-  // SEO Sitemap.xml
-  app.get("/sitemap.xml", (req, res) => {
-    res.type("application/xml");
-    res.send(generateSitemapXml());
   });
 
   // In-Memory CRM Store for Leads
@@ -1737,17 +1744,6 @@ Provide a JSON response with the following keys:
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
-  });
-
-  // Dynamic Sitemap.xml & Robots.txt Routes
-  app.get("/sitemap.xml", (req, res) => {
-    res.header("Content-Type", "application/xml; charset=utf-8");
-    res.send(generateSitemapXml());
-  });
-
-  app.get("/robots.txt", (req, res) => {
-    res.header("Content-Type", "text/plain; charset=utf-8");
-    res.send(generateRobotsTxt());
   });
 
   // SEO & WEBMASTER SUITE API
