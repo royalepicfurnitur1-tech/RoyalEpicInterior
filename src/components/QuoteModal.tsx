@@ -20,8 +20,6 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
   prefilledTitle = '',
   prefilledBudget = '',
 }) => {
-  if (!isOpen) return null;
-
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -35,6 +33,8 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [quoteId, setQuoteId] = useState('');
+
+  if (!isOpen) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

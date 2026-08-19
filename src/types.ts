@@ -1,16 +1,40 @@
+export interface ProductVariation {
+  id: string;
+  sku: string;
+  name?: string;
+  size?: string;
+  color?: string;
+  material?: string;
+  finish?: string;
+  customAttributes?: Record<string, string>;
+  price: number;
+  discountPrice?: number;
+  stock: number;
+  image?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
+  sku?: string;
   category: string;
   categorySlug: string;
+  subCategory?: string;
   price: number;
   originalPrice: number;
   discount: number; // percentage
+  discountPrice?: number;
+  taxGst?: number; // GST percentage (e.g. 18)
+  stockQuantity?: number;
   rating: number;
   reviewsCount: number;
   image: string;
   galleryImages: string[];
+  shortDescription?: string;
   description: string;
+  dimensions?: string;
+  material?: string;
+  finish?: string;
   specifications: {
     material: string;
     size: string;
@@ -20,11 +44,14 @@ export interface Product {
     origin: string;
   };
   features: string[];
+  attributes?: Record<string, string[]>;
+  variations?: ProductVariation[];
   isHot?: boolean;
   isNew?: boolean;
   has3dViewer?: boolean;
   has360View?: boolean;
   inStock: boolean;
+  status?: 'Active' | 'Inactive' | 'Draft';
   brochureUrl?: string;
 }
 
@@ -58,6 +85,17 @@ export interface CartItem {
   quantity: number;
   selectedColor?: string;
   customSize?: string;
+  selectedVariation?: ProductVariation;
+  selectedAttributes?: Record<string, string>;
+}
+
+export interface OrderTimelineStep {
+  status: string;
+  date: string;
+  time: string;
+  remarks?: string;
+  completed: boolean;
+  current: boolean;
 }
 
 export interface QuotationRequest {
@@ -135,9 +173,11 @@ export type ActiveTab =
   | 'gallery'
   | 'blog' 
   | 'contact' 
+  | 'track-order'
   | 'dashboard' 
   | 'admin'
   | 'developer'
   | 'customers'
   | 'product-manager'
   | 'product-management';
+

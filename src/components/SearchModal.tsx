@@ -16,9 +16,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onSelectProduct,
   onRequestQuote,
 }) => {
-  if (!isOpen) return null;
-
   const [query, setQuery] = useState('');
+
+  if (!isOpen) return null;
 
   const matchingProducts = query
     ? PRODUCTS_DATA.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()))

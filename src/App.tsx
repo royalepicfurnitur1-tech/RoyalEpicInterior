@@ -127,7 +127,7 @@ export default function App() {
 
   // Dynamic SEO Page Title & Meta Updates
   useEffect(() => {
-    const seoMap: Record<ActiveTab, { title: string; description: string }> = {
+    const seoMap: Record<string, { title: string; description: string }> = {
       home: {
         title: 'Royal Epic Interior & Furniture | Luxury Turnkey Interiors Bengaluru',
         description: 'Complete end-to-end turnkey interior execution, custom furniture manufacturing, WPC waterproof doors, beauty spa fit-outs, restaurant interior design, and corporate office space planning in Bengaluru.'
@@ -445,7 +445,7 @@ export default function App() {
 
             {activeTab === 'contact' && <ContactSection />}
 
-            {activeTab === 'dashboard' && (
+            {(activeTab === 'dashboard' || activeTab === 'track-order' || activeTab === 'customers') && (
               <CustomerDashboard
                 wishlistProducts={wishlistProducts}
                 onRequestQuote={(title) => handleOpenQuote(title)}
@@ -473,6 +473,11 @@ export default function App() {
             portfolio: '/portfolio',
             blog: '/blog',
             contact: '/contact-us',
+            'track-order': '/track-order',
+            dashboard: '/track-order',
+            customers: '/customers',
+            admin: '/admin',
+            developer: '/dev'
           };
           if (tabToPathMap[tab]) {
             navigateTo(tabToPathMap[tab]);
@@ -518,6 +523,11 @@ export default function App() {
           setIsCartOpen(false);
           setIsCheckoutOpen(true);
         }}
+        onNavigateToAuth={() => {
+          setIsCartOpen(false);
+          setActiveTab('track-order');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
       />
 
       <CheckoutModal
@@ -528,6 +538,16 @@ export default function App() {
         discountAmount={0}
         onOrderSuccess={() => {
           setCartItems([]);
+        }}
+        onNavigateToAuth={() => {
+          setIsCheckoutOpen(false);
+          setActiveTab('track-order');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigateToTrackOrder={(orderId) => {
+          setIsCheckoutOpen(false);
+          setActiveTab('track-order');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
 

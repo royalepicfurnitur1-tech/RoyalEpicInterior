@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   const { user, profile, isAdmin, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const baseNavItems: { id: ActiveTab; label: string; badge?: string }[] = [
+  const navItems: { id: ActiveTab; label: string; badge?: string }[] = [
     { id: 'home', label: 'Home' },
     { id: 'services', label: 'Services' },
     { id: 'products', label: 'Products' },
@@ -36,12 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'gallery', label: 'Gallery' },
     { id: 'blog', label: 'Blog' },
     { id: 'contact', label: 'Contact' },
-  ];
-
-  // Protected portal link if client is logged in
-  const navItems = [
-    ...baseNavItems,
-    ...(user ? [{ id: 'dashboard' as ActiveTab, label: 'Client Portal', badge: 'Live' }] : []),
+    { id: 'track-order', label: 'Track Your Order' },
   ];
 
   const handleNavClick = (id: ActiveTab) => {
@@ -54,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-xl border-b border-neutral-200 text-neutral-900 transition-all shadow-sm">
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-        {/* Left Side: Brand Logo & Auth */}
+        {/* Left Side: Brand Logo */}
         <div className="flex items-center gap-4 sm:gap-6">
           <div 
             onClick={() => handleNavClick('home')}
@@ -72,22 +67,6 @@ export const Header: React.FC<HeaderProps> = ({
               </p>
             </div>
           </div>
-          {!user && (
-            <div className="hidden sm:flex items-center gap-2 border-l border-neutral-200 pl-4 sm:pl-6">
-              <button 
-                onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'login' })), 50); }}
-                className="text-xs font-bold text-neutral-600 hover:text-black px-2 transition-colors"
-              >
-                Sign In
-              </button>
-              <button 
-                onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'register' })), 50); }}
-                className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-xs font-bold hover:bg-black transition-colors shadow-sm"
-              >
-                Sign Up
-              </button>
-            </div>
-          )}
         </div>
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
           {navItems.map((item) => {
@@ -143,24 +122,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <ChevronRight className="w-4 h-4 text-neutral-600" />
               </button>
             ))}
-            {!user && (
-              <>
-                <button
-                  onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'login' })), 50); }}
-                  className="flex items-center justify-between p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all bg-[#f8f5ee] text-neutral-800 hover:bg-neutral-200 border border-gold/20"
-                >
-                  <span>Sign In</span>
-                  <ChevronRight className="w-4 h-4 text-neutral-600" />
-                </button>
-                <button
-                  onClick={() => { handleNavClick('dashboard'); setTimeout(() => window.dispatchEvent(new CustomEvent('auth-mode-change', { detail: 'register' })), 50); }}
-                  className="flex items-center justify-between p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all bg-neutral-900 text-white shadow-md"
-                >
-                  <span>Sign Up</span>
-                  <ChevronRight className="w-4 h-4 text-neutral-400" />
-                </button>
-              </>
-            )}
           </div>
           <div className="pt-2 border-t border-neutral-200 flex flex-col gap-2">
             <button

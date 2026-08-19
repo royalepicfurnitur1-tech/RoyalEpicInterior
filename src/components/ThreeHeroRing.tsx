@@ -55,130 +55,138 @@ export const ThreeHeroRing: React.FC<ThreeHeroRingProps> = ({ onSelectItem, onRe
     const container = mountRef.current;
     if (!container) return;
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-
-    // Scene
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-
-    // Camera
-    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
-    camera.position.z = 8.5;
-    cameraRef.current = camera;
-
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-    scene.add(ambientLight);
-
-    const pointLight = new THREE.PointLight(0xd4af37, 5, 20); // Gold Light
-    pointLight.position.set(0, 0, 5);
-    scene.add(pointLight);
-    lightRef.current = pointLight;
-
-    const topLight = new THREE.DirectionalLight(0xffffff, 2);
-    topLight.position.set(5, 10, 7);
-    scene.add(topLight);
-
-    // 1. Primary Outer Torus Ring (Static)
-    const geometry = new THREE.TorusGeometry(4.2, 0.09, 30, 200);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      metalness: 0.9,
-      roughness: 0.1,
-      emissive: 0x997015,
-      emissiveIntensity: 0.6,
-    });
-    const ringMesh = new THREE.Mesh(geometry, material);
-    scene.add(ringMesh);
-    ringMeshRef.current = ringMesh;
-
-    // 2. Secondary Inner Thin Gold Ring (Static)
-    const innerGeometry = new THREE.TorusGeometry(3.7, 0.035, 20, 150);
-    const innerMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 1.0,
-      roughness: 0.0,
-      emissive: 0xd4af37,
-      emissiveIntensity: 0.8,
-    });
-    const innerRingMesh = new THREE.Mesh(innerGeometry, innerMaterial);
-    innerRingMesh.rotation.x = Math.PI / 4;
-    scene.add(innerRingMesh);
-    innerRingMeshRef.current = innerRingMesh;
-
-    // 3. Gold Particles Ring (Static)
-    const particleCount = 1400;
-    const particlesGeo = new THREE.BufferGeometry();
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-
-    for (let i = 0; i < particleCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 3.3 + Math.random() * 1.8;
-      positions[i * 3] = Math.cos(angle) * radius;
-      positions[i * 3 + 1] = Math.sin(angle) * radius;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 1.4;
-
-      colors[i * 3] = 0.83 + Math.random() * 0.17;
-      colors[i * 3 + 1] = 0.68 + Math.random() * 0.2;
-      colors[i * 3 + 2] = 0.2 + Math.random() * 0.3;
-    }
-
-    particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particlesGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const particlesMat = new THREE.PointsMaterial({
-      size: 0.045,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.85,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const particlesMesh = new THREE.Points(particlesGeo, particlesMat);
-    scene.add(particlesMesh);
-    particlesMeshRef.current = particlesMesh;
-
-    // Continuous 3D Animation Loop
     let animationFrameId: number;
-    let clock = new THREE.Clock();
+    let renderer: THREE.WebGLRenderer | null = null;
 
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
+    try {
+      const width = container.clientWidth || 800;
+      const height = container.clientHeight || 500;
 
-      if (ringMeshRef.current) {
-        ringMeshRef.current.rotation.z = elapsedTime * 0.2;
-        ringMeshRef.current.rotation.x = Math.sin(elapsedTime * 0.3) * 0.15;
+      // Scene
+      const scene = new THREE.Scene();
+      sceneRef.current = scene;
+
+      // Camera
+      const camera = new THREE.PerspectiveCamera(50, width / (height || 1), 0.1, 1000);
+      camera.position.z = 8.5;
+      cameraRef.current = camera;
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'default' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      container.appendChild(renderer.domElement);
+      rendererRef.current = renderer;
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      scene.add(ambientLight);
+
+      const pointLight = new THREE.PointLight(0xd4af37, 5, 20); // Gold Light
+      pointLight.position.set(0, 0, 5);
+      scene.add(pointLight);
+      lightRef.current = pointLight;
+
+      const topLight = new THREE.DirectionalLight(0xffffff, 2);
+      topLight.position.set(5, 10, 7);
+      scene.add(topLight);
+
+      // 1. Primary Outer Torus Ring (Static)
+      const geometry = new THREE.TorusGeometry(4.2, 0.09, 30, 200);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        metalness: 0.9,
+        roughness: 0.1,
+        emissive: 0x997015,
+        emissiveIntensity: 0.6,
+      });
+      const ringMesh = new THREE.Mesh(geometry, material);
+      scene.add(ringMesh);
+      ringMeshRef.current = ringMesh;
+
+      // 2. Secondary Inner Thin Gold Ring (Static)
+      const innerGeometry = new THREE.TorusGeometry(3.7, 0.035, 20, 150);
+      const innerMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        metalness: 1.0,
+        roughness: 0.0,
+        emissive: 0xd4af37,
+        emissiveIntensity: 0.8,
+      });
+      const innerRingMesh = new THREE.Mesh(innerGeometry, innerMaterial);
+      innerRingMesh.rotation.x = Math.PI / 4;
+      scene.add(innerRingMesh);
+      innerRingMeshRef.current = innerRingMesh;
+
+      // 3. Gold Particles Ring (Static)
+      const particleCount = 1400;
+      const particlesGeo = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      const colors = new Float32Array(particleCount * 3);
+
+      for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 3.3 + Math.random() * 1.8;
+        positions[i * 3] = Math.cos(angle) * radius;
+        positions[i * 3 + 1] = Math.sin(angle) * radius;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 1.4;
+
+        colors[i * 3] = 0.83 + Math.random() * 0.17;
+        colors[i * 3 + 1] = 0.68 + Math.random() * 0.2;
+        colors[i * 3 + 2] = 0.2 + Math.random() * 0.3;
       }
 
-      if (innerRingMeshRef.current) {
-        innerRingMeshRef.current.rotation.z = -elapsedTime * 0.35;
-        innerRingMeshRef.current.rotation.y = Math.cos(elapsedTime * 0.25) * 0.2;
-      }
+      particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      particlesGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-      if (particlesMeshRef.current) {
-        particlesMeshRef.current.rotation.z = elapsedTime * 0.08;
-      }
+      const particlesMat = new THREE.PointsMaterial({
+        size: 0.045,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+      });
 
-      renderer.render(scene, camera);
-    };
+      const particlesMesh = new THREE.Points(particlesGeo, particlesMat);
+      scene.add(particlesMesh);
+      particlesMeshRef.current = particlesMesh;
 
-    animate();
+      // Continuous 3D Animation Loop
+      let clock = new THREE.Clock();
+
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate);
+        const elapsedTime = clock.getElapsedTime();
+
+        if (ringMeshRef.current) {
+          ringMeshRef.current.rotation.z = elapsedTime * 0.2;
+          ringMeshRef.current.rotation.x = Math.sin(elapsedTime * 0.3) * 0.15;
+        }
+
+        if (innerRingMeshRef.current) {
+          innerRingMeshRef.current.rotation.z = -elapsedTime * 0.35;
+          innerRingMeshRef.current.rotation.y = Math.cos(elapsedTime * 0.25) * 0.2;
+        }
+
+        if (particlesMeshRef.current) {
+          particlesMeshRef.current.rotation.z = elapsedTime * 0.08;
+        }
+
+        if (renderer && scene && camera) {
+          renderer.render(scene, camera);
+        }
+      };
+
+      animate();
+    } catch (e) {
+      console.warn("ThreeHeroRing WebGL initialization failed (using graceful fallback):", e);
+    }
 
     const handleResize = () => {
       if (!container || !rendererRef.current || !cameraRef.current) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      cameraRef.current.aspect = w / h;
+      const w = container.clientWidth || 800;
+      const h = container.clientHeight || 500;
+      cameraRef.current.aspect = w / (h || 1);
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(w, h);
     };
@@ -186,12 +194,12 @@ export const ThreeHeroRing: React.FC<ThreeHeroRingProps> = ({ onSelectItem, onRe
     window.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
-      if (renderer.domElement && container.contains(renderer.domElement)) {
+      if (renderer && renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
-      renderer.dispose();
+      if (renderer) renderer.dispose();
     };
   }, []);
 

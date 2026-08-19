@@ -16,6 +16,7 @@ import { CrmKanbanBoard } from './CrmKanbanBoard';
 import { AdminActivityLogger } from './AdminActivityLogger';
 import { SeoManager } from './SeoManager';
 import { AccessControlPanel } from './AccessControlPanel';
+import { ProductManagementModule } from './ProductManagementModule';
 import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supabase';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 import { getPortfolioProjects, savePortfolioProject, deletePortfolioProject, seedPortfolioToSupabase } from '../services/portfolioService';
@@ -88,6 +89,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Main Active Module Tab
   const [activeTab, setActiveTab] = useState<
     | 'overview' 
+    | 'orders'
+    | 'product-management'
     | 'cms' 
     | 'ai-manager' 
     | 'crm' 
@@ -636,6 +639,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const moduleTabs = [
     { id: "orders", label: "🛒 Orders Management", icon: ShoppingCart },
+    { id: "product-management", label: "🛍️ Product Management (Variations/SKUs)", icon: Package },
     { id: 'overview', label: '📊 Dashboard Overview', icon: LayoutDashboard },
     { id: 'cms', label: '🌐 Website CMS', icon: Globe },
     { id: 'ai-manager', label: '🤖 AI Voice Manager', icon: Bot },
@@ -1015,6 +1019,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* 4. CRM LEAD PIPELINE KANBAN BOARD */}
           {activeTab === 'orders' && (
             <AdminOrdersManagement />
+          )}
+
+          {activeTab === 'product-management' && (
+            <ProductManagementModule onBackToWebsite={() => setActiveTab('overview')} />
           )}
 
           {activeTab === 'crm' && (

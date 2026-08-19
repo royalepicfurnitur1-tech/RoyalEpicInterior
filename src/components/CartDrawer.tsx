@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { CartItem } from '../types';
 import { 
-  X, Trash2, ShoppingBag, ArrowRight, Tag, ShieldCheck, CreditCard 
+  X, Trash2, ShoppingBag, ArrowRight, Tag, ShieldCheck, CreditCard, Lock, AlertCircle, LogIn 
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface CartDrawerProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onProceedCheckout: (finalSubtotal: number, discountAmount: number) => void;
+  onNavigateToAuth?: () => void;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -20,12 +22,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onProceedCheckout,
+  onNavigateToAuth,
 }) => {
-  if (!isOpen) return null;
-
+  const { user } = useAuth();
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0); // percentage
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  const [showAuthWarning, setShowAuthWarning] = useState(false);
+
+  if (!isOpen) return null;
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const discountAmount = Math.round((subtotal * appliedDiscount) / 100);
@@ -41,6 +46,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     } else {
       setCouponMsg('Invalid Coupon Code (Try: ROYAL10)');
     }
+  };
+
+  const handleCheckoutClick = () => {
+    if (!user) {
+      setShowAuthWarning(true);
+      return;
+    }
+    onProceedCheckout(subtotal, discountAmount);
   };
 
   return (
@@ -176,12 +189,38 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={() => onProceedCheckout(subtotal, discountAmount)}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
-            >
-              Proceed to Checkout <ArrowRight className="w-4 h-4" />
-            </button>
+            {/* Auth Required Warning for Guest / Unauthenticated */}
+            {!user ? (
+              <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 space-y-2">
+                <div className="flex items-start gap-2 text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="leading-snug">
+                    <strong className="text-amber-300 font-semibold block">Account Required for Live Tracking</strong>
+                    Please log in or create an account to proceed. This links your order to your account for live manufacturing & delivery updates.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateToAuth) {
+                      onNavigateToAuth();
+                    } else {
+                      onClose();
+                    }
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-gold hover:bg-amber-400 text-neutral-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5" /> Sign In / Register to Checkout
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleCheckoutClick}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+              >
+                Proceed to Checkout <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 

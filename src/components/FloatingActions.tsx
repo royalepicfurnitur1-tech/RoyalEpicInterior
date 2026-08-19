@@ -251,33 +251,6 @@ Please connect me with a Senior Interior Designer and share your latest design c
         </button>
       )}
 
-      {/* AI Voice & Chat Consultant Floating Trigger */}
-      {onOpenAiConsultant && (
-        <div className="relative flex items-center">
-          <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#f8f5ee] border border-gold/60 text-neutral-950 text-xs font-bold mr-2 shadow-xl animate-pulse">
-            <Bot className="w-3.5 h-3.5 text-amber-600" /> AI Voice Consultant
-          </span>
-
-          <button
-            onClick={onOpenAiConsultant}
-            className="p-3.5 rounded-full bg-gradient-to-r from-gold via-amber-400 to-yellow-500 border-2 border-amber-600 text-neutral-950 hover:scale-110 shadow-[0_0_20px_rgba(212,175,55,0.6)] transition-all cursor-pointer flex items-center justify-center group relative"
-            title="Ask Royal Epic AI Interior Consultant (Voice & Chat)"
-          >
-            <Bot className="w-5 h-5 text-neutral-950 group-hover:scale-110" />
-            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white animate-ping" />
-          </button>
-        </div>
-      )}
-
-      {/* Direct Call Button */}
-      <a
-        href="tel:+919916633338"
-        className="p-3.5 rounded-full bg-gold border border-amber-500 text-neutral-950 hover:bg-amber-400 hover:scale-110 shadow-2xl transition-all cursor-pointer flex items-center justify-center group font-bold"
-        title="Direct Call (+91 99166 33338)"
-      >
-        <Phone className="w-5 h-5 text-neutral-950 group-hover:animate-bounce" />
-      </a>
-
       {/* Chat on WhatsApp Interactive Floating Button */}
       <div className="relative flex items-center">
         {/* Pulsing indicator tooltip */}

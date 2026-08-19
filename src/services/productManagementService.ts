@@ -1,5 +1,5 @@
 import { getSupabase } from '../lib/supabase';
-import { Product } from '../types';
+import { Product, ProductVariation } from '../types';
 
 export interface CategoryItem {
   id: string;
@@ -20,7 +20,7 @@ export interface SubCategoryItem {
 
 export interface AttributeGroupItem {
   id: string;
-  name: string; // e.g. "Color", "Texture", "Finish", "Material"
+  name: string; // e.g. "Color", "Texture", "Finish", "Material", "Size"
   values: string[]; // e.g. ["Wooden Color", "Teak Wood Color", "Plain", "Textured"]
   createdAt?: string;
 }
@@ -32,16 +32,24 @@ export interface ProductItem {
   subCategory: string;
   sku: string;
   price: number;
+  discountPrice?: number;
+  taxGst?: number;
+  shortDescription?: string;
   description: string;
   material: string;
+  finish?: string;
   size: string;
+  dimensions?: string;
   warranty: string;
   stock: number;
   coverImage: string;
   galleryImages: string[];
   selectedAttributes?: Record<string, string[]>; // { "Color": ["Wooden Color", "Teak Wood Color"], "Texture": ["Plain"] }
+  variations?: ProductVariation[];
+  specifications?: Record<string, string>;
   status: 'Active' | 'Inactive' | 'Draft';
   createdAt?: string;
+  updatedAt?: string;
 }
 
 const CATEGORIES_KEY = 'royalepic_categories_store';
@@ -55,7 +63,8 @@ export const DEFAULT_CATEGORIES: CategoryItem[] = [
   { id: 'cat-2', name: 'Living Room Luxury', slug: 'living-room-luxury', description: 'Italian marble, sofas, TV units & console tables' },
   { id: 'cat-3', name: 'Master Bedroom Suites', slug: 'master-bedroom-suites', description: 'Beds, headboards & sliding wardrobes' },
   { id: 'cat-4', name: 'WPC Waterproof Doors', slug: 'wpc-waterproof-doors', description: '100% waterproof bathroom & exterior doors' },
-  { id: 'cat-5', name: 'Dining & Crockery', slug: 'dining-crockery', description: 'Marble dining tables and illuminated bar cabinets' }
+  { id: 'cat-5', name: 'Dining & Crockery', slug: 'dining-crockery', description: 'Marble dining tables and illuminated bar cabinets' },
+  { id: 'cat-6', name: 'Doors', slug: 'doors', description: 'Premium main doors, pooja doors & veneer flush doors' }
 ];
 
 export const DEFAULT_SUBCATEGORIES: SubCategoryItem[] = [
@@ -67,34 +76,109 @@ export const DEFAULT_SUBCATEGORIES: SubCategoryItem[] = [
   { id: 'sub-6', categoryId: 'cat-3', name: 'King Size Hydraulic Beds', slug: 'hydraulic-beds' },
   { id: 'sub-7', categoryId: 'cat-3', name: 'Floor-to-Ceiling Wardrobes', slug: 'sliding-wardrobes' },
   { id: 'sub-8', categoryId: 'cat-4', name: 'Veneer Finish Flush Doors', slug: 'flush-doors' },
-  { id: 'sub-9', categoryId: 'cat-5', name: '8-Seater Onyx Marble Tables', slug: 'onyx-dining' }
+  { id: 'sub-9', categoryId: 'cat-5', name: '8-Seater Onyx Marble Tables', slug: 'onyx-dining' },
+  { id: 'sub-10', categoryId: 'cat-6', name: 'Main Doors', slug: 'main-doors' },
+  { id: 'sub-11', categoryId: 'cat-6', name: 'Pooja Room Doors', slug: 'pooja-doors' },
+  { id: 'sub-12', categoryId: 'cat-6', name: 'Internal Flush Doors', slug: 'internal-flush-doors' }
 ];
 
 // Default Attribute Groups
 export const DEFAULT_ATTRIBUTES: AttributeGroupItem[] = [
   {
     id: 'attr-1',
-    name: 'Color',
-    values: ['Wooden Color', 'Teak Wood Color', 'Walnut Brown', 'Smoked Ash', 'Classic Honey', 'Natural Rosewood', 'Pearl White', 'Matte Charcoal']
+    name: 'Size',
+    values: ['7x3 ft', '7x3.5 ft', '8x4 ft', '6x3 ft', 'Standard 14ft x 10ft', 'Custom Size']
   },
   {
     id: 'attr-2',
-    name: 'Texture',
-    values: ['Plain', 'Textured', 'Vertical Fluted', 'Grooved Slat', 'Hand-Distressed']
+    name: 'Colour',
+    values: ['Walnut Brown', 'Teak Wood Color', 'Wooden Natural', 'Smoked Ash', 'Pearl White', 'Matte Charcoal', 'Classic Honey']
   },
   {
     id: 'attr-3',
-    name: 'Finish',
-    values: ['PU Matte', 'High Gloss Polyester', 'Open Grain Satin', 'Anti-Scratch Acrylic', 'Suede Finish']
+    name: 'Material',
+    values: ['100% Solid Burma Teak', 'Indian Sheesham', 'American Walnut', '18mm BWP Marine Plywood', 'High-Density Virgin WPC', 'Italian Marble + SS']
   },
   {
     id: 'attr-4',
-    name: 'Material',
-    values: ['100% Solid Burma Teak', 'Indian Sheesham (Rosewood)', 'American Walnut', '18mm BWP Marine Plywood', 'High-Density Virgin WPC']
+    name: 'Finish',
+    values: ['Walnut Matte', 'PU Matte', 'High Gloss Polyester', 'Open Grain Satin', 'Anti-Scratch Acrylic', 'Suede Finish']
   }
 ];
 
 export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
+  {
+    id: 'prod-addon-door-1',
+    name: 'Royal Heritage Solid Teak Main Door',
+    category: 'Doors',
+    subCategory: 'Main Doors',
+    sku: 'RE-DOR-MAIN-01',
+    price: 48500,
+    discountPrice: 42000,
+    taxGst: 18,
+    shortDescription: 'Solid Burma teak grand entrance door with precision brass inlays and weather-seal frame.',
+    description: 'Mastercrafted solid Burma teak entrance door designed for premium villas and luxury apartments. Includes solid timber core, heavy-duty brass architectural pivots, multi-point lock readiness, and German weather seal.',
+    material: '100% Solid Burma Teak Wood',
+    finish: 'Walnut Matte PU Finish',
+    size: '7x3.5 ft',
+    dimensions: '84" H x 42" W x 45mm Thickness',
+    warranty: '25 Years Structural & Termite Guarantee',
+    stock: 12,
+    coverImage: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80'
+    ],
+    selectedAttributes: {
+      'Size': ['7x3 ft', '7x3.5 ft', '8x4 ft'],
+      'Colour': ['Walnut Brown', 'Teak Wood Color'],
+      'Material': ['100% Solid Burma Teak'],
+      'Finish': ['Walnut Matte', 'Open Grain Satin']
+    },
+    variations: [
+      {
+        id: 'var-door-1',
+        sku: 'RE-DOR-7X3-WAL',
+        name: '7x3 ft / Walnut Finish / Solid Teak',
+        size: '7x3 ft',
+        color: 'Walnut Brown',
+        material: 'Solid Burma Teak',
+        finish: 'Walnut Matte',
+        price: 42000,
+        discountPrice: 38000,
+        stock: 8,
+        image: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80'
+      },
+      {
+        id: 'var-door-2',
+        sku: 'RE-DOR-7X35-WAL',
+        name: '7x3.5 ft / Walnut Finish / Solid Teak',
+        size: '7x3.5 ft',
+        color: 'Walnut Brown',
+        material: 'Solid Burma Teak',
+        finish: 'Walnut Matte',
+        price: 48500,
+        discountPrice: 42000,
+        stock: 5,
+        image: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80'
+      },
+      {
+        id: 'var-door-3',
+        sku: 'RE-DOR-8X4-NAT',
+        name: '8x4 ft Grand / Natural Teak Finish',
+        size: '8x4 ft',
+        color: 'Teak Wood Color',
+        material: 'Solid Burma Teak',
+        finish: 'Open Grain Satin',
+        price: 64000,
+        discountPrice: 58000,
+        stock: 3,
+        image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80'
+      }
+    ],
+    status: 'Active',
+    createdAt: new Date().toISOString()
+  },
   {
     id: 'prod-addon-1',
     name: 'Imperial Italian Acrylic Island Kitchen Suite',
@@ -102,9 +186,14 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
     subCategory: 'Island Kitchens',
     sku: 'RE-KIT-001',
     price: 345000,
+    discountPrice: 310000,
+    taxGst: 18,
+    shortDescription: 'Modern island modular kitchen with Blum servo-drive fittings & Calacatta quartz.',
     description: 'Factory-manufactured island kitchen with soft-close Blum servo-drive drawers, Calacatta quartz countertops, and built-in spice pullouts.',
     material: '18mm Marine Grade BWP Plywood + 2mm Anti-scratch Acrylic',
+    finish: 'Anti-Scratch Acrylic High Gloss',
     size: '14ft x 10ft Custom Layout',
+    dimensions: '14ft L x 10ft W x 7ft H',
     warranty: '15 Years Waterproof & Hardware Warranty',
     stock: 8,
     coverImage: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
@@ -113,11 +202,34 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
       'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1200&q=80'
     ],
     selectedAttributes: {
-      'Color': ['Teak Wood Color', 'Pearl White'],
-      'Texture': ['Plain'],
+      'Colour': ['Pearl White', 'Matte Charcoal'],
       'Finish': ['Anti-Scratch Acrylic', 'High Gloss Polyester'],
       'Material': ['18mm BWP Marine Plywood']
     },
+    variations: [
+      {
+        id: 'var-kit-1',
+        sku: 'RE-KIT-WHT-14X10',
+        name: 'Pearl White / Acrylic High Gloss',
+        color: 'Pearl White',
+        finish: 'Anti-Scratch Acrylic',
+        price: 345000,
+        discountPrice: 310000,
+        stock: 4,
+        image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'
+      },
+      {
+        id: 'var-kit-2',
+        sku: 'RE-KIT-CHR-14X10',
+        name: 'Matte Charcoal / Suede Finish',
+        color: 'Matte Charcoal',
+        finish: 'Suede Finish',
+        price: 365000,
+        discountPrice: 330000,
+        stock: 4,
+        image: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1200&q=80'
+      }
+    ],
     status: 'Active',
     createdAt: new Date().toISOString()
   },
@@ -128,9 +240,14 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
     subCategory: '8-Seater Onyx Marble Tables',
     sku: 'RE-DIN-002',
     price: 210000,
-    description: 'Imported translucent Brazilian onyx marble dining tabletop with brushed gold stainless steel geometric pedestal base.',
+    discountPrice: 185000,
+    taxGst: 18,
+    shortDescription: 'Translucent onyx marble dining table with titanium gold PVD steel frame.',
+    description: 'Imported translucent Brazilian onyx marble dining tabletop with brushed gold stainless steel geometric pedestal base and 8 handcrafted chairs.',
     material: 'Natural Onyx Stone + 304 PVD Coated Titanium Gold Steel',
-    size: '8ft x 4ft Table + 8 Ergonomic Leather Chairs',
+    finish: 'Polished High Mirror Onyx',
+    size: '8ft x 4ft Table + 8 Chairs',
+    dimensions: '96" L x 48" W x 30" H',
     warranty: '10 Years Structural Guarantee',
     stock: 4,
     coverImage: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
@@ -138,40 +255,14 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
       'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80'
     ],
     selectedAttributes: {
-      'Color': ['Wooden Color', 'Walnut Brown'],
-      'Texture': ['Plain'],
-      'Finish': ['PU Matte'],
-      'Material': ['100% Solid Burma Teak']
-    },
-    status: 'Active',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-addon-3',
-    name: 'Luxury WPC Waterproof Flush Door with Brass Inlays',
-    category: 'WPC Waterproof Doors',
-    subCategory: 'Veneer Finish Flush Doors',
-    sku: 'RE-DOR-003',
-    price: 24500,
-    description: '100% Waterproof Wood Polymer Composite door with solid virgin density core, natural teak veneer and gold brass strips.',
-    material: 'High Density Virgin WPC Core + Teak Veneer + Brass',
-    size: '7ft x 3ft x 35mm (Standard & Custom Sizes)',
-    warranty: 'Lifetime 100% Termite & Waterproof Guarantee',
-    stock: 25,
-    coverImage: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80',
-    galleryImages: [
-      'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80'
-    ],
-    selectedAttributes: {
-      'Color': ['Wooden Color', 'Teak Wood Color'],
-      'Texture': ['Textured'],
-      'Finish': ['Open Grain Satin'],
-      'Material': ['High-Density Virgin WPC']
+      'Colour': ['Walnut Brown', 'Pearl White'],
+      'Material': ['Natural Onyx Stone + 304 PVD Coated Titanium Gold Steel']
     },
     status: 'Active',
     createdAt: new Date().toISOString()
   }
 ];
+
 
 // CATEGORY OPERATIONS
 export async function getCategories(): Promise<CategoryItem[]> {
@@ -475,16 +566,24 @@ export async function getAddonProducts(): Promise<ProductItem[]> {
           subCategory: d.sub_category || d.subCategory || '',
           sku: d.sku || '',
           price: Number(d.price) || 0,
+          discountPrice: d.discount_price ? Number(d.discount_price) : (d.discountPrice ? Number(d.discountPrice) : undefined),
+          taxGst: d.tax_gst ? Number(d.tax_gst) : (d.taxGst ? Number(d.taxGst) : 18),
+          shortDescription: d.short_description || d.shortDescription || '',
           description: d.description || '',
           material: d.material || '',
+          finish: d.finish || '',
           size: d.size || '',
+          dimensions: d.dimensions || '',
           warranty: d.warranty || '',
           stock: Number(d.stock) || 0,
           coverImage: d.cover_image || d.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
           galleryImages: Array.isArray(d.gallery_images) ? d.gallery_images : (d.galleryImages || []),
           selectedAttributes: d.selected_attributes || d.selectedAttributes || {},
+          variations: d.variations || [],
+          specifications: d.specifications || {},
           status: (d.status as 'Active' | 'Inactive' | 'Draft') || 'Active',
-          createdAt: d.created_at
+          createdAt: d.created_at,
+          updatedAt: d.updated_at
         }));
         localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items));
         return items;
@@ -515,16 +614,24 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
       subCategory: prod.subCategory || '',
       sku: prod.sku?.trim() || `RE-SKU-${Math.floor(1000 + Math.random() * 9000)}`,
       price: Number(prod.price) || 0,
+      discountPrice: prod.discountPrice !== undefined ? Number(prod.discountPrice) : undefined,
+      taxGst: prod.taxGst !== undefined ? Number(prod.taxGst) : 18,
+      shortDescription: prod.shortDescription?.trim() || '',
       description: prod.description?.trim() || '',
       material: prod.material?.trim() || '',
+      finish: prod.finish?.trim() || '',
       size: prod.size?.trim() || '',
+      dimensions: prod.dimensions?.trim() || '',
       warranty: prod.warranty?.trim() || '10 Years Warranty',
       stock: Number(prod.stock) || 0,
       coverImage: prod.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
-      galleryImages: Array.isArray(prod.galleryImages) ? prod.galleryImages : [],
+      galleryImages: Array.isArray(prod.galleryImages) && prod.galleryImages.length > 0 ? prod.galleryImages : [prod.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'],
       selectedAttributes: prod.selectedAttributes || {},
+      variations: Array.isArray(prod.variations) ? prod.variations : [],
+      specifications: prod.specifications || {},
       status: prod.status || 'Active',
-      createdAt: prod.createdAt || new Date().toISOString()
+      createdAt: prod.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     try {
@@ -537,14 +644,20 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
           sub_category: fullProd.subCategory,
           sku: fullProd.sku,
           price: fullProd.price,
+          discount_price: fullProd.discountPrice,
+          tax_gst: fullProd.taxGst,
+          short_description: fullProd.shortDescription,
           description: fullProd.description,
           material: fullProd.material,
+          finish: fullProd.finish,
           size: fullProd.size,
+          dimensions: fullProd.dimensions,
           warranty: fullProd.warranty,
           stock: fullProd.stock,
           cover_image: fullProd.coverImage,
           gallery_images: fullProd.galleryImages,
           selected_attributes: fullProd.selectedAttributes,
+          variations: fullProd.variations,
           status: fullProd.status,
           updated_at: new Date().toISOString()
         });

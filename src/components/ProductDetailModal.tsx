@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { Product } from '../types';
+import { Product, ProductVariation } from '../types';
 import { 
   X, Box, Rotate3d, Heart, ShoppingBag, Download, MessageSquare, 
   Phone, CheckCircle2, ShieldCheck, Sparkles, Truck, FileText,
-  Smartphone, Camera, Scan, Maximize2, Layers, Move, RefreshCw
+  Smartphone, Camera, Scan, Maximize2, Layers, Move, RefreshCw, Tag, Layers3
 } from 'lucide-react';
 
 interface ProductDetailModalProps {
   product: Product | null;
   onClose: () => void;
-  onAddToCart: (product: Product, quantity: number) => void;
-  onBuyNow: (product: Product) => void;
+  onAddToCart: (product: Product, quantity: number, variation?: ProductVariation, selectedAttributes?: Record<string, string>) => void;
+  onBuyNow: (product: Product, variation?: ProductVariation, selectedAttributes?: Record<string, string>) => void;
   onRequestQuote: (productName: string) => void;
   isWishlisted: boolean;
   onToggleWishlist: (product: Product) => void;
@@ -26,14 +26,44 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   isWishlisted,
   onToggleWishlist,
 }) => {
-  if (!product) return null;
-
-  const [activeTab, setActiveTab] = useState<'gallery' | '3d-viewer' | '360-degree' | 'ar-preview'>('3d-viewer');
-  const [selectedImage, setSelectedImage] = useState<string>(product.image);
+  const [activeTab, setActiveTab] = useState<'gallery' | '3d-viewer' | '360-degree' | 'ar-preview'>('gallery');
+  const [selectedImage, setSelectedImage] = useState<string>(product?.image || '');
   const [quantity, setQuantity] = useState<number>(1);
   const [isZoomed, setIsZoomed] = useState<boolean>(false);
   const [arScale, setArScale] = useState<number>(100);
   const [arScanning, setArScanning] = useState<boolean>(false);
+
+  // Variations & Attributes Selection State
+  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(() => {
+    return product?.variations && product.variations.length > 0 ? product.variations[0] : null;
+  });
+
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (product?.attributes) {
+      Object.entries(product.attributes).forEach(([attrName, values]) => {
+        if (Array.isArray(values) && values.length > 0) {
+          initial[attrName] = values[0];
+        }
+      });
+    }
+    return initial;
+  });
+
+  // Reset/sync when product changes
+  useEffect(() => {
+    if (product) {
+      setSelectedImage(product.image);
+      if (product.variations && product.variations.length > 0) {
+        setSelectedVariation(product.variations[0]);
+        if (product.variations[0].image) {
+          setSelectedImage(product.variations[0].image);
+        }
+      } else {
+        setSelectedVariation(null);
+      }
+    }
+  }, [product]);
 
   // 3D Canvas Reference
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -41,7 +71,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   // Interactive 3D Model Canvas Orbit Simulation
   useEffect(() => {
-    if (activeTab !== '3d-viewer' || !canvasContainerRef.current) return;
+    if (!product || activeTab !== '3d-viewer' || !canvasContainerRef.current) return;
 
     const container = canvasContainerRef.current;
     const width = container.clientWidth;
@@ -142,10 +172,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     };
   }, [activeTab, product]);
 
+  if (!product) return null;
+
+  // Current effective price and SKU
+  const currentPrice = selectedVariation ? (selectedVariation.discountPrice || selectedVariation.price) : product.price;
+  const currentOriginalPrice = selectedVariation ? selectedVariation.price : product.originalPrice;
+  const currentSku = selectedVariation?.sku || product.sku || `RE-SKU-${product.id}`;
+  const currentStock = selectedVariation?.stock !== undefined ? selectedVariation.stock : (product.stockQuantity || 10);
+
   const handleDownloadBrochure = () => {
-    // Generate brochure download simulation
     const blob = new Blob(
-      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Brochure: ${product.name}\n\nPrice: ₹${product.price}\nMaterial: ${product.specifications.material}\nWarranty: ${product.specifications.warranty}\nContact: +91 99166 33338`],
+      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ₹${currentPrice}\nMaterial: ${product.specifications.material}\nWarranty: ${product.specifications.warranty}\nContact: +91 99166 33338`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
@@ -163,154 +200,124 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-lg overflow-y-auto">
-      <div className="bg-neutral-900 border border-gold/40 rounded-3xl max-w-5xl w-full p-6 sm:p-8 max-h-[92vh] overflow-y-auto relative text-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in">
+      <div className="relative w-full max-w-5xl bg-neutral-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden my-auto">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full bg-black/60 border border-white/20 text-neutral-400 hover:text-white hover:border-gold transition-all cursor-pointer z-20"
+          className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-black/60 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/10 transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
           
-          {/* Left Column: Multi-view Media Canvas & Gallery */}
-          <div className="lg:col-span-7 flex flex-col justify-between">
+          {/* Left Column: Interactive Visual Showcase */}
+          <div className="lg:col-span-7 flex flex-col gap-4">
             
-            {/* View Switcher Tabs */}
-            <div className="flex flex-wrap items-center gap-2 mb-4 bg-black/60 p-1.5 rounded-xl border border-white/10 w-fit">
-              <button
-                onClick={() => setActiveTab('3d-viewer')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === '3d-viewer'
-                    ? 'bg-gold text-black shadow-md'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                <Box className="w-3.5 h-3.5" /> 3D Viewer
-              </button>
-              <button
-                onClick={() => setActiveTab('360-degree')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === '360-degree'
-                    ? 'bg-gold text-black shadow-md'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                <Rotate3d className="w-3.5 h-3.5" /> 360° Orbit
-              </button>
+            {/* View Mode Switcher Tabs */}
+            <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-black/50 border border-white/10">
               <button
                 onClick={() => setActiveTab('gallery')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'gallery'
-                    ? 'bg-gold text-black shadow-md'
-                    : 'text-neutral-400 hover:text-white'
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeTab === 'gallery' ? 'bg-gold text-black shadow-md' : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                HD Gallery
+                <Maximize2 className="w-3.5 h-3.5" /> High-Res Gallery
+              </button>
+              <button
+                onClick={() => setActiveTab('3d-viewer')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeTab === '3d-viewer' ? 'bg-gold text-black shadow-md' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <Rotate3d className="w-3.5 h-3.5" /> 3D Orbit View
               </button>
               <button
                 onClick={() => setActiveTab('ar-preview')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                  activeTab === 'ar-preview'
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-black border-yellow-300 font-extrabold shadow-lg shadow-gold/20'
-                    : 'bg-amber-500/10 border-gold/40 text-gold hover:bg-gold/20'
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeTab === 'ar-preview' ? 'bg-gold text-black shadow-md' : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                <Smartphone className="w-3.5 h-3.5" /> View in AR
+                <Smartphone className="w-3.5 h-3.5 text-amber-500" /> AR Live Scan
               </button>
             </div>
 
-            {/* Media Display Area */}
-            <div className="relative w-full h-[340px] sm:h-[400px] rounded-2xl overflow-hidden bg-black border border-white/10 flex items-center justify-center mb-4">
+            {/* Display Stage Container */}
+            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center">
               
-              {activeTab === '3d-viewer' && (
-                <div className="w-full h-full relative cursor-grab active:cursor-grabbing">
-                  <div ref={canvasContainerRef} className="w-full h-full" />
-                  <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-gold/30 text-[10px] font-mono text-gold flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> Click & Drag to Orbit 3D Model
-                  </div>
-                </div>
-              )}
-
-              {activeTab === '360-degree' && (
-                <div className="w-full h-full relative flex items-center justify-center bg-radial from-neutral-800 to-black p-4">
-                  <img
-                    src={selectedImage}
-                    alt={product.name}
-                    referrerPolicy="no-referrer"
-                    className="max-h-full max-w-full object-contain animate-spin-slow"
-                  />
-                  <div className="absolute bottom-3 right-3 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-full text-emerald-400 text-[10px] font-mono">
-                    360° Rotational View Active
-                  </div>
-                </div>
-              )}
-
+              {/* High-Res Image Gallery View */}
               {activeTab === 'gallery' && (
-                <div className="w-full h-full relative flex items-center justify-center p-2">
+                <div className="relative w-full h-full group">
                   <img
                     src={selectedImage}
                     alt={product.name}
                     referrerPolicy="no-referrer"
-                    className={`max-h-full max-w-full object-contain transition-transform duration-300 ${
+                    className={`w-full h-full object-cover transition-transform duration-300 ${
                       isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'
                     }`}
                     onClick={() => setIsZoomed(!isZoomed)}
                   />
+                  <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-[10px] font-mono text-neutral-300 pointer-events-none">
+                    Click image to toggle 1.5x zoom
+                  </div>
                 </div>
               )}
 
-              {/* Augmented Reality Interactive Spatial Preview */}
-              {activeTab === 'ar-preview' && (
-                <div className="w-full h-full relative flex flex-col justify-between p-4 bg-gradient-to-b from-neutral-950 via-neutral-900 to-black overflow-hidden border border-gold/30">
-                  {/* AR Viewfinder Camera Reticle Overlay */}
-                  <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
-                  
-                  {/* Corner Target Markers */}
-                  <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-gold/70" />
-                  <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-gold/70" />
-                  <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-gold/70" />
-                  <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-gold/70" />
+              {/* Three.js 3D WebGL Model View */}
+              {activeTab === '3d-viewer' && (
+                <div className="relative w-full h-full">
+                  <div ref={canvasContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+                  <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-[10px] font-mono text-gold pointer-events-none flex items-center gap-1.5">
+                    <Rotate3d className="w-3.5 h-3.5 text-gold animate-spin" /> Click & drag to rotate 3D mesh
+                  </div>
+                </div>
+              )}
 
-                  {/* Top Status Banner */}
-                  <div className="relative z-10 flex items-center justify-between bg-black/70 backdrop-blur-md px-3 py-2 rounded-xl border border-gold/30">
+              {/* AR Augmented Reality Space Scanner Simulator */}
+              {activeTab === 'ar-preview' && (
+                <div className="relative w-full h-full flex flex-col justify-between p-4 overflow-hidden">
+                  
+                  {/* AR Camera Viewfinder Background */}
+                  <div className="absolute inset-0 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none" />
+                  
+                  {/* Viewfinder Reticle */}
+                  <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-gold pointer-events-none" />
+                  <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-gold pointer-events-none" />
+                  <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-gold pointer-events-none" />
+                  <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-gold pointer-events-none" />
+
+                  {/* Top Status Header */}
+                  <div className="relative z-10 flex items-center justify-between bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                      <span className="text-xs font-mono font-bold text-gold">
-                        AR Spatial Surface Detected
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="text-[11px] font-mono font-bold text-neutral-200">
+                        {arScanning ? 'Detecting Floor Plane...' : 'Surface Locked (Bengaluru Living Room)'}
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded">
-                      1:1 Scale Mode
+                    <span className="text-[10px] font-mono text-gold bg-gold/10 px-2 py-0.5 rounded border border-gold/30">
+                      Scale: 1:1
                     </span>
                   </div>
 
-                  {/* Simulated AR Furniture Placement Scene */}
-                  <div className="relative z-10 flex-1 flex flex-col items-center justify-center my-2">
+                  {/* AR Projected Object in Real Space */}
+                  <div className="relative z-10 flex-1 flex items-center justify-center my-4">
                     {arScanning ? (
-                      <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="flex flex-col items-center gap-3">
                         <RefreshCw className="w-8 h-8 text-gold animate-spin" />
-                        <span className="text-xs font-mono text-gold/90">
-                          Scanning room floor plane & lighting...
-                        </span>
+                        <p className="text-xs font-mono text-neutral-300">Point phone camera at floor...</p>
                       </div>
                     ) : (
                       <div className="relative group flex items-center justify-center">
-                        {/* Floor Perspective Grid Line */}
                         <div className="absolute bottom-[-10px] w-56 h-28 bg-gold/10 border border-gold/30 rounded-[50%] rotate-x-60 blur-[1px] shadow-[0_0_20px_rgba(212,175,55,0.3)]" />
-                        
-                        {/* Product Render Floating on AR Surface */}
                         <img
-                          src={product.image}
+                          src={selectedImage}
                           alt={product.name}
                           referrerPolicy="no-referrer"
                           style={{ transform: `scale(${arScale / 100})` }}
                           className="max-h-48 object-contain transition-transform duration-200 drop-shadow-[0_15px_15px_rgba(0,0,0,0.8)] relative z-10"
                         />
-                        
                         <div className="absolute bottom-[-24px] z-20 bg-black/80 text-[10px] font-mono text-gold px-2 py-0.5 rounded-full border border-gold/40 flex items-center gap-1 shadow-md">
                           <Move className="w-3 h-3" /> Tap & drag to reposition piece
                         </div>
@@ -384,13 +391,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
           </div>
 
-          {/* Right Column: Specifications, Price & Actions */}
+          {/* Right Column: Specifications, Variations, Price & Actions */}
           <div className="lg:col-span-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-gold font-mono">
-                  {product.category}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-widest text-gold font-mono">
+                    {product.category}
+                  </span>
+                  {product.subCategory && (
+                    <span className="text-[10px] font-semibold text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                      {product.subCategory}
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => onToggleWishlist(product)}
                   className={`p-2 rounded-full border transition-all cursor-pointer ${
@@ -401,18 +415,34 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </button>
               </div>
 
-              <h2 className="text-2xl font-serif font-bold text-white mb-3">
+              <h2 className="text-2xl font-serif font-bold text-white mb-1">
                 {product.name}
               </h2>
+
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-[11px] font-mono text-neutral-400 flex items-center gap-1">
+                  <Tag className="w-3 h-3 text-gold" /> SKU: <strong className="text-white">{currentSku}</strong>
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                  currentStock > 0 ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-red-950 text-red-400 border border-red-500/30'
+                }`}>
+                  {currentStock > 0 ? `In Stock (${currentStock} Units)` : 'Made to Order'}
+                </span>
+              </div>
 
               {/* Price & Discount */}
               <div className="flex items-baseline gap-3 mb-4 p-3 rounded-xl bg-black/40 border border-white/10">
                 <span className="text-2xl font-mono font-bold text-gold">
-                  ₹{(product.price * quantity).toLocaleString('en-IN')}
+                  ₹{(currentPrice * quantity).toLocaleString('en-IN')}
                 </span>
-                {product.originalPrice > product.price && (
+                {currentOriginalPrice > currentPrice && (
                   <span className="text-xs text-neutral-500 line-through font-mono">
-                    ₹{(product.originalPrice * quantity).toLocaleString('en-IN')}
+                    ₹{(currentOriginalPrice * quantity).toLocaleString('en-IN')}
+                  </span>
+                )}
+                {product.taxGst && (
+                  <span className="text-[10px] font-mono text-neutral-400 ml-1">
+                    (incl. {product.taxGst}% GST)
                   </span>
                 )}
                 {product.discount > 0 && (
@@ -422,46 +452,114 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 )}
               </div>
 
-              {/* Augmented Reality Feature Banner / Quick Launch Button */}
-              <div className="mb-5 p-3 rounded-2xl bg-gradient-to-r from-amber-950/60 via-black to-neutral-900 border border-gold/40 flex items-center justify-between gap-3 shadow-lg">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-gold/10 border border-gold/30 text-gold">
-                    <Smartphone className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-gold block">
-                      Visualize Furniture in Your Space (AR)
-                    </span>
-                    <span className="text-[10px] text-neutral-400 block">
-                      Preview 3D scale, dimensions & finish in your home
-                    </span>
+              {/* Product Short Description */}
+              {(product.shortDescription || product.description) && (
+                <p className="text-xs text-neutral-300 leading-relaxed mb-4">
+                  {product.shortDescription || product.description}
+                </p>
+              )}
+
+              {/* Product Variations Selector (If Available) */}
+              {product.variations && product.variations.length > 0 && (
+                <div className="mb-5 p-3 rounded-2xl bg-black/40 border border-white/10">
+                  <label className="block text-[11px] font-bold uppercase text-gold tracking-wider mb-2 flex items-center gap-1.5">
+                    <Layers3 className="w-3.5 h-3.5" /> Select Variation / Size & Finish:
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {product.variations.map((v) => {
+                      const isSelected = selectedVariation?.id === v.id;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedVariation(v);
+                            if (v.image) setSelectedImage(v.image);
+                          }}
+                          className={`p-2.5 rounded-xl text-left border transition-all flex items-center justify-between cursor-pointer ${
+                            isSelected
+                              ? 'bg-gold/15 border-gold shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                              : 'bg-black/30 border-white/10 hover:border-white/30 text-neutral-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            {v.image && (
+                              <img src={v.image} alt={v.name || v.sku} className="w-8 h-8 rounded-lg object-cover" />
+                            )}
+                            <div>
+                              <p className={`text-xs font-bold ${isSelected ? 'text-gold' : 'text-white'}`}>
+                                {v.name || `${v.size || ''} ${v.finish ? `• ${v.finish}` : ''} ${v.color ? `• ${v.color}` : ''}`}
+                              </p>
+                              <span className="text-[10px] font-mono text-neutral-400">SKU: {v.sku}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-mono font-bold text-gold">
+                              ₹{(v.discountPrice || v.price).toLocaleString('en-IN')}
+                            </span>
+                            <span className="block text-[9px] text-neutral-400">Stock: {v.stock}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('ar-preview')}
-                  className="px-3 py-2 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-extrabold text-xs uppercase tracking-wider shadow-md hover:scale-105 transition-all cursor-pointer shrink-0 flex items-center gap-1"
-                >
-                  <Scan className="w-3.5 h-3.5" /> Launch AR
-                </button>
-              </div>
+              )}
+
+              {/* Attributes Selectors (Size, Colour, Finish, Material) */}
+              {product.attributes && Object.keys(product.attributes).length > 0 && (
+                <div className="space-y-3 mb-5 p-3 rounded-2xl bg-black/40 border border-white/10">
+                  {Object.entries(product.attributes).map(([attrName, rawValues]) => {
+                    const values = Array.isArray(rawValues) ? (rawValues as string[]) : [];
+                    if (values.length === 0) return null;
+
+                    return (
+                      <div key={attrName}>
+                        <label className="block text-[10px] font-bold uppercase text-neutral-400 tracking-wider mb-1.5">
+                          {attrName}: <span className="text-gold font-normal">{selectedAttributes[attrName] || 'None'}</span>
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {values.map((val) => {
+                            const isSelected = selectedAttributes[attrName] === val;
+                            return (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setSelectedAttributes(prev => ({ ...prev, [attrName]: val }))}
+                                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-gold text-black border-gold font-bold shadow-sm'
+                                    : 'bg-black/50 border-white/10 text-neutral-300 hover:border-white/30'
+                                }`}
+                              >
+                                {val}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Technical Specifications */}
-              <div className="space-y-2 mb-6">
+              <div className="space-y-2 mb-5">
                 <h4 className="text-xs font-bold uppercase text-neutral-400 tracking-wider">
                   Specifications & Material
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
                     <span className="text-neutral-500 block">Material:</span>
-                    <span className="font-semibold text-neutral-200">{product.specifications.material}</span>
+                    <span className="font-semibold text-neutral-200">{product.material || product.specifications.material}</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
                     <span className="text-neutral-500 block">Dimensions:</span>
-                    <span className="font-semibold text-neutral-200">{product.specifications.size}</span>
+                    <span className="font-semibold text-neutral-200">{product.dimensions || product.specifications.size}</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
                     <span className="text-neutral-500 block">Finish Coating:</span>
-                    <span className="font-semibold text-neutral-200">{product.specifications.finish}</span>
+                    <span className="font-semibold text-neutral-200">{product.finish || product.specifications.finish}</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
                     <span className="text-neutral-500 block">Warranty:</span>
@@ -470,25 +568,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Key Features List */}
-              <div className="mb-6">
-                <h4 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">
-                  Highlight Features
-                </h4>
-                <div className="space-y-1.5">
-                  {product.features.map((feat, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-xs text-neutral-300">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-gold shrink-0" />
-                      <span>{feat}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
             </div>
 
             {/* Quantity Selector & Action Buttons */}
-            <div className="space-y-3 pt-4 border-t border-white/10">
+            <div className="space-y-3 pt-3 border-t border-white/10">
               
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 bg-black/60 border border-white/20 rounded-xl p-1">
@@ -510,7 +593,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
 
                 <button
-                  onClick={() => onAddToCart(product, quantity)}
+                  onClick={() => onAddToCart(product, quantity, selectedVariation || undefined, selectedAttributes)}
                   className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <ShoppingBag className="w-4 h-4" /> Add to Cart
@@ -519,7 +602,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => onBuyNow(product)}
+                  onClick={() => onBuyNow(product, selectedVariation || undefined, selectedAttributes)}
                   className="py-3 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider shadow-lg hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                 >
                   Buy Now
@@ -533,7 +616,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
 
               {/* Direct Instant Contact Buttons */}
-              <div className="grid grid-cols-2 gap-2 pt-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   onClick={handleDownloadBrochure}
                   className="py-2.5 rounded-xl bg-[#f8f5ee] hover:bg-gold text-neutral-950 font-bold text-[11px] uppercase flex items-center justify-center gap-1.5 border border-gold/40 transition-all cursor-pointer shadow-sm"
@@ -541,7 +624,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <Download className="w-3.5 h-3.5 text-neutral-950" /> Download Brochure
                 </button>
                 <a
-                  href={`https://wa.me/919916633338?text=Hi%20Royal%20Epic,%20I%20am%20interested%20in%20${encodeURIComponent(product.name)}`}
+                  href={`https://wa.me/919916633338?text=Hi%20Royal%20Epic,%20I%20am%20interested%20in%20${encodeURIComponent(product.name)}%20(SKU:%20${encodeURIComponent(currentSku)})`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-2.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-bold uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer"

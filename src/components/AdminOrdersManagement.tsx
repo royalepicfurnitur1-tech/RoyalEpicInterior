@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Filter, CheckCircle2, Clock, MapPin, Package, Save, X, Edit, User, Truck } from 'lucide-react';
+import { ShoppingCart, Search, Filter, CheckCircle2, Clock, MapPin, Package, Save, X, Edit, User, Truck, MessageSquare, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { fetchAllOrders, updateOrderStatus, Order } from '../services/orderService';
+import { fetchAllOrders, updateOrderStatus, Order, ORDER_STAGES } from '../services/orderService';
 
 export const AdminOrdersManagement: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -12,9 +12,11 @@ export const AdminOrdersManagement: React.FC = () => {
 
   // Edit states
   const [editStatus, setEditStatus] = useState('');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<'Paid' | 'Pending' | 'Refunded' | 'Failed'>('Paid');
   const [editCourier, setEditCourier] = useState('');
   const [editTracking, setEditTracking] = useState('');
   const [editExpectedDate, setEditExpectedDate] = useState('');
+  const [editStageRemark, setEditStageRemark] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -31,20 +33,29 @@ export const AdminOrdersManagement: React.FC = () => {
   const handleOpenDetails = (order: Order) => {
     setSelectedOrder(order);
     setEditStatus(order.status);
+    setEditPaymentStatus(order.payment_status || 'Paid');
     setEditCourier(order.courier_name || '');
     setEditTracking(order.tracking_number || '');
     setEditExpectedDate(order.expected_delivery_date || '');
+    setEditStageRemark(order.admin_remarks?.[order.status] || '');
   };
 
   const handleUpdateOrder = async () => {
     if (!selectedOrder) return;
     setIsSaving(true);
     
+    const currentRemarks = { ...(selectedOrder.admin_remarks || {}) };
+    if (editStageRemark.trim()) {
+      currentRemarks[editStatus] = editStageRemark.trim();
+    }
+
     const updates = {
       status: editStatus,
+      payment_status: editPaymentStatus,
       courier_name: editCourier,
       tracking_number: editTracking,
-      expected_delivery_date: editExpectedDate
+      expected_delivery_date: editExpectedDate,
+      admin_remarks: currentRemarks
     };
 
     const success = await updateOrderStatus(selectedOrder.id, updates);
@@ -58,15 +69,13 @@ export const AdminOrdersManagement: React.FC = () => {
 
   const filteredOrders = orders.filter(o => {
     const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (o.delivery_address?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (o.delivery_address?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.customer_email || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatus === 'All' || o.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const STATUS_OPTIONS = [
-    'Order Placed', 'Confirmed', 'Processing', 'Ready to Dispatch', 
-    'Dispatched', 'Out for Delivery', 'Delivered', 'Cancelled'
-  ];
+  const STATUS_OPTIONS = [...ORDER_STAGES, 'Cancelled'];
 
   return (
     <div className="space-y-6">
@@ -196,12 +205,22 @@ export const AdminOrdersManagement: React.FC = () => {
                   <div className="space-y-3">
                     {selectedOrder.items?.map((item: any, idx: number) => (
                       <div key={idx} className="flex gap-4 items-center bg-black/40 p-3 rounded-xl border border-white/5">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-800 shrink-0">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-neutral-800 shrink-0">
                           {item.product?.image && <img src={item.product.image} className="w-full h-full object-cover" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-white truncate">{item.product?.name}</p>
-                          <p className="text-xs text-neutral-500">Qty: {item.quantity}</p>
+                          {item.selectedVariation && (
+                            <p className="text-[11px] text-gold/90 font-mono">
+                              {[
+                                item.selectedVariation.sku && `SKU: ${item.selectedVariation.sku}`,
+                                item.selectedVariation.size && `Size: ${item.selectedVariation.size}`,
+                                item.selectedVariation.color && `Color: ${item.selectedVariation.color}`,
+                                item.selectedVariation.finish && `Finish: ${item.selectedVariation.finish}`
+                              ].filter(Boolean).join(' • ')}
+                            </p>
+                          )}
+                          <p className="text-xs text-neutral-400 mt-0.5">Qty: {item.quantity}</p>
                         </div>
                         <div className="font-mono text-sm font-bold text-gold shrink-0">
                           ₹{((item.product?.price || 0) * item.quantity).toLocaleString('en-IN')}
@@ -215,51 +234,82 @@ export const AdminOrdersManagement: React.FC = () => {
               {/* Right Col: Admin Actions */}
               <div className="bg-black/40 p-6 rounded-2xl border border-gold/20 flex flex-col h-full">
                 <h4 className="text-sm font-bold text-gold uppercase tracking-wider mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
-                  <Edit className="w-4 h-4" /> Update Order Details
+                  <Edit className="w-4 h-4" /> Update Order & Tracking Status
                 </h4>
 
-                <div className="space-y-5 flex-1">
+                <div className="space-y-4 flex-1">
                   <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Order Status</label>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Order Stage / Status</label>
                     <select 
                       value={editStatus}
-                      onChange={e => setEditStatus(e.target.value)}
-                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-gold"
+                      onChange={e => {
+                        const newSt = e.target.value;
+                        setEditStatus(newSt);
+                        if (selectedOrder.admin_remarks?.[newSt]) {
+                          setEditStageRemark(selectedOrder.admin_remarks[newSt]);
+                        }
+                      }}
+                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold"
                     >
                       {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Courier / Partner Name</label>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Payment Status</label>
+                    <select 
+                      value={editPaymentStatus}
+                      onChange={e => setEditPaymentStatus(e.target.value as any)}
+                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold"
+                    >
+                      <option value="Paid">Paid (Verified)</option>
+                      <option value="Pending">Pending / Cash on Delivery</option>
+                      <option value="Refunded">Refunded</option>
+                      <option value="Failed">Failed</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Stage Tracking Remarks / Notes</label>
+                    <textarea 
+                      rows={2}
+                      value={editStageRemark}
+                      onChange={e => setEditStageRemark(e.target.value)}
+                      placeholder={`e.g. Quality inspection passed at Thanisandra facility...`}
+                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Courier Partner</label>
                     <input 
                       type="text" 
                       value={editCourier}
                       onChange={e => setEditCourier(e.target.value)}
-                      placeholder="e.g. BlueDart, Delhivery"
-                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-gold"
+                      placeholder="e.g. Royal Epic Dedicated Logistics, BlueDart"
+                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Tracking Number</label>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Tracking / AWB Number</label>
                     <input 
                       type="text" 
                       value={editTracking}
                       onChange={e => setEditTracking(e.target.value)}
-                      placeholder="AWB Number"
-                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-gold font-mono"
+                      placeholder="e.g. RE-TRK-984210"
+                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Expected Delivery Date</label>
+                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Expected Delivery Date</label>
                     <input 
                       type="text" 
                       value={editExpectedDate}
                       onChange={e => setEditExpectedDate(e.target.value)}
                       placeholder="e.g. 24th Oct 2026"
-                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-gold"
+                      className="w-full bg-neutral-900 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold"
                     />
                   </div>
                 </div>
