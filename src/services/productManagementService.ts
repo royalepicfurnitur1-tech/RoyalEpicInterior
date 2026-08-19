@@ -106,162 +106,7 @@ export const DEFAULT_ATTRIBUTES: AttributeGroupItem[] = [
   }
 ];
 
-export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [
-  {
-    id: 'prod-addon-door-1',
-    name: 'Royal Heritage Solid Teak Main Door',
-    category: 'Doors',
-    subCategory: 'Main Doors',
-    sku: 'RE-DOR-MAIN-01',
-    price: 48500,
-    discountPrice: 42000,
-    taxGst: 18,
-    shortDescription: 'Solid Burma teak grand entrance door with precision brass inlays and weather-seal frame.',
-    description: 'Mastercrafted solid Burma teak entrance door designed for premium villas and luxury apartments. Includes solid timber core, heavy-duty brass architectural pivots, multi-point lock readiness, and German weather seal.',
-    material: '100% Solid Burma Teak Wood',
-    finish: 'Walnut Matte PU Finish',
-    size: '7x3.5 ft',
-    dimensions: '84" H x 42" W x 45mm Thickness',
-    warranty: '25 Years Structural & Termite Guarantee',
-    stock: 12,
-    coverImage: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80',
-    galleryImages: [
-      'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80'
-    ],
-    selectedAttributes: {
-      'Size': ['7x3 ft', '7x3.5 ft', '8x4 ft'],
-      'Colour': ['Walnut Brown', 'Teak Wood Color'],
-      'Material': ['100% Solid Burma Teak'],
-      'Finish': ['Walnut Matte', 'Open Grain Satin']
-    },
-    variations: [
-      {
-        id: 'var-door-1',
-        sku: 'RE-DOR-7X3-WAL',
-        name: '7x3 ft / Walnut Finish / Solid Teak',
-        size: '7x3 ft',
-        color: 'Walnut Brown',
-        material: 'Solid Burma Teak',
-        finish: 'Walnut Matte',
-        price: 42000,
-        discountPrice: 38000,
-        stock: 8,
-        image: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80'
-      },
-      {
-        id: 'var-door-2',
-        sku: 'RE-DOR-7X35-WAL',
-        name: '7x3.5 ft / Walnut Finish / Solid Teak',
-        size: '7x3.5 ft',
-        color: 'Walnut Brown',
-        material: 'Solid Burma Teak',
-        finish: 'Walnut Matte',
-        price: 48500,
-        discountPrice: 42000,
-        stock: 5,
-        image: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1200&q=80'
-      },
-      {
-        id: 'var-door-3',
-        sku: 'RE-DOR-8X4-NAT',
-        name: '8x4 ft Grand / Natural Teak Finish',
-        size: '8x4 ft',
-        color: 'Teak Wood Color',
-        material: 'Solid Burma Teak',
-        finish: 'Open Grain Satin',
-        price: 64000,
-        discountPrice: 58000,
-        stock: 3,
-        image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80'
-      }
-    ],
-    status: 'Active',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-addon-1',
-    name: 'Imperial Italian Acrylic Island Kitchen Suite',
-    category: 'Modular Kitchens',
-    subCategory: 'Island Kitchens',
-    sku: 'RE-KIT-001',
-    price: 345000,
-    discountPrice: 310000,
-    taxGst: 18,
-    shortDescription: 'Modern island modular kitchen with Blum servo-drive fittings & Calacatta quartz.',
-    description: 'Factory-manufactured island kitchen with soft-close Blum servo-drive drawers, Calacatta quartz countertops, and built-in spice pullouts.',
-    material: '18mm Marine Grade BWP Plywood + 2mm Anti-scratch Acrylic',
-    finish: 'Anti-Scratch Acrylic High Gloss',
-    size: '14ft x 10ft Custom Layout',
-    dimensions: '14ft L x 10ft W x 7ft H',
-    warranty: '15 Years Waterproof & Hardware Warranty',
-    stock: 8,
-    coverImage: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
-    galleryImages: [
-      'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1200&q=80'
-    ],
-    selectedAttributes: {
-      'Colour': ['Pearl White', 'Matte Charcoal'],
-      'Finish': ['Anti-Scratch Acrylic', 'High Gloss Polyester'],
-      'Material': ['18mm BWP Marine Plywood']
-    },
-    variations: [
-      {
-        id: 'var-kit-1',
-        sku: 'RE-KIT-WHT-14X10',
-        name: 'Pearl White / Acrylic High Gloss',
-        color: 'Pearl White',
-        finish: 'Anti-Scratch Acrylic',
-        price: 345000,
-        discountPrice: 310000,
-        stock: 4,
-        image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'
-      },
-      {
-        id: 'var-kit-2',
-        sku: 'RE-KIT-CHR-14X10',
-        name: 'Matte Charcoal / Suede Finish',
-        color: 'Matte Charcoal',
-        finish: 'Suede Finish',
-        price: 365000,
-        discountPrice: 330000,
-        stock: 4,
-        image: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1200&q=80'
-      }
-    ],
-    status: 'Active',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-addon-2',
-    name: 'Bespoke Onyx Marble 8-Seater Dining Set',
-    category: 'Dining & Crockery',
-    subCategory: '8-Seater Onyx Marble Tables',
-    sku: 'RE-DIN-002',
-    price: 210000,
-    discountPrice: 185000,
-    taxGst: 18,
-    shortDescription: 'Translucent onyx marble dining table with titanium gold PVD steel frame.',
-    description: 'Imported translucent Brazilian onyx marble dining tabletop with brushed gold stainless steel geometric pedestal base and 8 handcrafted chairs.',
-    material: 'Natural Onyx Stone + 304 PVD Coated Titanium Gold Steel',
-    finish: 'Polished High Mirror Onyx',
-    size: '8ft x 4ft Table + 8 Chairs',
-    dimensions: '96" L x 48" W x 30" H',
-    warranty: '10 Years Structural Guarantee',
-    stock: 4,
-    coverImage: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
-    galleryImages: [
-      'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80'
-    ],
-    selectedAttributes: {
-      'Colour': ['Walnut Brown', 'Pearl White'],
-      'Material': ['Natural Onyx Stone + 304 PVD Coated Titanium Gold Steel']
-    },
-    status: 'Active',
-    createdAt: new Date().toISOString()
-  }
-];
+export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [];
 
 
 // CATEGORY OPERATIONS
@@ -598,7 +443,16 @@ export async function getAddonProducts(): Promise<ProductItem[]> {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Exclude legacy mock seed duplicate items
+          const cleaned = parsed.filter((p: any) => 
+            p && p.id && !['prod-addon-door-1', 'prod-addon-1', 'prod-addon-2'].includes(p.id)
+          );
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(PRODUCTS_KEY, JSON.stringify(cleaned));
+          }
+          return cleaned;
+        }
       } catch {}
     }
   }

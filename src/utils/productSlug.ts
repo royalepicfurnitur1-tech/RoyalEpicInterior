@@ -79,3 +79,41 @@ export function findProductBySlug(products: Product[] | null | undefined, slug: 
     return candidateSlug === cleanSlug || candidateSlug.startsWith(cleanSlug) || cleanSlug.startsWith(candidateSlug);
   });
 }
+
+/**
+ * Deduplicates product arrays by canonical ID, SKU, and slugified name.
+ * Ensures the public catalog and search never display duplicate entries.
+ */
+export function deduplicateProducts(products: Product[] | null | undefined): Product[] {
+  if (!Array.isArray(products) || products.length === 0) return [];
+
+  const seenIds = new Set<string>();
+  const seenSkus = new Set<string>();
+  const seenSlugs = new Set<string>();
+  const result: Product[] = [];
+
+  for (const product of products) {
+    if (!product || !product.id) continue;
+
+    const normalizedId = String(product.id).trim().toLowerCase();
+    const normalizedSku = product.sku ? String(product.sku).trim().toLowerCase() : '';
+    const normalizedSlug = getProductSlug(product).trim().toLowerCase();
+
+    // Check if duplicate by ID, SKU or Title Slug
+    const isDuplicateId = seenIds.has(normalizedId);
+    const isDuplicateSku = normalizedSku ? seenSkus.has(normalizedSku) : false;
+    const isDuplicateSlug = normalizedSlug ? seenSlugs.has(normalizedSlug) : false;
+
+    if (isDuplicateId || isDuplicateSku || isDuplicateSlug) {
+      continue;
+    }
+
+    seenIds.add(normalizedId);
+    if (normalizedSku) seenSkus.add(normalizedSku);
+    if (normalizedSlug) seenSlugs.add(normalizedSlug);
+
+    result.push(product);
+  }
+
+  return result;
+}

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Product } from '../types';
 import { PRODUCTS_DATA } from '../data/mockData';
 import { getAddonProducts, ProductItem } from './productManagementService';
+import { deduplicateProducts } from '../utils/productSlug';
 
 // Supabase Connection Credentials (with fallbacks)
 const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
@@ -197,12 +198,12 @@ export async function getProducts(): Promise<{ products: Product[]; source: 'sup
       }
     }
 
-    // Merge without duplicates (addon products take priority)
-    const addonIds = new Set(addonProducts.map(p => p.id));
-    const merged = [
+    // Merge and deduplicate by canonical ID, SKU, and slug (addon products take priority)
+    const rawMerged = [
       ...addonProducts,
-      ...baseProducts.filter(p => !addonIds.has(p.id))
+      ...baseProducts
     ];
+    const merged = deduplicateProducts(rawMerged);
 
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
@@ -211,7 +212,7 @@ export async function getProducts(): Promise<{ products: Product[]; source: 'sup
     return { products: merged, source: 'supabase' };
   } catch (err: any) {
     console.error('getProducts exception:', err);
-    return { products: PRODUCTS_DATA, source: 'default', error: err.message };
+    return { products: deduplicateProducts(PRODUCTS_DATA), source: 'default', error: err.message };
   }
 }
 

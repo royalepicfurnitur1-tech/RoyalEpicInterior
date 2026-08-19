@@ -127,18 +127,16 @@ export async function addToDbCart(
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to save item to cart: HTTP ${res.status}`);
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.items)) {
+        return data.items.map(mapDbItemToCartItem);
+      }
     }
-
-    const data = await res.json();
-    if (data.success && Array.isArray(data.items)) {
-      return data.items.map(mapDbItemToCartItem);
-    }
-    return [];
+    return await fetchDbCart(userId);
   } catch (err) {
-    console.error('addToDbCart error:', err);
-    throw err;
+    console.warn('addToDbCart notice:', err);
+    return await fetchDbCart(userId);
   }
 }
 
@@ -154,33 +152,46 @@ export async function updateDbCartQuantity(
 ): Promise<CartItem[]> {
   if (!userId) return [];
   try {
-    const res = await fetch('/api/cart/items', {
+    const payload = {
+      userId,
+      itemId,
+      productId,
+      variationId,
+      quantity
+    };
+
+    let res = await fetch('/api/cart/items', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'x-user-id': userId
       },
-      body: JSON.stringify({
-        userId,
-        itemId,
-        productId,
-        variationId,
-        quantity
-      })
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to update quantity: HTTP ${res.status}`);
+    // If PATCH failed or was intercepted by an HTML fallback, retry via POST endpoint
+    if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
+      res = await fetch('/api/cart/items/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
+        body: JSON.stringify(payload)
+      });
     }
 
-    const data = await res.json();
-    if (data.success && Array.isArray(data.items)) {
-      return data.items.map(mapDbItemToCartItem);
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.items)) {
+        return data.items.map(mapDbItemToCartItem);
+      }
     }
-    return [];
+
+    return await fetchDbCart(userId);
   } catch (err) {
-    console.error('updateDbCartQuantity error:', err);
-    throw err;
+    console.warn('updateDbCartQuantity fallback notice:', err);
+    return await fetchDbCart(userId);
   }
 }
 
@@ -195,32 +206,44 @@ export async function removeDbCartItem(
 ): Promise<CartItem[]> {
   if (!userId) return [];
   try {
-    const res = await fetch('/api/cart/items', {
+    const payload = {
+      userId,
+      itemId,
+      productId,
+      variationId
+    };
+
+    let res = await fetch('/api/cart/items', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
         'x-user-id': userId
       },
-      body: JSON.stringify({
-        userId,
-        itemId,
-        productId,
-        variationId
-      })
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to remove item: HTTP ${res.status}`);
+    if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
+      res = await fetch('/api/cart/items/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
+        body: JSON.stringify(payload)
+      });
     }
 
-    const data = await res.json();
-    if (data.success && Array.isArray(data.items)) {
-      return data.items.map(mapDbItemToCartItem);
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.items)) {
+        return data.items.map(mapDbItemToCartItem);
+      }
     }
-    return [];
+
+    return await fetchDbCart(userId);
   } catch (err) {
-    console.error('removeDbCartItem error:', err);
-    throw err;
+    console.warn('removeDbCartItem fallback notice:', err);
+    return await fetchDbCart(userId);
   }
 }
 

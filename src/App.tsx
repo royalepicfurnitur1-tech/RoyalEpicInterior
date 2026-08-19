@@ -30,6 +30,7 @@ import { ShieldCheck, Award, Wrench, Sparkles } from 'lucide-react';
 import { submitLeadToSupabase } from './lib/supabase';
 import { getProducts } from './services/productService';
 import { useAuth } from './context/AuthContext';
+import { deduplicateProducts } from './utils/productSlug';
 import { 
   fetchDbCart, 
   addToDbCart, 
@@ -163,7 +164,7 @@ export default function App() {
     try {
       const res = await getProducts();
       if (res.products && res.products.length > 0) {
-        setProducts(res.products);
+        setProducts(deduplicateProducts(res.products));
       }
     } catch (e) {
       console.error("Failed to load CMS products:", e);

@@ -498,19 +498,20 @@ async function startServer() {
     }
   });
 
-  // PATCH: Update quantity or variation of item in cart database
-  app.patch("/api/cart/items", async (req, res) => {
+  // Handler for updating cart item quantity
+  const handleUpdateCartItem = async (req: express.Request, res: express.Response) => {
     try {
       const { userId, itemId, productId, variationId, quantity } = req.body;
-      if (!userId) {
+      const effectiveUserId = userId || (req.headers["x-user-id"] as string);
+      if (!effectiveUserId) {
         return res.status(400).json({ success: false, error: "userId is required." });
       }
 
-      const userItems = getUserCartItems(userId);
+      const userItems = getUserCartItems(effectiveUserId);
       let targetItem: ServerCartItem | undefined;
 
       if (itemId) {
-        targetItem = dbCartItems[itemId] && dbCartItems[itemId].user_id === userId ? dbCartItems[itemId] : undefined;
+        targetItem = dbCartItems[itemId] && dbCartItems[itemId].user_id === effectiveUserId ? dbCartItems[itemId] : undefined;
       }
 
       if (!targetItem && productId) {
@@ -524,7 +525,7 @@ async function startServer() {
       }
 
       if (!targetItem) {
-        return res.status(404).json({ success: false, error: "Cart item not found." });
+        return res.status(404).json({ success: false, error: "Cart item not found.", items: getUserCartItems(effectiveUserId) });
       }
 
       const newQty = Number(quantity);
@@ -536,7 +537,7 @@ async function startServer() {
         return res.json({
           success: true,
           message: "Item removed from database cart.",
-          items: getUserCartItems(userId)
+          items: getUserCartItems(effectiveUserId)
         });
       }
 
@@ -549,15 +550,15 @@ async function startServer() {
         success: true,
         message: "Cart item quantity updated in database.",
         item: targetItem,
-        items: getUserCartItems(userId)
+        items: getUserCartItems(effectiveUserId)
       });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message || "Failed to update cart item." });
     }
-  });
+  };
 
-  // DELETE: Remove specific item from persistent cart database
-  app.delete("/api/cart/items", async (req, res) => {
+  // Handler for deleting cart item
+  const handleDeleteCartItem = async (req: express.Request, res: express.Response) => {
     try {
       const userId = (req.body.userId || req.query.userId || req.headers["x-user-id"]) as string;
       const itemId = (req.body.itemId || req.query.itemId) as string;
@@ -601,7 +602,17 @@ async function startServer() {
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message || "Failed to delete cart item." });
     }
-  });
+  };
+
+  // PATCH & POST: Update quantity or variation of item in cart database
+  app.patch("/api/cart/items", handleUpdateCartItem);
+  app.post("/api/cart/items/update", handleUpdateCartItem);
+  app.post("/api/cart/update-quantity", handleUpdateCartItem);
+
+  // DELETE & POST: Remove specific item from persistent cart database
+  app.delete("/api/cart/items", handleDeleteCartItem);
+  app.post("/api/cart/items/delete", handleDeleteCartItem);
+  app.post("/api/cart/delete-item", handleDeleteCartItem);
 
   // POST: Merge guest cart items into authenticated user's persistent cart database
   app.post("/api/cart/merge", async (req, res) => {

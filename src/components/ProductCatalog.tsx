@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PRODUCTS_DATA, KITCHEN_EQUIPMENT_CATALOG } from '../data/mockData';
 import { Product, KitchenEquipmentItem } from '../types';
-import { getProductSlug, getCategorySlug } from '../utils/productSlug';
+import { getProductSlug, getCategorySlug, deduplicateProducts } from '../utils/productSlug';
 import { 
   Search, SlidersHorizontal, Heart, ShoppingBag, Eye, Box, 
   Rotate3d, Star, Sparkles, Check, FileText, Filter,
@@ -80,7 +80,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   ];
 
   const filteredProducts = useMemo(() => {
-    const list = products && products.length > 0 ? products : PRODUCTS_DATA;
+    const rawList = products && products.length > 0 ? products : PRODUCTS_DATA;
+    const list = deduplicateProducts(rawList);
     return list.filter((p) => {
       const matchesSearch = 
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
