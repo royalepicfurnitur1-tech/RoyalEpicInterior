@@ -24,6 +24,36 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
     }
   };
 
+  const serviceLinks = [
+    { label: 'Turnkey Interior Contractors', path: '/turnkey-interior-contractors-bangalore' },
+    { label: 'Home Interior Design', path: '/home-interior-design-bangalore' },
+    { label: 'Luxury Home Interiors', path: '/luxury-home-interiors-bangalore' },
+    { label: 'Modular Kitchen Bangalore', path: '/modular-kitchen-bangalore' },
+    { label: 'Modular Wardrobe Solutions', path: '/modular-wardrobe-bangalore' },
+    { label: 'Commercial Office Interiors', path: '/office-interior-design-bangalore' },
+    { label: 'Restaurant Interior Design', path: '/restaurant-interior-design' },
+    { label: 'Custom Furniture Manufacturer', path: '/custom-furniture-manufacturer' },
+    { label: 'False Ceiling & Lighting', path: '/false-ceiling-design' }
+  ];
+
+  const productLinks = [
+    { label: 'Main Entrance Doors', path: '/products/main-entrance-doors' },
+    { label: 'WPC Bathroom Doors', path: '/products/wpc-bathroom-doors' },
+    { label: 'Modular Kitchen Units', path: '/products/modular-kitchens' },
+    { label: 'Sliding Wardrobes', path: '/products/sliding-wardrobes' },
+    { label: 'TV Console Units', path: '/products/tv-units' },
+    { label: 'Chesterfield Sofas', path: '/products/sofas' },
+    { label: 'Onyx Dining Tables', path: '/products/dining-tables' },
+    { label: 'Commercial Equipment', path: '/products/kitchen-equipment' },
+    { label: 'Glass Partitions', path: '/products/glass-partitions' }
+  ];
+
+  const handleNavClick = (tab: ActiveTab, path: string) => {
+    setActiveTab(tab);
+    window.history.pushState({}, '', path);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <footer className="bg-black text-white pt-16 pb-8 border-t border-gold/30 relative overflow-hidden">
       {/* Background Soft Glow */}
@@ -41,7 +71,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
               Subscribe to Royal Epic Design Digest
             </h3>
             <p className="text-xs text-neutral-400">
-              Get exclusive 2026 architectural trends, material durability guides, and seasonal luxury offers delivered to your inbox.
+              Get exclusive architectural trends, material durability guides, and seasonal luxury offers delivered to your inbox.
             </p>
           </div>
 
@@ -86,7 +116,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
             </div>
 
             <p className="text-xs text-neutral-400 leading-relaxed mb-6 max-w-sm">
-              World-class interior design, custom furniture manufacturing, commercial kitchen equipment fabrication, and architectural door systems. Delivering turnkey excellence across residences, hotels, offices, and restaurants.
+              World-class interior design, custom furniture manufacturing, commercial kitchen equipment fabrication, and architectural door systems. Delivering turnkey excellence across residences, hotels, offices, and restaurants in Bengaluru.
             </p>
 
             {/* Contact Quick Info */}
@@ -107,8 +137,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
                 <div className="space-y-0.5">
                   <span className="text-neutral-400 block font-semibold text-[11px]">Email Support:</span>
                   <a href="mailto:royalepicfurnitur1@gmail.com" className="hover:text-gold block font-mono text-[11px]">royalepicfurnitur1@gmail.com</a>
-                  <a href="mailto:info@royalepic.in" className="hover:text-gold block font-mono text-[11px]">info@royalepic.in</a>
-                  <a href="mailto:info@royalepicinterior.in" className="hover:text-gold block font-mono text-[11px]">info@royalepicinterior.in</a>
+                  <a href="mailto:info@royalepicinterior.com" className="hover:text-gold block font-mono text-[11px]">info@royalepicinterior.com</a>
                 </div>
               </div>
             </div>
@@ -117,20 +146,21 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
           {/* Col 2: Services Divisions */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-gold mb-4 font-mono">
-              Interior Divisions
+              Interior Services
             </h4>
             <ul className="space-y-2 text-xs text-neutral-400">
-              {['Residential Interiors', 'Commercial Office Interiors', 'Restaurant Interiors', 'Hotel Interiors & Suites', 'Kitchen Equipment Mfg', 'Furniture Manufacturing', 'Doors & Windows', 'Painting & Texture', 'Electrical & Plumbing'].map((item, idx) => (
+              {serviceLinks.map((item, idx) => (
                 <li key={idx}>
-                  <button
-                    onClick={() => {
-                      setActiveTab('services');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                  <a
+                    href={item.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick('services', item.path);
                     }}
-                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left"
+                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left block"
                   >
-                    {item}
-                  </button>
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>
@@ -142,17 +172,18 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
               Product Categories
             </h4>
             <ul className="space-y-2 text-xs text-neutral-400">
-              {['Main Entrance Doors', 'WPC Bathroom Doors', 'Modular Kitchen Units', 'Sliding Wardrobes', 'TV Console Units', 'Chesterfield Sofas', 'Onyx Dining Tables', 'Commercial Equipment', 'Glass Partitions'].map((item, idx) => (
+              {productLinks.map((item, idx) => (
                 <li key={idx}>
-                  <button
-                    onClick={() => {
-                      setActiveTab('products');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                  <a
+                    href={item.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick('products', item.path);
                     }}
-                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left"
+                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left block"
                   >
-                    {item}
-                  </button>
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>

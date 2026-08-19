@@ -1739,14 +1739,25 @@ Provide a JSON response with the following keys:
     }
   });
 
+  // Dynamic Sitemap.xml & Robots.txt Routes
+  app.get("/sitemap.xml", (req, res) => {
+    res.header("Content-Type", "application/xml; charset=utf-8");
+    res.send(generateSitemapXml());
+  });
+
+  app.get("/robots.txt", (req, res) => {
+    res.header("Content-Type", "text/plain; charset=utf-8");
+    res.send(generateRobotsTxt());
+  });
+
   // SEO & WEBMASTER SUITE API
   let seoConfigData = {
     metaTitle: "Best Interior Designers in Bengaluru | Royal Epic Interior & Furniture",
     metaDescription: "10,000 Sq.Ft Factory Manufactured Modular Kitchens, Wardrobes & Turnkey Home Interiors in Thanisandra, Bengaluru. Get Free 3D VR Estimate.",
     keywords: "Interior Designers Bengaluru, Modular Kitchen Thanisandra, Turnkey Interior Contractor, Wardrobes Manyata Tech Park",
-    robotsTxt: "User-agent: *\nAllow: /\nSitemap: https://www.royalepicinterior.com/sitemap.xml",
-    sitemapUrl: "https://www.royalepicinterior.com/sitemap.xml",
-    canonicalUrl: "https://www.royalepicinterior.com",
+    robotsTxt: generateRobotsTxt(),
+    sitemapUrl: "https://royalepicinterior.com/sitemap.xml",
+    canonicalUrl: "https://royalepicinterior.com",
     schemaType: "LocalBusiness / InteriorDesign"
   };
 

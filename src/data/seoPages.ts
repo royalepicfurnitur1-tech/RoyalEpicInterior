@@ -47,9 +47,9 @@ const COMMON_ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "HomeAndConstructionBusiness",
   "name": "Royal Epic Interior & Furniture",
-  "image": "https://royalepicfurniture.com/logo.png",
-  "@id": "https://royalepicfurniture.com/#organization",
-  "url": "https://royalepicfurniture.com",
+  "image": "https://royalepicinterior.com/logo.png",
+  "@id": "https://royalepicinterior.com/#organization",
+  "url": "https://royalepicinterior.com",
   "telephone": "+91-9916633338",
   "priceRange": "₹₹₹",
   "address": {

@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PRODUCTS_DATA, KITCHEN_EQUIPMENT_CATALOG } from '../data/mockData';
 import { Product, KitchenEquipmentItem } from '../types';
+import { getProductSlug, getCategorySlug } from '../utils/productSlug';
 import { 
   Search, SlidersHorizontal, Heart, ShoppingBag, Eye, Box, 
   Rotate3d, Star, Sparkles, Check, FileText, Filter,
@@ -10,6 +11,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface ProductCatalogProps {
   products?: Product[];
+  initialCategory?: string;
+  initialSearch?: string;
   onSelectProduct: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   onToggleWishlist: (product: Product) => void;
@@ -19,19 +22,33 @@ interface ProductCatalogProps {
 
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   products,
+  initialCategory,
+  initialSearch,
   onSelectProduct,
   onAddToCart,
   onToggleWishlist,
   wishlistIds,
   onRequestQuote,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState(initialSearch || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [sortBy, setSortBy] = useState<'featured' | 'price-low' | 'price-high' | 'rating'>('featured');
   const [priceMax, setPriceMax] = useState<number>(500000);
   const [viewMode, setViewMode] = useState<'grid' | 'equipment-table'>('grid');
   const [equipmentCategoryFilter, setEquipmentCategoryFilter] = useState<string>('All');
   const [previewImage, setPreviewImage] = useState<{ name: string; image: string; specification: string; priceRange: string } | null>(null);
+
+  useEffect(() => {
+    if (initialCategory && initialCategory !== selectedCategory) {
+      setSelectedCategory(initialCategory);
+    }
+  }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialSearch !== undefined && initialSearch !== searchQuery) {
+      setSearchQuery(initialSearch);
+    }
+  }, [initialSearch]);
 
   const categories = [
     'All',
@@ -274,6 +291,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product) => {
                 const isWishlisted = wishlistIds.includes(product.id);
+                const slug = getProductSlug(product);
 
                 return (
                   <motion.div
@@ -283,12 +301,21 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                   >
                     {/* Image & Badges Overlay */}
                     <div className="relative h-64 overflow-hidden bg-black/60">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                      />
+                      <a
+                        href={`/products/${slug}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onSelectProduct(product);
+                        }}
+                        className="block w-full h-full"
+                      >
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                      </a>
 
                       {/* Top Badges */}
                       <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
@@ -324,12 +351,16 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
                       {/* Quick View Hover Trigger Overlay */}
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => onSelectProduct(product)}
+                        <a
+                          href={`/products/${slug}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onSelectProduct(product);
+                          }}
                           className="px-4 py-2 rounded-xl bg-gold text-black text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-lg hover:scale-105 transition-transform cursor-pointer"
                         >
                           <Eye className="w-4 h-4" /> 3D Quick View
-                        </button>
+                        </a>
                       </div>
                     </div>
 
@@ -349,11 +380,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           </div>
                         </div>
 
-                        <h3
-                          onClick={() => onSelectProduct(product)}
-                          className="text-sm font-serif font-bold text-white mb-2 line-clamp-2 hover:text-gold transition-colors cursor-pointer"
-                        >
-                          {product.name}
+                        <h3 className="text-sm font-serif font-bold text-white mb-2 line-clamp-2 hover:text-gold transition-colors">
+                          <a
+                            href={`/products/${slug}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onSelectProduct(product);
+                            }}
+                            className="hover:text-gold transition-colors"
+                          >
+                            {product.name}
+                          </a>
                         </h3>
 
                         <p className="text-xs text-neutral-400 line-clamp-2 mb-4 leading-relaxed">

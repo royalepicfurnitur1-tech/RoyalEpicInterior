@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ActiveTab, Product, CartItem } from './types';
 import { PRODUCTS_DATA } from './data/mockData';
 import { SEO_PAGES } from './data/seoPages';
@@ -37,7 +37,17 @@ import {
   mergeGuestCartToDb, 
   clearDbCart 
 } from './services/cartService';
-
+import { 
+  getProductSlug, 
+  findProductBySlug, 
+  findCategoryBySlug 
+} from './utils/productSlug';
+import { 
+  updatePageHead, 
+  updateProductSeo, 
+  updateCategorySeo, 
+  BASE_PRODUCTION_DOMAIN 
+} from './utils/seoHelper';
 
 export default function App() {
   // Subdomain & Path-based detection for Admin, Customers, and Dev workspaces
@@ -81,10 +91,21 @@ export default function App() {
 
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
-  const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/');
+  const [currentPath, setCurrentPath] = useState<string>(() => (typeof window !== 'undefined' ? window.location.pathname : '/'));
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>(['prod-1', 'prod-2']);
   const [products, setProducts] = useState<Product[]>(PRODUCTS_DATA);
+  const [catalogCategory, setCatalogCategory] = useState<string>('All');
+
+  // Modals state
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isQuoteOpen, setIsQuoteOpen] = useState<boolean>(false);
+  const [quotePrefill, setQuotePrefill] = useState({ title: '', budget: '' });
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [isAiConsultantOpen, setIsAiConsultantOpen] = useState<boolean>(false);
+  const [showInquiryPopup, setShowInquiryPopup] = useState<boolean>(false);
 
   // Sync Cart with Server Database upon Authentication / User Change
   useEffect(() => {
@@ -94,13 +115,11 @@ export default function App() {
       if (user?.id) {
         try {
           if (cartItems.length > 0) {
-            // Merge guest items with database cart
             const merged = await mergeGuestCartToDb(user.id, cartItems);
             if (isMounted) {
               setCartItems(merged);
             }
           } else {
-            // Fetch persistent database cart
             const dbItems = await fetchDbCart(user.id);
             if (isMounted) {
               setCartItems(dbItems);
@@ -135,16 +154,6 @@ export default function App() {
     fetchProducts();
   }, []);
 
-  // Modals state
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isQuoteOpen, setIsQuoteOpen] = useState<boolean>(false);
-  const [quotePrefill, setQuotePrefill] = useState({ title: '', budget: '' });
-  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
-  const [isAiConsultantOpen, setIsAiConsultantOpen] = useState<boolean>(false);
-  const [showInquiryPopup, setShowInquiryPopup] = useState<boolean>(false);
-
   // Sync state with URL popstate (Browser Back/Forward)
   useEffect(() => {
     const handlePopState = () => {
@@ -154,10 +163,196 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const navigateTo = (path: string) => {
+  const navigateTo = useCallback((path: string) => {
     window.history.pushState({}, '', path);
     setCurrentPath(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Handle Dynamic URL Routing (e.g., /products/:slug, /our-services, /portfolio, etc.)
+  useEffect(() => {
+    const path = currentPath;
+
+    // 1. Check for /products/:slug or /products/:category
+    if (path.startsWith('/products/')) {
+      const slug = path.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
+      if (slug) {
+        // Check if category slug
+        const categoryMatch = findCategoryBySlug(slug);
+        if (categoryMatch) {
+          setActiveTab('products');
+          setCatalogCategory(categoryMatch);
+          setSelectedProduct(null);
+          updateCategorySeo(categoryMatch, slug);
+          return;
+        }
+
+        // Check if product slug
+        const productMatch = findProductBySlug(products, slug);
+        if (productMatch) {
+          setActiveTab('products');
+          setSelectedProduct(productMatch);
+          updateProductSeo(productMatch);
+          return;
+        }
+      }
+    }
+
+    // 2. Exact Route Mappings
+    if (path === '/products' || path === '/products/') {
+      setActiveTab('products');
+      setSelectedProduct(null);
+      updatePageHead({
+        title: 'Luxury Modular Kitchens, Wardrobes & Custom Furniture | Royal Epic Interior',
+        description: 'Browse direct factory-crafted interior products: modular kitchens, sliding wardrobes, teak wood main entrance doors, WPC bathroom doors, dining tables, and commercial kitchen equipment.',
+        canonicalPath: '/products',
+        type: 'website'
+      });
+      return;
+    }
+
+    if (path === '/our-services') {
+      setActiveTab('services');
+      setSelectedProduct(null);
+      return;
+    }
+
+    if (path === '/portfolio') {
+      setActiveTab('portfolio');
+      setSelectedProduct(null);
+      return;
+    }
+
+    if (path === '/completed-projects') {
+      setActiveTab('gallery');
+      setSelectedProduct(null);
+      return;
+    }
+
+    if (path === '/blog') {
+      setActiveTab('blog');
+      setSelectedProduct(null);
+      return;
+    }
+
+    if (path === '/contact-us') {
+      setActiveTab('contact');
+      setSelectedProduct(null);
+      return;
+    }
+
+    if (path === '/track-order') {
+      setActiveTab('track-order');
+      setSelectedProduct(null);
+      return;
+    }
+
+    if (path === '/get-free-quote') {
+      setIsQuoteOpen(true);
+      return;
+    }
+
+    // 3. Fallback to Active Tab Metadata if not an SEO sub-page
+    if (!SEO_PAGES[path]) {
+      const seoMap: Record<string, { title: string; description: string }> = {
+        home: {
+          title: 'Royal Epic Interior & Furniture | Luxury Turnkey Interiors Bengaluru',
+          description: 'Complete end-to-end turnkey interior execution, custom furniture manufacturing, WPC waterproof doors, beauty spa fit-outs, restaurant interior design, and corporate office space planning in Bengaluru.'
+        },
+        services: {
+          title: 'Interior Design Services & Turnkey Execution | Royal Epic Bengaluru',
+          description: 'Explore Royal Epic turnkey interior services: Residential homes, Beauty Spa interiors, Restaurant fit-outs, Corporate office workspace planning, and WPC waterproof doors.'
+        },
+        products: {
+          title: 'Luxury Modular Kitchens, Wardrobes & Custom Furniture | Royal Epic Interior',
+          description: 'Browse factory-crafted luxury furniture: Modular kitchens, sliding wardrobes, solid teak main entrance doors, WPC bathroom doors, and TV consoles.'
+        },
+        portfolio: {
+          title: 'Completed Turnkey Interior Projects & Showcase | Royal Epic Interior',
+          description: 'View real project photo galleries and video walk-throughs of completed luxury villas, corporate offices, beauty spas, and fine dining restaurants.'
+        },
+        gallery: {
+          title: 'Interior Design Inspiration & Media Gallery | Royal Epic Interior',
+          description: 'High-definition photo gallery and project walkthroughs of completed turnkey interior works, SS modular kitchens, and custom woodwork.'
+        },
+        blog: {
+          title: 'Interior Design Journal & Turnkey Project Guides | Royal Epic Interior',
+          description: 'Expert articles on turnkey interior execution, beauty spa design principles, home decorating, restaurant fit-outs, and corporate office planning.'
+        },
+        contact: {
+          title: 'Contact Royal Epic Interior & Furniture | Thanisandra, Bengaluru',
+          description: 'Visit our main showroom and factory at No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru - 560077 or call +91 99166 33338.'
+        },
+        'track-order': {
+          title: 'Customer Project Dashboard & Live Tracking | Royal Epic RE Teams',
+          description: 'Track your ongoing interior project stages from site measurement, 3D design approval, factory production, to final dispatch and site installation.'
+        },
+        dashboard: {
+          title: 'Customer Project Dashboard & Live Tracking | Royal Epic RE Teams',
+          description: 'Track your ongoing interior project stages from site measurement, 3D design approval, factory production, to final dispatch and site installation.'
+        },
+        admin: {
+          title: 'Internal ERP & Operations Command | RE Teams Royal Epic',
+          description: 'Internal ERP and CRM system for Royal Epic Interior & Furniture employees and management.'
+        },
+        developer: {
+          title: 'Developer Console | Royal Epic Architecture',
+          description: 'Technical developer console and system metrics.'
+        },
+        customers: {
+          title: 'Customers & Leads Workspace | Royal Epic Portal',
+          description: 'Marketing executive workstation and client customer intelligence directory.'
+        },
+        'product-manager': {
+          title: 'Product Catalog Management Hub | Royal Epic Products',
+          description: 'Authorized Product Manager portal for updating inventory, prices, specifications, and photography.'
+        },
+        'product-management': {
+          title: 'Product Management Module | product.royalepic.com',
+          description: 'Dedicated Add-on Product Management module for managing categories, subcategories, and product catalog items.'
+        }
+      };
+
+      const currentSeo = seoMap[activeTab] || seoMap.home;
+      updatePageHead({
+        title: currentSeo.title,
+        description: currentSeo.description,
+        canonicalPath: path === '/' ? '' : path,
+        type: 'website'
+      });
+    }
+
+    // Google Analytics Page View Tracking
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'page_view', {
+        page_path: currentPath !== '/' ? currentPath : `/${activeTab}`,
+        page_title: document.title,
+        page_location: window.location.href
+      });
+    }
+  }, [activeTab, currentPath, products]);
+
+  // Handle Product Selection with URL synchronization
+  const handleSelectProduct = (product: Product) => {
+    const slug = getProductSlug(product);
+    window.history.pushState({}, '', `/products/${slug}`);
+    setCurrentPath(`/products/${slug}`);
+    setSelectedProduct(product);
+    updateProductSeo(product);
+  };
+
+  const handleCloseProduct = () => {
+    setSelectedProduct(null);
+    if (window.location.pathname.startsWith('/products/')) {
+      window.history.pushState({}, '', '/products');
+      setCurrentPath('/products');
+      updatePageHead({
+        title: 'Luxury Modular Kitchens, Wardrobes & Custom Furniture | Royal Epic Interior',
+        description: 'Browse direct factory-crafted interior products: modular kitchens, sliding wardrobes, teak wood main entrance doors, WPC bathroom doors, dining tables, and commercial kitchen equipment.',
+        canonicalPath: '/products',
+        type: 'website'
+      });
+    }
   };
 
   // Auto trigger inquiry popup after 15s if not closed
@@ -167,94 +362,6 @@ export default function App() {
     }, 15000);
     return () => clearTimeout(timer);
   }, []);
-
-  // Dynamic SEO Page Title & Meta Updates
-  useEffect(() => {
-    const seoMap: Record<string, { title: string; description: string }> = {
-      home: {
-        title: 'Royal Epic Interior & Furniture | Luxury Turnkey Interiors Bengaluru',
-        description: 'Complete end-to-end turnkey interior execution, custom furniture manufacturing, WPC waterproof doors, beauty spa fit-outs, restaurant interior design, and corporate office space planning in Bengaluru.'
-      },
-      services: {
-        title: 'Interior Design Services & Turnkey Execution | Royal Epic Bengaluru',
-        description: 'Explore Royal Epic turnkey interior services: Residential homes, Beauty Spa interiors, Restaurant fit-outs, Corporate office workspace planning, and WPC waterproof doors.'
-      },
-      products: {
-        title: 'Luxury Modular Kitchens, Wardrobes & Custom Furniture | Royal Epic',
-        description: 'Browse factory-crafted luxury furniture: Modular kitchens, sliding wardrobes, solid teak main entrance doors, WPC bathroom doors, and TV consoles.'
-      },
-      portfolio: {
-        title: 'Completed Turnkey Interior Projects & Showcase | Royal Epic',
-        description: 'View real project photo galleries and video walk-throughs of completed luxury villas, corporate offices, beauty spas, and fine dining restaurants.'
-      },
-      gallery: {
-        title: 'Interior Design Inspiration & Media Gallery | Royal Epic',
-        description: 'High-definition photo gallery and project walkthroughs of completed turnkey interior works, SS modular kitchens, and custom woodwork.'
-      },
-      'ai-design': {
-        title: 'AI Custom Interior Design Generator | Royal Epic Interior & Furniture',
-        description: 'Generate instant custom 3D interior design concepts, material estimations, and BOQ budget ranges powered by Gemini AI for your space.'
-      },
-      estimator: {
-        title: 'Project Cost Estimator & Instant BOQ Calculator | Royal Epic',
-        description: 'Calculate instant room dimension based turnkey interior cost estimates, modular kitchen pricing, and BOQ budget ranges based on Bengaluru factory market rates.'
-      },
-      'custom-quote': {
-        title: 'Request Custom Quotation & Site Visit | Royal Epic Bengaluru',
-        description: 'Get an official turnkey interior quotation and schedule a free site laser measurement meeting with our senior architects.'
-      },
-      blog: {
-        title: 'Interior Design Journal & Turnkey Project Guides | Royal Epic',
-        description: 'Expert articles on turnkey interior execution, beauty spa design principles, home decorating, restaurant fit-outs, and corporate office planning.'
-      },
-      contact: {
-        title: 'Contact Royal Epic Interior & Furniture | Thanisandra, Bengaluru',
-        description: 'Visit our main showroom and factory at No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru - 560077 or call +91 99166 33338.'
-      },
-      dashboard: {
-        title: 'Customer Project Dashboard & Live Tracking | Royal Epic RE Teams',
-        description: 'Track your ongoing interior project stages from site measurement, 3D design approval, factory production, to final dispatch and site installation.'
-      },
-      admin: {
-        title: 'Internal ERP & Operations Command | RE Teams Royal Epic',
-        description: 'Internal ERP and CRM system for Royal Epic Interior & Furniture employees and management.'
-      },
-      developer: {
-        title: 'Developer Console | Royal Epic Architecture',
-        description: 'Technical developer console and system metrics.'
-      },
-      customers: {
-        title: 'Customers & Leads Workspace | Royal Epic Portal',
-        description: 'Marketing executive workstation and client customer intelligence directory.'
-      },
-      'product-manager': {
-        title: 'Product Catalog Management Hub | Royal Epic Products',
-        description: 'Authorized Product Manager portal for updating inventory, prices, specifications, and photography.'
-      },
-      'product-management': {
-        title: 'Product Management Module | product.royalepic.com',
-        description: 'Dedicated Add-on Product Management module for managing categories, subcategories, and product catalog items.'
-      }
-    };
-
-    const currentSeo = seoMap[activeTab] || seoMap.home;
-    document.title = currentSeo.title;
-
-    // Update Meta Description
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute('content', currentSeo.description);
-    }
-
-    // Google Analytics Page View Tracking
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'page_view', {
-        page_path: currentPath !== '/' ? currentPath : `/${activeTab}`,
-        page_title: currentSeo.title,
-        page_location: window.location.href
-      });
-    }
-  }, [activeTab, currentPath]);
 
   // Database-backed Persistent Cart operations
   const handleAddToCart = async (
@@ -361,41 +468,29 @@ export default function App() {
     );
   };
 
-  const handleOpenQuote = (title = '', budget = '') => {
-    setQuotePrefill({ title, budget });
+  const handleOpenQuote = (title?: string, budget?: string) => {
+    setQuotePrefill({
+      title: title || '',
+      budget: budget || '',
+    });
     setIsQuoteOpen(true);
   };
 
-  const wishlistProducts = PRODUCTS_DATA.filter((p) => wishlistIds.includes(p.id));
+  const wishlistProducts = products.filter((p) => wishlistIds.includes(p.id));
 
-  // If visiting dedicated Admin subdomain/path or activeTab is admin
-  if (isDedicatedAdmin || activeTab === 'admin') {
-    return (
-      <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-gold selection:text-black antialiased">
-        <AdminDashboard 
-          products={products} 
-          onProductsUpdated={fetchProducts} 
-          onBackToWebsite={() => setActiveTab('home')}
-          onNavigateToCustomers={() => setActiveTab('customers')}
-          onNavigateToProducts={() => setActiveTab('product-manager')}
-        />
-      </div>
-    );
-  }
-
-  // If visiting dedicated Customers subdomain/path or activeTab is customers
+  // If visiting dedicated Customer Portal on customers.royalepic.com or activeTab is customers
   if (isDedicatedCustomers || activeTab === 'customers') {
     return (
       <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-gold selection:text-black antialiased">
         <CustomersSubdomainPortal 
           onBackToWebsite={() => setActiveTab('home')}
-          onNavigateToAdmin={() => setActiveTab('admin')}
+          onOpenQuote={(title) => handleOpenQuote(title)}
         />
       </div>
     );
   }
 
-  // If visiting dedicated Dev subdomain/path or activeTab is developer
+  // If visiting dedicated Dev subdomain or activeTab is developer
   if (isDedicatedDev || activeTab === 'developer') {
     return (
       <div className="min-h-screen w-full bg-neutral-950 text-white font-sans selection:bg-emerald-500 selection:text-black antialiased">
@@ -438,9 +533,16 @@ export default function App() {
           const tabToPathMap: Record<string, string> = {
             home: '/',
             services: '/our-services',
+            products: '/products',
             portfolio: '/portfolio',
+            gallery: '/completed-projects',
             blog: '/blog',
             contact: '/contact-us',
+            'track-order': '/track-order',
+            dashboard: '/track-order',
+            customers: '/customers',
+            admin: '/admin',
+            developer: '/dev'
           };
           if (tabToPathMap[tab]) {
             navigateTo(tabToPathMap[tab]);
@@ -448,12 +550,12 @@ export default function App() {
             setCurrentPath('/');
           }
         }}
+        onNavigate={navigateTo}
         cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
         wishlistCount={wishlistIds.length}
         onOpenCart={() => setIsCartOpen(true)}
         onOpenQuote={() => handleOpenQuote()}
         onOpenSearch={() => setIsSearchOpen(true)}
-        onOpenAiConsultant={() => setIsAiConsultantOpen(true)}
       />
 
       {/* Main View Router */}
@@ -473,8 +575,10 @@ export default function App() {
                   onSelectItem={(category, title) => {
                     if (category.includes('Kitchen') || category.includes('Door') || category.includes('Furniture') || category.includes('Wardrobe')) {
                       setActiveTab('products');
+                      navigateTo('/products');
                     } else {
                       setActiveTab('portfolio');
+                      navigateTo('/portfolio');
                     }
                   }}
                   onRequestQuote={(title) => handleOpenQuote(title)}
@@ -512,7 +616,8 @@ export default function App() {
                 {/* Featured Product Catalog */}
                 <ProductCatalog
                   products={products}
-                  onSelectProduct={(p) => setSelectedProduct(p)}
+                  initialCategory={catalogCategory}
+                  onSelectProduct={(p) => handleSelectProduct(p)}
                   onAddToCart={(p) => handleAddToCart(p)}
                   onToggleWishlist={(p) => handleToggleWishlist(p)}
                   wishlistIds={wishlistIds}
@@ -521,10 +626,6 @@ export default function App() {
 
                 {/* Portfolio Before & After Slider */}
                 <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
-
-                {/* Custom AI Interior Design Generator */}
-
-                {/* Instant Project Estimator & BOQ Calculator */}
 
                 {/* Blog Section */}
                 <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} />
@@ -541,7 +642,8 @@ export default function App() {
             {activeTab === 'products' && (
               <ProductCatalog
                 products={products}
-                onSelectProduct={(p) => setSelectedProduct(p)}
+                initialCategory={catalogCategory}
+                onSelectProduct={(p) => handleSelectProduct(p)}
                 onAddToCart={(p) => handleAddToCart(p)}
                 onToggleWishlist={(p) => handleToggleWishlist(p)}
                 wishlistIds={wishlistIds}
@@ -586,7 +688,9 @@ export default function App() {
           const tabToPathMap: Record<string, string> = {
             home: '/',
             services: '/our-services',
+            products: '/products',
             portfolio: '/portfolio',
+            gallery: '/completed-projects',
             blog: '/blog',
             contact: '/contact-us',
             'track-order': '/track-order',
@@ -607,15 +711,15 @@ export default function App() {
       {/* Modals & Overlays */}
       <ProductDetailModal
         product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
+        onClose={handleCloseProduct}
         onAddToCart={(p, q) => handleAddToCart(p, q)}
         onBuyNow={(p) => {
           handleAddToCart(p, 1);
-          setSelectedProduct(null);
+          handleCloseProduct();
           setIsCheckoutOpen(true);
         }}
         onRequestQuote={(pTitle) => {
-          setSelectedProduct(null);
+          handleCloseProduct();
           handleOpenQuote(pTitle);
         }}
         isWishlisted={selectedProduct ? wishlistIds.includes(selectedProduct.id) : false}
@@ -642,7 +746,7 @@ export default function App() {
         onNavigateToAuth={() => {
           setIsCartOpen(false);
           setActiveTab('track-order');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigateTo('/track-order');
         }}
       />
 
@@ -661,19 +765,19 @@ export default function App() {
         onNavigateToAuth={() => {
           setIsCheckoutOpen(false);
           setActiveTab('track-order');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigateTo('/track-order');
         }}
         onNavigateToTrackOrder={(orderId) => {
           setIsCheckoutOpen(false);
           setActiveTab('track-order');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigateTo('/track-order');
         }}
       />
 
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onSelectProduct={(p) => setSelectedProduct(p)}
+        onSelectProduct={(p) => handleSelectProduct(p)}
         onRequestQuote={(title) => handleOpenQuote(title)}
       />
 

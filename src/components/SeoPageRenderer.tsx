@@ -60,7 +60,7 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
       canonical.setAttribute('rel', 'canonical');
       document.head.appendChild(canonical);
     }
-    const fullUrl = `https://royalepicfurniture.com${pageData.slug === '/' ? '' : pageData.slug}`;
+    const fullUrl = `https://royalepicinterior.com${pageData.slug === '/' ? '' : pageData.slug}`;
     canonical.setAttribute('href', fullUrl);
 
     // 3b. OpenGraph and Twitter Meta Tags
@@ -110,7 +110,7 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
         "@type": "ListItem",
         "position": idx + 1,
         "name": b.name,
-        "item": `https://royalepicfurniture.com${b.url === '/' ? '' : b.url}`
+        "item": `https://royalepicinterior.com${b.url === '/' ? '' : b.url}`
       }))
     };
 
