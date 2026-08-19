@@ -14,7 +14,7 @@ Allow: /customer-reviews
 Allow: /faq
 Allow: /track-order
 
-# Disallow private administrative, developer, internal APIs, and sensitive user dashboard paths
+# Disallow private administrative & user dashboard paths from search engine indexing
 Disallow: /admin
 Disallow: /developer
 Disallow: /dev
@@ -25,5 +25,5 @@ Disallow: /product-management
 Disallow: /products-hub
 Disallow: /api/
 
-# Sitemap location for Search Engine Crawlers (Googlebot, Bingbot, etc.)
+# Sitemap location for Search Engine Crawlers
 Sitemap: https://royalepicinterior.com/sitemap.xml

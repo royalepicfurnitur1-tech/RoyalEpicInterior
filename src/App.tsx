@@ -8,6 +8,7 @@ import { ThreeHeroRing } from './components/ThreeHeroRing';
 import { ServicesSection } from './components/ServicesSection';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetailModal } from './components/ProductDetailModal';
+import { ProductDetailPage } from './components/ProductDetailPage';
 import { PortfolioSection } from './components/PortfolioSection';
 import { QuoteModal } from './components/QuoteModal';
 import { CartDrawer } from './components/CartDrawer';
@@ -81,13 +82,21 @@ export default function App() {
     window.location.pathname.startsWith('/product-manager')
   );
 
+  const isProductsRoute = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/products')
+  );
+
   const initialTab: ActiveTab = isDedicatedProductModule
     ? 'product-management'
     : (isDedicatedProducts
         ? 'product-manager'
         : (isDedicatedAdmin 
             ? 'admin' 
-            : (isDedicatedCustomers ? 'customers' : (isDedicatedDev ? 'developer' : 'home'))));
+            : (isDedicatedCustomers 
+                ? 'customers' 
+                : (isDedicatedDev 
+                    ? 'developer' 
+                    : (isProductsRoute ? 'products' : 'home')))));
 
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
@@ -95,10 +104,31 @@ export default function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>(['prod-1', 'prod-2']);
   const [products, setProducts] = useState<Product[]>(PRODUCTS_DATA);
-  const [catalogCategory, setCatalogCategory] = useState<string>('All');
+  const [catalogCategory, setCatalogCategory] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'All';
+    const path = window.location.pathname;
+    if (path.startsWith('/products/')) {
+      const slug = path.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
+      if (slug) {
+        const cat = findCategoryBySlug(slug);
+        if (cat) return cat;
+      }
+    }
+    return 'All';
+  });
 
   // Modals state
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const path = window.location.pathname;
+    if (path.startsWith('/products/')) {
+      const slug = path.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
+      if (slug && !findCategoryBySlug(slug)) {
+        return findProductBySlug(PRODUCTS_DATA, slug) || null;
+      }
+    }
+    return null;
+  });
   const [isQuoteOpen, setIsQuoteOpen] = useState<boolean>(false);
   const [quotePrefill, setQuotePrefill] = useState({ title: '', budget: '' });
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
@@ -195,6 +225,17 @@ export default function App() {
           updateProductSeo(productMatch);
           return;
         }
+
+        // If neither category nor product match, set 404 SEO
+        setActiveTab('products');
+        setSelectedProduct(null);
+        updatePageHead({
+          title: 'Product Not Found | Royal Epic Interior',
+          description: 'The requested product could not be found or may have been renamed in our factory catalog.',
+          canonicalPath: path,
+          type: 'website'
+        });
+        return;
       }
     }
 
@@ -566,6 +607,40 @@ export default function App() {
             onNavigate={navigateTo}
             onRequestQuote={(title) => handleOpenQuote(title)}
           />
+        ) : currentPath.startsWith('/products/') ? (
+          (() => {
+            const slug = currentPath.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
+            const categoryMatch = findCategoryBySlug(slug);
+            if (categoryMatch) {
+              return (
+                <ProductCatalog
+                  products={products}
+                  initialCategory={categoryMatch}
+                  onSelectProduct={(p) => handleSelectProduct(p)}
+                  onAddToCart={(p) => handleAddToCart(p)}
+                  onToggleWishlist={(p) => handleToggleWishlist(p)}
+                  wishlistIds={wishlistIds}
+                  onRequestQuote={(title) => handleOpenQuote(title)}
+                />
+              );
+            }
+            const productMatch = findProductBySlug(products, slug);
+            return (
+              <ProductDetailPage
+                product={productMatch || null}
+                allProducts={products}
+                onNavigate={navigateTo}
+                onAddToCart={(p, q, v, a) => handleAddToCart(p, q, v, a)}
+                onBuyNow={(p, v, a) => {
+                  handleAddToCart(p, 1, v, a);
+                  setIsCheckoutOpen(true);
+                }}
+                onRequestQuote={(title) => handleOpenQuote(title)}
+                isWishlisted={productMatch ? wishlistIds.includes(productMatch.id) : false}
+                onToggleWishlist={(p) => handleToggleWishlist(p)}
+              />
+            );
+          })()
         ) : (
           <>
             {activeTab === 'home' && (

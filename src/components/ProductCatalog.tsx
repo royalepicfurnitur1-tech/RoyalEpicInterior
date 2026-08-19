@@ -97,7 +97,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       if (sortBy === 'rating') return b.rating - a.rating;
       return 0; // default
     });
-  }, [searchQuery, selectedCategory, sortBy, priceMax]);
+  }, [searchQuery, selectedCategory, sortBy, priceMax, products]);
 
   const filteredEquipment = useMemo(() => {
     return KITCHEN_EQUIPMENT_CATALOG.filter((item) => {
