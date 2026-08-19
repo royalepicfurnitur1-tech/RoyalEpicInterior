@@ -1790,8 +1790,35 @@ Provide a JSON response with the following keys:
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+
+    // Guard against relative asset requests originating from nested subpaths (e.g. /products/assets/* -> /assets/*)
+    app.use(/^\/(?:products|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res) => {
+      const assetFileName = req.params[0];
+      const targetFilePath = path.join(distPath, "assets", assetFileName);
+      if (fs.existsSync(targetFilePath)) {
+        return res.sendFile(targetFilePath);
+      }
+      res.status(404).type("text/plain").send("Asset Not Found");
+    });
+
+    // Primary static assets directory with long-term caching
+    app.use("/assets", express.static(path.join(distPath, "assets"), {
+      immutable: true,
+      maxAge: "1y",
+      fallthrough: false
+    }));
+
+    // Serve public root static files (favicon, manifest, robots, images, etc.)
+    app.use(express.static(distPath, {
+      maxAge: "1h"
+    }));
+
+    // Catch-all SPA route - strictly for HTML document navigation
     app.get("*", (req, res) => {
+      // If the request is for a missing file/script/stylesheet, return 404 text/plain rather than HTML
+      if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.path)) {
+        return res.status(404).type("text/plain").send("Static Asset Not Found");
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
