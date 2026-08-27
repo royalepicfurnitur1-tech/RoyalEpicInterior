@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 
 interface FooterProps {
-  setActiveTab: (tab: ActiveTab) => void;
-  onOpenQuote: () => void;
+  setActiveTab?: (tab: ActiveTab) => void;
+  onOpenQuote?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => {
@@ -25,6 +25,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
   };
 
   const serviceLinks = [
+    { label: 'Heritage Homes & Traditional Design', path: '/services/heritage-homes' },
     { label: 'Turnkey Interior Contractors', path: '/turnkey-interior-contractors-bangalore' },
     { label: 'Home Interior Design', path: '/home-interior-design-bangalore' },
     { label: 'Luxury Home Interiors', path: '/luxury-home-interiors-bangalore' },
@@ -48,8 +49,16 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
     { label: 'Glass Partitions', path: '/products/glass-partitions' }
   ];
 
+  const galleryLinks = [
+    { label: 'Restaurant Interior Gallery', path: '/restaurant-interior-gallery' },
+    { label: 'Chettinad & Kerala Traditional Homes', path: '/chettinad-kerala-traditional-homes' },
+    { label: 'Completed Project Showcase', path: '/completed-projects' }
+  ];
+
   const handleNavClick = (tab: ActiveTab, path: string) => {
-    setActiveTab(tab);
+    if (typeof setActiveTab === 'function') {
+      setActiveTab(tab);
+    }
     window.history.pushState({}, '', path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -191,15 +200,35 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
 
           {/* Col 4: Quick Links & Policies */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gold mb-4 font-mono">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gold mb-3 font-mono">
+              Design Galleries
+            </h4>
+            <ul className="space-y-1.5 text-xs text-neutral-400 mb-5">
+              {galleryLinks.map((item, idx) => (
+                <li key={idx}>
+                  <a
+                    href={item.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick('gallery', item.path);
+                    }}
+                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left block text-[11px]"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gold mb-3 font-mono">
               Legal & Support
             </h4>
-            <ul className="space-y-2 text-xs text-neutral-400">
+            <ul className="space-y-1.5 text-xs text-neutral-400">
               {['Privacy Policy', 'Terms & Conditions', 'Refund & Return Policy', 'Shipping Policy', 'Careers at Royal Epic', 'Contact Us'].map((item, idx) => (
                 <li key={idx}>
                   <button
                     onClick={() => setPolicyModal(item)}
-                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left"
+                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left text-[11px]"
                   >
                     {item}
                   </button>
@@ -208,7 +237,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
             </ul>
 
             <button
-              onClick={onOpenQuote}
+              onClick={() => onOpenQuote?.()}
               className="mt-6 w-full py-2.5 rounded-xl bg-gold text-black font-bold text-xs uppercase tracking-wider shadow-md hover:scale-105 transition-transform cursor-pointer"
             >
               Get Free Quote
@@ -217,7 +246,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
             <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between gap-2 flex-wrap">
               <button
                 onClick={() => {
-                  setActiveTab('customers');
+                  if (typeof setActiveTab === 'function') setActiveTab('customers');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className="text-[11px] text-neutral-400 hover:text-gold transition-colors flex items-center gap-1 cursor-pointer font-mono"
@@ -227,7 +256,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
               </button>
               <button
                 onClick={() => {
-                  setActiveTab('admin');
+                  if (typeof setActiveTab === 'function') setActiveTab('admin');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className="text-[11px] text-neutral-500 hover:text-gold transition-colors flex items-center gap-1 cursor-pointer font-mono"

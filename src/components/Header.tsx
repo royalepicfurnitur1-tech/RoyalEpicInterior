@@ -8,24 +8,28 @@ import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   activeTab: ActiveTab;
-  setActiveTab: (tab: ActiveTab) => void;
+  setActiveTab?: (tab: ActiveTab) => void;
+  onTabChange?: (tab: ActiveTab) => void;
   onNavigate?: (path: string) => void;
-  cartCount: number;
-  wishlistCount: number;
-  onOpenCart: () => void;
-  onOpenQuote: () => void;
-  onOpenSearch: () => void;
+  cartCount?: number;
+  wishlistCount?: number;
+  onOpenCart?: () => void;
+  onOpenQuote?: () => void;
+  onOpenSearch?: () => void;
+  onSearchClick?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
+  onTabChange,
   onNavigate,
-  cartCount,
-  wishlistCount,
-  onOpenCart,
-  onOpenQuote,
-  onOpenSearch,
+  cartCount = 0,
+  wishlistCount = 0,
+  onOpenCart = () => {},
+  onOpenQuote = () => {},
+  onOpenSearch = () => {},
+  onSearchClick,
 }) => {
   const { user, profile, isAdmin, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -42,7 +46,11 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   const handleNavClick = (id: ActiveTab, path: string) => {
-    setActiveTab(id);
+    if (typeof setActiveTab === 'function') {
+      setActiveTab(id);
+    } else if (typeof onTabChange === 'function') {
+      onTabChange(id);
+    }
     if (onNavigate) {
       onNavigate(path);
     }
@@ -80,6 +88,143 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
+            if (item.id === 'services') {
+              return (
+                <div key={item.id} className="relative group">
+                  <a
+                    href={item.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick(item.id, item.path);
+                    }}
+                    className={`relative px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
+                      isActive
+                        ? 'text-black bg-gradient-to-r from-gold via-amber-400 to-yellow-500 shadow-md'
+                        : 'text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                  </a>
+
+                  {/* Services Submenu Dropdown */}
+                  <div className="absolute top-full left-0 w-80 pt-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-neutral-200 p-2 space-y-1">
+                      <a
+                        href="/services/heritage-homes"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onNavigate?.('/services/heritage-homes');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="block px-3 py-2.5 rounded-xl bg-amber-50/80 hover:bg-amber-100/80 transition-colors group/sub border border-amber-200/60"
+                      >
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs font-bold text-amber-900 block group-hover/sub:text-amber-800">
+                            Heritage Homes & Traditional Design
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-bold uppercase">
+                            New
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-neutral-600 block">
+                          Kerala Nalukettu, Chettinad, courtyards & timber architecture
+                        </span>
+                      </a>
+                      <a
+                        href="/our-services"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleNavClick('services', '/our-services');
+                        }}
+                        className="block px-3 py-2.5 rounded-xl hover:bg-[#f8f5ee] transition-colors group/sub"
+                      >
+                        <span className="text-xs font-bold text-neutral-900 block group-hover/sub:text-amber-700">
+                          All Interior & Turnkey Services
+                        </span>
+                        <span className="text-[10px] text-neutral-500 block">
+                          Residential, commercial, modular kitchens, and fitouts
+                        </span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (item.id === 'gallery') {
+              return (
+                <div key={item.id} className="relative group">
+                  <a
+                    href={item.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick(item.id, item.path);
+                    }}
+                    className={`relative px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
+                      isActive
+                        ? 'text-black bg-gradient-to-r from-gold via-amber-400 to-yellow-500 shadow-md'
+                        : 'text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                  </a>
+
+                  {/* Gallery Submenu Dropdown */}
+                  <div className="absolute top-full left-0 w-72 pt-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-neutral-200 p-2 space-y-1">
+                      <a
+                        href="/completed-projects"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleNavClick('gallery', '/completed-projects');
+                        }}
+                        className="block px-3 py-2.5 rounded-xl hover:bg-[#f8f5ee] transition-colors group/sub"
+                      >
+                        <span className="text-xs font-bold text-neutral-900 block group-hover/sub:text-amber-700">
+                          All Completed Projects
+                        </span>
+                        <span className="text-[10px] text-neutral-500 block">
+                          Turnkey residences, villas, & commercial interiors
+                        </span>
+                      </a>
+                      <a
+                        href="/restaurant-interior-gallery"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onNavigate?.('/restaurant-interior-gallery');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="block px-3 py-2.5 rounded-xl hover:bg-[#f8f5ee] transition-colors group/sub"
+                      >
+                        <span className="text-xs font-bold text-neutral-900 block group-hover/sub:text-amber-700">
+                          Restaurant Interior Gallery
+                        </span>
+                        <span className="text-[10px] text-neutral-500 block">
+                          Fine dining, cafes, bars, and food courts
+                        </span>
+                      </a>
+                      <a
+                        href="/chettinad-kerala-traditional-homes"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onNavigate?.('/chettinad-kerala-traditional-homes');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="block px-3 py-2.5 rounded-xl hover:bg-[#f8f5ee] transition-colors group/sub"
+                      >
+                        <span className="text-xs font-bold text-neutral-900 block group-hover/sub:text-amber-700">
+                          Chettinad & Kerala Traditional Homes
+                        </span>
+                        <span className="text-[10px] text-neutral-500 block">
+                          Nalukettu homes, heritage villas, & carved teakwood
+                        </span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <a
                 key={item.id}
@@ -140,6 +285,55 @@ export const Header: React.FC<HeaderProps> = ({
                 <ChevronRight className="w-4 h-4 text-neutral-600" />
               </a>
             ))}
+          </div>
+
+          {/* Quick Dedicated Services & Galleries on Mobile */}
+          <div className="space-y-2 pt-1">
+            <a
+              href="/services/heritage-homes"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                onNavigate?.('/services/heritage-homes');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="p-3 rounded-xl bg-amber-500 text-neutral-950 text-xs font-bold flex items-center justify-between shadow-sm hover:brightness-105 transition-all border border-amber-600/30"
+            >
+              <span className="flex items-center gap-1.5">
+                <Crown className="w-4 h-4 text-neutral-950" />
+                Heritage Homes & Traditional Design
+              </span>
+              <ChevronRight className="w-4 h-4 text-neutral-950" />
+            </a>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <a
+                href="/restaurant-interior-gallery"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMobileMenuOpen(false);
+                  onNavigate?.('/restaurant-interior-gallery');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="p-2.5 rounded-xl bg-neutral-900 text-white text-xs font-bold flex items-center justify-between hover:bg-amber-600 transition-colors"
+              >
+                <span>Restaurant Gallery</span>
+                <ChevronRight className="w-4 h-4 text-amber-400" />
+              </a>
+              <a
+                href="/chettinad-kerala-traditional-homes"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMobileMenuOpen(false);
+                  onNavigate?.('/chettinad-kerala-traditional-homes');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="p-2.5 rounded-xl bg-neutral-900 text-white text-xs font-bold flex items-center justify-between hover:bg-amber-600 transition-colors"
+              >
+                <span>Chettinad & Kerala Homes</span>
+                <ChevronRight className="w-4 h-4 text-amber-400" />
+              </a>
+            </div>
           </div>
           <div className="pt-2 border-t border-neutral-200 flex flex-col gap-2">
             <button

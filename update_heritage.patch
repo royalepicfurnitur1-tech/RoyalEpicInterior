@@ -1,0 +1,43 @@
+--- src/pages/HeritageHomes.tsx
++++ src/pages/HeritageHomes.tsx
+@@ -4,6 +4,7 @@
+   Check, ChevronRight, Eye, Building
+ } from 'lucide-react';
+ import { GalleryLightbox } from '../components/GalleryLightbox';
++import { getHeritageHomes, HeritageHomeItem } from '../services/heritageHomeService';
+ 
+ interface HeritageHomesProps {
+   onNavigate?: (path: string) => void;
+@@ -11,26 +12,24 @@
+ }
+ 
+-interface HeritageSectionItem {
+-  id: string;
+-  sectionNumber: number;
+-  title: string;
+-  subtitle: string;
+-  image: string;
+-  alt: string;
+-  designStyle: string;
+-  architecturalFeatures: string;
+-  interiorCharacter: string;
+-  suitableFor: string;
+-  highlights: string[];
+-  keyElements: string[];
+-}
+-
+ export const HeritageHomes: React.FC<HeritageHomesProps> = ({ onNavigate, onRequestQuote }) => {
+   const [selectedLightboxIndex, setSelectedLightboxIndex] = useState<number | null>(null);
++  const [sectionsData, setSectionsData] = React.useState<HeritageHomeItem[]>([]);
++
++  React.useEffect(() => {
++    const loadData = async () => {
++      const data = await getHeritageHomes();
++      // Filter only published ones for public view
++      setSectionsData(data.filter(item => item.published !== false));
++    };
++    loadData();
++  }, []);
+ 
+   const HERITAGE_SERVICES = [
+     {

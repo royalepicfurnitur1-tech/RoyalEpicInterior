@@ -1,0 +1,21 @@
+--- src/App.tsx
++++ src/App.tsx
+@@ -5,6 +5,7 @@
+ import { SeoPageRenderer } from './components/SeoPageRenderer';
+ import { Header } from './components/Header';
+ import { HeritageHomes } from './pages/HeritageHomes';
++import { TurnkeyInteriorsPage } from './pages/TurnkeyInteriorsPage';
+ import { ThreeHeroRing } from './components/ThreeHeroRing';
+ import { ServicesSection } from './components/ServicesSection';
+@@ -620,6 +621,11 @@
+             onNavigate={navigateTo}
+             onRequestQuote={(title) => handleOpenQuote(title)}
+           />
++        ) : currentPath === '/turnkey-interior-contractors-bangalore' ? (
++          <TurnkeyInteriorsPage
++            onNavigate={navigateTo}
++            onRequestQuote={(title) => handleOpenQuote(title)}
++          />
+         ) : currentPath !== '/' && SEO_PAGES[currentPath] ? (
+           <SeoPageRenderer
+             pageData={SEO_PAGES[currentPath]}

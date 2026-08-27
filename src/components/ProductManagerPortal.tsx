@@ -7,6 +7,8 @@ import {
   Lock, User, ChevronDown, CheckSquare, Star
 } from 'lucide-react';
 import { Product } from '../types';
+import { HeritageHomesManager } from './HeritageHomesManager';
+import { TurnkeyManager } from './TurnkeyManager';
 import { useAuth } from '../context/AuthContext';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 
@@ -42,6 +44,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
   ));
 
   // Portal State
+  const [activeView, setActiveView] = useState<'products' | 'heritage-homes' | 'turnkey'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -460,8 +463,30 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
           </div>
         )}
 
-        {/* Analytics Header Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* View Switcher */}
+        <div className="flex bg-neutral-900 border border-white/10 rounded-2xl p-1 mb-4">
+          <button
+            onClick={() => setActiveView('products')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeView === 'products' ? 'bg-amber-500 text-black' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+          >Products</button>
+          <button
+            onClick={() => setActiveView('heritage-homes')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeView === 'heritage-homes' ? 'bg-amber-500 text-black' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+          >Heritage Homes CMS</button>
+          <button
+            onClick={() => setActiveView('turnkey')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeView === 'turnkey' ? 'bg-amber-500 text-black' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+          >Turnkey CMS</button>
+        </div>
+
+        {activeView === 'heritage-homes' ? (
+          <HeritageHomesManager />
+        ) : activeView === 'turnkey' ? (
+          <TurnkeyManager />
+        ) : (
+          <>
+            {/* Analytics Header Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-neutral-900/80 border border-white/10 rounded-2xl p-4 space-y-1">
             <span className="text-[10px] uppercase font-mono font-bold text-neutral-400">Total Catalog Items</span>
             <div className="text-2xl font-bold font-mono text-white">{stats.totalCount} SKUs</div>
@@ -810,6 +835,9 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
           </div>
         )}
 
+        {/* END PRODUCTS VIEW */}
+          </>
+        )}
       </main>
 
       {/* ========================================================= */}

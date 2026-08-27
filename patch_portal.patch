@@ -1,0 +1,24 @@
+--- src/components/ProductManagerPortal.tsx
++++ src/components/ProductManagerPortal.tsx
+@@ -462,6 +462,18 @@
+           </div>
+         )}
+ 
++        {/* View Switcher */}
++        <div className="flex bg-neutral-900 border border-white/10 rounded-2xl p-1 mb-4">
++          <button
++            onClick={() => setActiveView('products')}
++            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeView === 'products' ? 'bg-amber-500 text-black' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
++          >Products</button>
++          <button
++            onClick={() => setActiveView('heritage-homes')}
++            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeView === 'heritage-homes' ? 'bg-amber-500 text-black' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
++          >Heritage Homes CMS</button>
++        </div>
++
++        {activeView === 'heritage-homes' ? (
++          <HeritageHomesManager />
++        ) : (
++          <>
+         {/* Analytics Header Strip */}
+         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

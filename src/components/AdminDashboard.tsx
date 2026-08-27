@@ -6,7 +6,8 @@ import {
   CheckCircle2, XCircle, Image as ImageIcon, Sparkles, Flame, Tag, X, Save,
   Globe, LayoutDashboard, Database, Smartphone, Wrench, Share2, Mail, Phone,
   FileSpreadsheet, Download, Send, Clock, AlertTriangle, Building, Briefcase,
-  HelpCircle, Eye, Cpu, Radio, ChevronRight, CheckSquare, ShieldX, Sparkle, Upload
+  HelpCircle, Eye, Cpu, Radio, ChevronRight, CheckSquare, ShieldX, Sparkle, Upload,
+  Home, Hammer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AdminOrdersManagement } from "./AdminOrdersManagement";
@@ -17,6 +18,8 @@ import { AdminActivityLogger } from './AdminActivityLogger';
 import { SeoManager } from './SeoManager';
 import { AccessControlPanel } from './AccessControlPanel';
 import { ProductManagementModule } from './ProductManagementModule';
+import { HeritageHomesManager } from './HeritageHomesManager';
+import { TurnkeyManager } from './TurnkeyManager';
 import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supabase';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 import { getPortfolioProjects, savePortfolioProject, deletePortfolioProject, seedPortfolioToSupabase } from '../services/portfolioService';
@@ -105,7 +108,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     | 'materials' 
     | 'appointments' 
     | 'reports' 
-    | 'integrations' 
+    | 'integrations'
+    | 'heritage-homes' 
+    | 'turnkey'
     | 'security'
   >('overview');
 
@@ -652,6 +657,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'seo', label: '🔍 SEO & Webmasters', icon: Search },
     { id: 'blog', label: '📝 Blog Manager', icon: Edit },
     { id: 'portfolio', label: '🖼️ Portfolio Manager', icon: ImageIcon },
+    { id: 'heritage-homes', label: '🏛️ Heritage Homes CMS', icon: Home },
+    { id: 'turnkey', label: '🔑 Turnkey CMS', icon: Hammer },
     { id: 'materials', label: `🪵 Material Library (${materials.length})`, icon: Layers },
     { id: 'appointments', label: '📅 Site Visit Appointments', icon: Calendar },
     { id: 'reports', label: '📊 Executive Reports', icon: BarChart3 },
@@ -1533,6 +1540,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {/* 12. PORTFOLIO SHOWCASE MANAGER */}
+          {activeTab === 'heritage-homes' && (
+            <div className="space-y-6">
+              <HeritageHomesManager />
+            </div>
+          )}
+
+          {activeTab === 'turnkey' && (
+            <div className="space-y-6">
+              <TurnkeyManager />
+            </div>
+          )}
+
           {activeTab === 'portfolio' && (
             <div className="space-y-6">
               <div className="border-b border-white/10 pb-4">

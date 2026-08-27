@@ -1,0 +1,605 @@
+  const SECTIONS_DATA: HeritageSectionItem[] = [
+    {
+      id: 'heritage-homes',
+      sectionNumber: 1,
+      title: 'Heritage Homes',
+      subtitle: 'Timeless Royal Mansions & Ancestral Architecture',
+      image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Kerala traditional heritage home with sloping terracotta clay tiled roof, Chinese-influenced timber gables, carved wooden pillars, and brick foundation',
+      designStyle: 'Traditional Kerala & Classical South Indian Vernacular Heritage Architecture',
+      architecturalFeatures: 'Multi-tiered sloping terracotta clay tile roof, Chinese pagoda-influenced curved timber Mukhappu gables, solid carved wooden pillars, and exposed brick sit-out portico.',
+      interiorCharacter: 'Warm solid teakwood joinery, high-volume airy ceilings, hand-burnished lime plaster walls, and heirloom antique brass accents.',
+      suitableFor: 'Ancestral land developments, luxury countryside farmhouses, luxury heritage villas, and boutique heritage resorts.',
+      highlights: ['Terracotta Clay Tiled Roof', 'Chinese-Influenced Gables', 'Solid Wooden Pillars'],
+      keyElements: ['Solid Teak Columns', 'Sloping Clay Tile Roof', 'Chinese Mukhappu Gables', 'Terracotta Brick Portico']
+    },
+    {
+      id: 'traditional-homes',
+      sectionNumber: 2,
+      title: 'Traditional Homes',
+      subtitle: 'Authentic Indian Vernacular Living for Modern Families',
+      image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Traditional Indian vernacular home interior with wooden rafters, warm lighting, and traditional seating',
+      designStyle: 'Authentic Indian Vernacular blended with Modern Lifestyle Amenities',
+      architecturalFeatures: 'Pitched terracotta rooflines, central light wells, cross-ventilating louvered windows, and expansive family sit-out verandahs.',
+      interiorCharacter: 'Warm earthy neutral tones, built-in wooden benches, brass oil lamp fixtures, and carved timber partition screens.',
+      suitableFor: 'Multi-generational families, quiet suburban homes, and homeowners desiring rooted cultural aesthetics and peaceful living.',
+      highlights: ['Passive Natural Cooling', 'Cross-Ventilated Rooms', 'Multi-Generational Living'],
+      keyElements: ['Timber Louvered Windows', 'Terracotta Floor Borders', 'Carved Wooden Partitions', 'Family Sit-Outs']
+    },
+    {
+      id: 'kerala-style-homes',
+      sectionNumber: 3,
+      title: 'Kerala Style Homes',
+      subtitle: 'Thachushasthra-Inspired Sloped Roof Architecture',
+      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Kerala traditional home design with steep pitched roof, Mukhappu gable, and wooden Charupadi sit-out',
+      designStyle: 'Traditional Kerala Vernacular (Thachushasthra & Vastu Vidya compliant)',
+      architecturalFeatures: 'Steeply pitched Mangalore clay tile roofs, intricately carved timber Mukhappu gables, Poomukham entry porches, and continuous Charupadi perimeter seating.',
+      interiorCharacter: 'Rich Anjili & Teak timber rafters, Nilavilakku brass lamp niches, smooth red oxide flooring, and airy open corridors.',
+      suitableFor: 'Kerala natives, South Indian villa builders, and clients seeking climate-responsive tropical heritage architecture.',
+      highlights: ['Charupadi Wooden Benches', 'Ornate Mukhappu Gables', 'Monsoon-Resistant Overhangs'],
+      keyElements: ['Turned Teak Pillars', 'Clay Tiled Sloped Roof', 'Red Oxide Flooring', 'Poomukham Entry']
+    },
+    {
+      id: 'chettinad-style-homes',
+      sectionNumber: 4,
+      title: 'Chettinad Style Homes',
+      subtitle: 'Palatial Mansions with Burma Teak Pillars & Athangudi Floors',
+      image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Chettinad style heritage mansion with heavy carved wooden pillars, central hall, and Athangudi patterned floor',
+      designStyle: 'Majestic Chettinad Palatial Architecture from Tamil Nadu',
+      architecturalFeatures: 'Imposing Burma teak carved pillars with lotus capitals, multi-tier pillared halls, egg-white plaster walls, and monumental double-door entryways.',
+      interiorCharacter: 'Hand-crafted Athangudi geometric floor tiles, Belgian glass chandeliers, ornate timber cornices, and heavy hand-carved heritage furniture.',
+      suitableFor: 'Luxury heritage residences, grand family estates, boutique heritage hotels, and lovers of regal South Indian grandeur.',
+      highlights: ['Burma Teak Pillar Colonnades', 'Handmade Athangudi Tiles', 'Egg-White Plaster Finish'],
+      keyElements: ['Lotus Capital Pillars', 'Triple-Leaf Front Doors', 'Grand Central Courtyards', 'Belgian Chandeliers']
+    },
+    {
+      id: 'nalukettu-homes',
+      sectionNumber: 5,
+      title: 'Nalukettu Homes',
+      subtitle: 'Four-Block Kerala Homes with Central Nadumuttam Courtyard',
+      image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Kerala Nalukettu house with central Nadumuttam open courtyard, perimeter wooden columns, and clay tile roof',
+      designStyle: 'Four-Block Traditional Kerala Courtyard Architecture',
+      architecturalFeatures: 'Single central open-to-sky Nadumuttam courtyard surrounded by four cardinal wings (Vadakkini, Thekkini, Kizhakkini, Padinjattini) and perimeter timber columns.',
+      interiorCharacter: 'Natural sunlight and gentle rainfall entering the central stone court, continuous cool breezes, and private family chambers.',
+      suitableFor: 'Independent luxury homes, ancestral property reconstructions, and families who prioritize biophilic light and air.',
+      highlights: ['Open Nadumuttam Lightwell', 'Four Cardinal Wings', 'Natural Rainwater Ingress'],
+      keyElements: ['Central Sunken Courtyard', 'Perimeter Timber Colonnade', 'Terracotta Floor Perimeter', 'Sloped Roof Eaves']
+    },
+    {
+      id: 'ettukettu-homes',
+      sectionNumber: 6,
+      title: 'Ettukettu Homes',
+      subtitle: 'Grand Eight-Block Mansions with Dual Courtyards',
+      image: 'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Expansive Ettukettu heritage mansion featuring dual central courtyards, extensive woodwork, and multi-tier roofs',
+      designStyle: 'Eight-Block Royal Kerala Architectural Architecture',
+      architecturalFeatures: 'Two interconnected open Nadumuttam courtyards, monumental timber roof framework, dual multi-tiered gables, and sprawling covered corridors.',
+      interiorCharacter: 'Regal spatial hierarchy, expansive ceremonial gathering halls, intricate timber ceilings, private suites, and sanctified temple-like ambience.',
+      suitableFor: 'Sprawling ancestral family estates, luxury heritage wellness retreats, and royal luxury residences.',
+      highlights: ['Dual Central Courtyards', 'Expansive Multi-Tier Roofs', 'Sprawling Regal Corridors'],
+      keyElements: ['Two Nadumuttam Lightwells', 'Ceremonial Reception Halls', 'Carved Wood Ceiling Coffers', 'Perimeter Verandahs']
+    },
+    {
+      id: 'traditional-courtyard-homes',
+      sectionNumber: 7,
+      title: 'Traditional Courtyard Homes',
+      subtitle: 'The Heart of Indian Vernacular Living (Aangan & Nadumuttam)',
+      image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Traditional Indian courtyard home with open central aangan, lush plants, wooden pillars, and natural daylight',
+      designStyle: 'Vernacular Central Courtyard (Aangan / Nadumuttam / Valavu) Design',
+      architecturalFeatures: 'Open-to-sky central courtyard creating a microclimate, perimeter pillared walkways, sunken rainwater channels, and central Tulsi Thara or brass Urli.',
+      interiorCharacter: 'Unobstructed natural daylight changing throughout the day, acoustic tranquility, and panoramic views of the open sky from all rooms.',
+      suitableFor: 'Urban and suburban plots seeking natural climate cooling, total indoor privacy from neighbors, and deep connection with nature.',
+      highlights: ['Passive Microclimate Cooling', 'Complete Visual Privacy', 'Central Tulsi & Water Feature'],
+      keyElements: ['Sunken Rain Drainage Basin', 'Pillared Perimeter Corridors', 'Central Water Urli', 'Lush Tropical Foliage']
+    },
+    {
+      id: 'terracotta-brick-homes',
+      sectionNumber: 8,
+      title: 'Terracotta & Brick Homes',
+      subtitle: 'Earthy, Sustainable & Naturally Cooled Architecture',
+      image: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Exposed wire-cut red brick and terracotta home with jaali breeze screens, arches, and warm earthen tones',
+      designStyle: 'Earthy Sustainable Vernacular & Laurie Baker Inspired Architecture',
+      architecturalFeatures: 'Exposed wire-cut red brick masonry, perforated terracotta Jaali breeze walls, curved brick archways, and natural clay tile accents.',
+      interiorCharacter: 'Warm earthen rustic ambiance, filtered geometric daylight shadows through Jaali screens, and naturally cool indoor temperatures.',
+      suitableFor: 'Eco-conscious homeowners, sustainable farmhouses, creative professionals, and clients desiring organic low-carbon living.',
+      highlights: ['Natural Passive Cooling', 'Perforated Jaali Breeze Screens', 'Zero-Maintenance Exposed Brick'],
+      keyElements: ['Wire-Cut Clay Bricks', 'Terracotta Jaali Louvers', 'Exposed Brick Arches', 'Terracotta Floor Tiles']
+    },
+    {
+      id: 'natural-stone-homes',
+      sectionNumber: 9,
+      title: 'Natural Stone Homes',
+      subtitle: 'Monumental Granite, Laterite & Hand-Chiseled Masonry',
+      image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Natural laterite and granite stone heritage home with chiseled pillars, slate flooring, and textured stone facade',
+      designStyle: 'Monumental Stone Masonry & Historic Indian Pavilion Architecture',
+      architecturalFeatures: 'Dressed granite plinths, exposed interlocking laterite stone walling, hand-chiseled stone pillars, and slate stone wall cladding.',
+      interiorCharacter: 'Massive thermal mass that stays cool during scorching summers, tactile organic stone textures, and a profound sense of permanence.',
+      suitableFor: 'Countryside villas, hillside retreats, durable luxury residences, and homeowners seeking timeless geological beauty.',
+      highlights: ['Lifetime Structural Durability', 'Exceptional Thermal Mass', 'Hand-Chiseled Stone Detailing'],
+      keyElements: ['Exposed Laterite Blocks', 'Granite Plinths & Pillars', 'Natural Slate Flooring', 'Hand-Crafted Stone Jali']
+    },
+    {
+      id: 'wooden-pillars-wooden-architecture',
+      sectionNumber: 10,
+      title: 'Wooden Pillars & Wooden Architecture',
+      subtitle: 'Hand-Carved Solid Teak Columns, Trusses & Ceiling Coffers',
+      image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Hand-carved solid teakwood architectural pillars with lotus capitals and decorative wooden coffered ceiling',
+      designStyle: 'Mastercrafted South Indian Timber Carpentry & Heritage Woodcraft',
+      architecturalFeatures: 'Solid Burma & CP Teakwood fluted or turned pillars, lotus capital brackets, exposed timber trusses, carved fascia boards, and timber cornices.',
+      interiorCharacter: 'Rich natural wood grains, warm golden-honey amber tones, natural timber fragrance, and an undeniable aura of regal luxury.',
+      suitableFor: 'Heritage porticos, grand living room colonnades, luxury verandahs, and clients who cherish artisanal wood craftsmanship.',
+      highlights: ['Solid Burma & CP Teakwood', 'Hand-Carved Lotus Capitals', 'Exposed Structural Trusses'],
+      keyElements: ['Turned Timber Columns', 'Coffered Wood Ceilings', 'Carved Bracket Capitals', 'Hand-Polished Teak']
+    },
+    {
+      id: 'clay-tile-roof-homes',
+      sectionNumber: 11,
+      title: 'Clay Tile Roof Homes',
+      subtitle: 'Multi-Tiered Sloped Roofs with Authentic Mangalore Tiles',
+      image: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Traditional pitched roof home with terracotta Mangalore clay tiles, decorative gables, and wooden rafters',
+      designStyle: 'Pitched Vernacular Roofing with Natural Baked Clay Mangalore Tiles',
+      architecturalFeatures: 'Multi-tiered sloping rooflines, carved wooden bargeboards, decorative terracotta ridge finials, and deep rainwater drainage eaves.',
+      interiorCharacter: 'High sloping vaulted ceilings with exposed timber rafters, superior thermal insulation against tropical heat, and peaceful acoustic dampening.',
+      suitableFor: 'Tropical South Indian homes, monsoon-heavy coastal zones, luxury countryside villas, and authentic heritage houses.',
+      highlights: ['Superior Heat Dissipation', 'Soothing Rain Acoustics', 'Authentic Mangalore Terracotta'],
+      keyElements: ['Layered Clay Roof Tiles', 'Carved Timber Bargeboards', 'Pitched Wooden Trusses', 'Terracotta Ridge Finials']
+    },
+    {
+      id: 'athangudi-tile-interiors',
+      sectionNumber: 12,
+      title: 'Athangudi Tile Interiors',
+      subtitle: 'Artisanal Handmade Heritage Tiles from Karaikudi, Chettinad',
+      image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Chettinad Athangudi handmade floor tiles with vibrant floral and geometric heritage patterns in living hall',
+      designStyle: 'Artisanal Chettinad Heritage Flooring (Hand-Cast Glass Mold Method)',
+      architecturalFeatures: 'Handcrafted cement and natural mineral pigment tiles featuring vintage geometric, floral, and border patterns with mirror-smooth glass sheen.',
+      interiorCharacter: 'Vibrant, colourful vintage floors that stay naturally cool under bare feet, developing a richer antique patina over decades.',
+      suitableFor: 'Dining rooms, central courtyards, grand entrance foyers, corridors, and heritage living rooms.',
+      highlights: ['Authentic Hand-Poured Tiles', 'Cool Underfoot Feel', 'Timeless Heritage Patterns'],
+      keyElements: ['Floral & Geometric Borders', 'Natural Mineral Pigments', 'Glass-Mold Polished Sheen', 'Custom Palette Matching']
+    },
+    {
+      id: 'traditional-hindu-interiors-pooja-rooms',
+      sectionNumber: 13,
+      title: 'Traditional Hindu Interiors & Pooja Rooms',
+      subtitle: 'Temple-Inspired Sanctums, Carved Teak Mandapams & Brass Bells',
+      image: 'https://images.unsplash.com/photo-1581299894007-aaa50297cf16?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Traditional Hindu pooja room design with hand-carved teakwood mandapam, brass bells, and diya niches',
+      designStyle: 'Temple-Inspired Sacred Residential Sanctum & Vastu-Aligned Interiors',
+      architecturalFeatures: 'Hand-carved solid teakwood Gopuram mandapam, brass hanging temple bells, carved Sanctum Sanctorum door shutters, and warm brass diya niches.',
+      interiorCharacter: 'Deep spiritual serenity, meditative aura, backlit warm onyx marble backdrops, divine geometric carvings, and sanctified atmosphere.',
+      suitableFor: 'Devout Hindu households, multi-generational family villas, and modern homes seeking an authentic temple-grade pooja sanctum.',
+      highlights: ['Carved Gopuram Teak Mandapam', 'Acoustic Brass Temple Bells', '100% Vastu-Compliant Alignment'],
+      keyElements: ['Solid Teak Pooja Doors', 'Brass Diya Wall Niches', 'Backlit Onyx Marble', 'Gopuram Roof Finials']
+    },
+    {
+      id: 'traditional-living-dining-bedroom-interiors',
+      sectionNumber: 14,
+      title: 'Traditional Living, Dining & Bedroom Interiors',
+      subtitle: 'Heirloom Furniture, Oonjal Swings & Four-Poster Canopy Beds',
+      image: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Traditional bedroom and living interior with solid teak four-poster bed, brass accents, and heritage wooden furniture',
+      designStyle: 'Regal South Indian & Classical Heritage Interior Styling',
+      architecturalFeatures: 'Hand-suspended wooden swing (Oonjal) with cast brass link chains, solid teak 8-seater dining tables with woven cane chairs, and four-poster canopy beds.',
+      interiorCharacter: 'Warm golden ambient lighting, brass urlis with floating fresh jasmine and marigolds, heirloom storage chests, and breathable natural linen drapery.',
+      suitableFor: 'Complete turnkey interior fitouts for apartments, villas, and farmhouses seeking cultural warmth and timeless royal prestige.',
+      highlights: ['Solid Teak Heirloom Furniture', 'Brass Chain Oonjal Swings', 'Carved Four-Poster Beds'],
+      keyElements: ['Brass Link Chain Oonjal', '8-Seater Teak Dining Suite', 'Canopy Four-Poster Bed', 'Carved Brass Urli Accents']
+    }
+  ];
+
+  const HERITAGE_SERVICES = [
+    {
+--
+  const lightboxItems = SECTIONS_DATA.map(item => ({
+    id: item.id,
+    image: item.image,
+    title: item.title,
+    category: item.subtitle,
+    description: `${item.designStyle} — ${item.architecturalFeatures}`,
+    alt: item.alt,
+    tags: item.keyElements
+  }));
+
+  const handleConsultation = (title: string) => {
+    if (onRequestQuote) {
+      onRequestQuote(`Heritage Home Design: ${title}`);
+    } else if (onNavigate) {
+      onNavigate('/get-free-quote');
+    }
+  };
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  return (
+    <div className="bg-[#fcfbf7] text-neutral-900 min-h-screen selection:bg-amber-500 selection:text-black">
+      
+      {/* Schema.org Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "name": "Heritage Homes & Traditional House Design",
+            "provider": {
+              "@type": "Organization",
+              "name": "Royal Epic Interiors",
+              "url": "https://royalepicinterior.com"
+            },
+            "serviceType": "Traditional House Design and Heritage Home Construction",
+            "description": "Explore heritage homes, traditional house design, Kerala style, Chettinad, Nalukettu, courtyard homes and traditional interiors by Royal Epic Interiors.",
+            "areaServed": ["Bengaluru", "Karnataka", "Kerala", "Tamil Nadu", "South India"],
+            "hasOfferCatalog": {
+              "@type": "OfferCatalog",
+              "name": "Heritage & Traditional Architectural Services",
+              "itemListElement": HERITAGE_SERVICES.map((s, idx) => ({
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": s.title,
+                  "description": s.desc
+                },
+                "position": idx + 1
+              }))
+            }
+          })
+        }}
+      />
+
+      {/* 1. HERO SECTION */}
+      <section className="relative pt-12 pb-20 lg:pt-16 lg:pb-28 bg-gradient-to-b from-[#1b1510] via-[#241a12] to-[#120d09] text-white overflow-hidden">
+        {/* Background decorative textures */}
+        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-2 text-xs text-neutral-400 mb-6 font-medium">
+            <a 
+              href="/" 
+              onClick={(e) => { e.preventDefault(); onNavigate?.('/'); }}
+              className="hover:text-amber-400 transition-colors"
+            >
+              Home
+            </a>
+            <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />
+            <a 
+              href="/our-services" 
+              onClick={(e) => { e.preventDefault(); onNavigate?.('/our-services'); }}
+              className="hover:text-amber-400 transition-colors"
+            >
+              Services
+            </a>
+            <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />
+            <span className="text-amber-400 font-semibold">Heritage Homes</span>
+          </nav>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                <Crown className="w-4 h-4 text-amber-400" />
+                <span>Premier South Indian Architectural Studio</span>
+              </div>
+
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-white tracking-tight leading-[1.15]">
+                Heritage Homes & <br />
+                <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
+                  Traditional House Design
+                </span>
+              </h1>
+
+              <p className="text-base sm:text-lg text-neutral-300 max-w-2xl font-light leading-relaxed">
+                Experience the soulful majesty of authentic Indian vernacular architecture. From Kerala Nalukettu courtyard residences and Chettinad palatial mansions to hand-carved teakwood pillars and artisanal Athangudi tile floors, Royal Epic Interiors designs and builds luxury traditional homes with timeless craftsmanship and modern living comforts.
+              </p>
+
+              {/* Key Metric Badges */}
+              <div className="grid grid-cols-3 gap-4 pt-2 border-t border-white/10 max-w-lg">
+                <div>
+                  <p className="text-2xl font-bold text-amber-400 font-serif">100%</p>
+                  <p className="text-[11px] text-neutral-400 uppercase tracking-wider">Vastu Vidya Aligned</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-amber-400 font-serif">Solid Teak</p>
+                  <p className="text-[11px] text-neutral-400 uppercase tracking-wider">In-House Woodcraft</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-amber-400 font-serif">Turnkey</p>
+                  <p className="text-[11px] text-neutral-400 uppercase tracking-wider">Foundation to Finish</p>
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  onClick={() => handleConsultation('Heritage Home General Inquiry')}
+                  className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-neutral-950 font-bold text-sm tracking-wide shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all flex items-center gap-2 group cursor-pointer"
+                >
+                  <span>Book Heritage Consultation</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                <a
+                  href="https://wa.me/919900000000?text=Hi%20Royal%20Epic%20Interiors,%20I%20am%20interested%20in%20Heritage%20Homes%20and%20Traditional%20House%20Design"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3.5 rounded-xl bg-neutral-900/80 hover:bg-neutral-800 text-white border border-white/15 font-medium text-sm transition-all flex items-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
+                  <span>WhatsApp Architect</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Hero Image Showcase */}
+            <div className="lg:col-span-5">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-amber-500/30 group">
+                <img
+                  src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80"
+                  alt="Kerala traditional Nalukettu heritage home with central courtyard and teak pillars"
+                  className="w-full h-[420px] object-cover group-hover:scale-105 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 text-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono">
+                      Masterpiece Heritage Project
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold">
+                      Turnkey Villa
+                    </span>
+                  </div>
+                  <p className="text-sm font-serif font-bold text-white">
+                    Kerala Nalukettu Courtyard Villa with Burma Teakwood Architecture
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Jump Ribbon */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+          <div className="p-3 rounded-2xl bg-neutral-900/90 backdrop-blur-md border border-white/10 overflow-x-auto scrollbar-none flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 whitespace-nowrap px-3">
+              Explore Styles:
+            </span>
+            {[
+              { label: 'All 14 Architectural Styles', target: 'heritage-homes' },
+              { label: 'Kerala Nalukettu', target: 'nalukettu-homes' },
+              { label: 'Chettinad Mansions', target: 'chettinad-style-homes' },
+              { label: 'Central Courtyards', target: 'traditional-courtyard-homes' },
+              { label: 'Wooden Architecture', target: 'wooden-pillars-wooden-architecture' },
+              { label: 'Clay Tile Roofs', target: 'clay-tile-roof-homes' },
+              { label: 'Athangudi Tiles', target: 'athangudi-tile-interiors' },
+              { label: 'Pooja Sanctums', target: 'traditional-hindu-interiors-pooja-rooms' },
+              { label: 'Our Services', target: 'our-heritage-services' }
+            ].map((jump, idx) => (
+              <button
+                key={idx}
+                onClick={() => scrollToSection(jump.target)}
+                className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-amber-500/20 hover:text-amber-300 text-xs font-medium text-neutral-300 whitespace-nowrap transition-colors cursor-pointer border border-transparent hover:border-amber-500/30"
+              >
+                {jump.label}
+              </button>
+            ))}
+          </div>
+        </div>
+--
+          {SECTIONS_DATA.map((item, index) => {
+            const isEven = index % 2 === 0;
+            return (
+              <article
+                key={item.id}
+                id={item.id}
+                className="scroll-mt-28 group rounded-3xl bg-white border border-neutral-200/80 shadow-xl overflow-hidden hover:border-amber-400/50 transition-all duration-300"
+              >
+                <div className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center ${isEven ? '' : 'lg:flex-row-reverse'}`}>
+                  
+                  {/* Left/Right: High-Resolution Realistic Image */}
+                  <div className={`lg:col-span-6 ${isEven ? 'lg:order-1' : 'lg:order-2'} relative overflow-hidden bg-neutral-100`}>
+                    <div 
+                      className="relative h-[360px] sm:h-[440px] lg:h-[500px] overflow-hidden cursor-pointer"
+                      onClick={() => setSelectedLightboxIndex(index)}
+                    >
+                      <img
+                        src={item.image}
+                        alt={item.alt}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      
+                      {/* Zoom Badge */}
+                      <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-medium flex items-center gap-1.5 border border-white/20">
+                        <Eye className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Click to Enlarge</span>
+                      </div>
+
+                      {/* Section Index Marker */}
+                      <div className="absolute bottom-4 left-4 px-3.5 py-1.5 rounded-xl bg-amber-500 text-neutral-950 font-mono font-bold text-xs shadow-md">
+                        Style {String(item.sectionNumber).padStart(2, '0')} / 14
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right/Left: Structured Content & Description */}
+                  <div className={`lg:col-span-6 p-6 sm:p-8 lg:p-10 ${isEven ? 'lg:order-2' : 'lg:order-1'} space-y-6`}>
+                    
+                    {/* Header */}
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 font-mono block mb-1">
+                        {item.subtitle}
+                      </span>
+                      <h3 className="text-2xl sm:text-3xl font-serif font-bold text-neutral-900">
+                        {item.title}
+                      </h3>
+                    </div>
+
+                    {/* Structured Specifications Required */}
+                    <div className="space-y-4 text-sm text-neutral-700">
+                      
+                      {/* Design Style */}
+                      <div className="p-3.5 rounded-xl bg-[#fbf9f4] border border-amber-200/60">
+                        <span className="font-bold text-neutral-900 block text-xs uppercase tracking-wider text-amber-800 mb-0.5">
+                          ✦ Design Style
+                        </span>
+                        <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed">
+                          {item.designStyle}
+                        </p>
+                      </div>
+
+                      {/* Main Architectural Features */}
+                      <div>
+                        <span className="font-bold text-neutral-900 block text-xs uppercase tracking-wider text-neutral-500 mb-1">
+                          Architectural Features
+                        </span>
+                        <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
+                          {item.architecturalFeatures}
+                        </p>
+                      </div>
+
+                      {/* Interior Character */}
+                      <div>
+                        <span className="font-bold text-neutral-900 block text-xs uppercase tracking-wider text-neutral-500 mb-1">
+                          Interior Character & Ambiance
+                        </span>
+                        <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
+                          {item.interiorCharacter}
+                        </p>
+                      </div>
+
+                      {/* Suitable For */}
+                      <div className="pt-2 border-t border-neutral-200">
+                        <span className="font-bold text-neutral-900 block text-xs uppercase tracking-wider text-amber-900 mb-1">
+                          Ideal For / Suitable Customers
+                        </span>
+                        <p className="text-xs sm:text-sm text-neutral-700 font-medium leading-relaxed">
+                          {item.suitableFor}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Architectural Feature Tags */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {item.keyElements.map((el, i) => (
+                        <span
+                          key={i}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 font-medium border border-neutral-200"
+                        >
+                          {el}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        onClick={() => handleConsultation(item.title)}
+                        className="px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md cursor-pointer"
+                      >
+                        <span>Plan This Style</span>
+                        <ChevronRight className="w-4 h-4 text-amber-400" />
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedLightboxIndex(index)}
+                        className="px-4 py-2.5 rounded-xl border border-neutral-300 hover:bg-neutral-100 text-neutral-700 font-medium text-xs transition-colors cursor-pointer"
+                      >
+                        View High-Res Photo
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 16. OUR HERITAGE HOME SERVICES SECTION */}
+      <section id="our-heritage-services" className="py-20 lg:py-28 bg-[#1a140e] text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
+        <div className="absolute top-1/2 left-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-400 bg-amber-500/15 px-3.5 py-1.5 rounded-full border border-amber-500/30">
+              End-to-End Capabilities
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-white">
+              Our Heritage Home Services
+            </h2>
+            <p className="text-sm sm:text-base text-neutral-300 font-light">
+              From master Vastu architectural planning and photorealistic 3D renders to solid teakwood factory fabrication and complete turnkey site execution, Royal Epic Interiors provides single-point craftsmanship.
+            </p>
+          </div>
+
+          {/* 10 Required Heritage Services Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {HERITAGE_SERVICES.map((srv, idx) => (
+              <div
+                key={idx}
+                className="p-6 rounded-2xl bg-neutral-900/90 border border-white/10 hover:border-amber-400/40 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/5 group flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    {srv.icon}
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-serif font-bold text-white group-hover:text-amber-300 transition-colors">
+                      {srv.title}
+                    </h3>
+                    <p className="text-xs text-neutral-300 mt-2 leading-relaxed font-light">
+                      {srv.desc}
+                    </p>
+                  </div>
+
+                  <ul className="space-y-1.5 pt-2 border-t border-white/10 text-[11px] text-neutral-400">
+                    {srv.features.map((feat, fIdx) => (
+                      <li key={fIdx} className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="pt-5 mt-4 border-t border-white/5">
+                  <button
+                    onClick={() => handleConsultation(srv.title)}
+                    className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 group/btn cursor-pointer"
+                  >
+                    <span>Request Quotation</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Guarantee Banner */}
+          <div className="mt-16 p-8 rounded-3xl bg-gradient-to-r from-neutral-900 via-neutral-900 to-amber-950/40 border border-amber-500/30 grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
+            <div className="md:col-span-3 space-y-2">
+              <h4 className="text-lg sm:text-xl font-serif font-bold text-white flex items-center gap-2">
+                <Shield className="w-5 h-5 text-amber-400" />

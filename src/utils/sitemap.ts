@@ -13,9 +13,12 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   // Main Navigation & Core Public Pages
   { path: '/', changefreq: 'daily', priority: 1.0 },
   { path: '/our-services', changefreq: 'weekly', priority: 0.95 },
+  { path: '/services/heritage-homes', changefreq: 'weekly', priority: 0.95 },
   { path: '/products', changefreq: 'daily', priority: 0.95 },
   { path: '/portfolio', changefreq: 'weekly', priority: 0.9 },
   { path: '/completed-projects', changefreq: 'weekly', priority: 0.9 },
+  { path: '/restaurant-interior-gallery', changefreq: 'weekly', priority: 0.9 },
+  { path: '/chettinad-kerala-traditional-homes', changefreq: 'weekly', priority: 0.9 },
   { path: '/blog', changefreq: 'weekly', priority: 0.85 },
   { path: '/about-us', changefreq: 'monthly', priority: 0.8 },
   { path: '/contact-us', changefreq: 'monthly', priority: 0.8 },
