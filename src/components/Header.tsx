@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActiveTab } from '../types';
 import { 
   Crown, Menu, X, FileText, User, ChevronRight, MessageSquare, ShieldCheck, LogOut, Code, Building,
-  Sparkles
+  Sparkles, Phone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,7 @@ interface HeaderProps {
   setActiveTab?: (tab: ActiveTab) => void;
   onTabChange?: (tab: ActiveTab) => void;
   onNavigate?: (path: string) => void;
+  onContactClick?: () => void;
   cartCount?: number;
   wishlistCount?: number;
   onOpenCart?: () => void;
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onTabChange,
   onNavigate,
+  onContactClick,
   cartCount = 0,
   wishlistCount = 0,
   onOpenCart = () => {},
@@ -45,7 +47,45 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'track-order', path: '/track-order', label: 'Track Your Order' },
   ];
 
+  const handleContactClick = () => {
+    setMobileMenuOpen(false);
+
+    if (onContactClick) {
+      onContactClick();
+      return;
+    }
+
+    const scrollToContactSection = () => {
+      const contactEl = document.getElementById('contact');
+      if (contactEl) {
+        contactEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }
+    };
+
+    const isHome = activeTab === 'home' && (window.location.pathname === '/' || window.location.pathname === '');
+
+    if (isHome) {
+      scrollToContactSection();
+    } else {
+      if (typeof setActiveTab === 'function') {
+        setActiveTab('home');
+      } else if (typeof onTabChange === 'function') {
+        onTabChange('home');
+      }
+      if (onNavigate) {
+        onNavigate('/');
+      }
+      setTimeout(scrollToContactSection, 150);
+    }
+  };
+
   const handleNavClick = (id: ActiveTab, path: string) => {
+    if (id === 'contact' || path === '/contact-us') {
+      handleContactClick();
+      return;
+    }
     if (typeof setActiveTab === 'function') {
       setActiveTab(id);
     } else if (typeof onTabChange === 'function') {
@@ -252,7 +292,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 relative">
-          
+          {/* Top Contact Us Button */}
+          <button
+            onClick={handleContactClick}
+            className="flex items-center gap-2 px-3.5 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:brightness-105 transition-all cursor-pointer border border-amber-600/30 whitespace-nowrap"
+            aria-label="Contact Us"
+          >
+            <Phone className="w-3.5 h-3.5 text-black shrink-0" />
+            <span>Contact Us</span>
+          </button>
+
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2.5 rounded-xl bg-[#f8f5ee] border border-gold/40 text-neutral-900 cursor-pointer hover:bg-gold transition-colors"
@@ -338,10 +387,19 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="pt-2 border-t border-neutral-200 flex flex-col gap-2">
             <button
               onClick={() => {
+                setMobileMenuOpen(false);
+                handleContactClick();
+              }}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:brightness-105 cursor-pointer"
+            >
+              <Phone className="w-4 h-4 text-black" /> Contact Us
+            </button>
+            <button
+              onClick={() => {
                 onOpenQuote();
                 setMobileMenuOpen(false);
               }}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:brightness-105 cursor-pointer"
+              className="w-full py-3 rounded-xl bg-[#f8f5ee] hover:bg-gold/20 text-neutral-900 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-gold/40 transition-all cursor-pointer"
             >
               <FileText className="w-4 h-4 text-black" /> Custom Quotation
             </button>

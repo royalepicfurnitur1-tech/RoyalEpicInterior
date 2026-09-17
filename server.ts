@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import Razorpay from "razorpay";
@@ -11,13 +10,19 @@ import { PRODUCTS_DATA } from "./src/data/mockData";
 
 dotenv.config();
 
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "rzp_test_TLdbeJzTprNsdX";
-const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || "hGD8X1kj8RlDPZtsuT8wbsjG";
-
-const razorpay = new Razorpay({
-  key_id: razorpayKeyId,
-  key_secret: razorpayKeySecret,
-});
+// Lazy initialization helper for Razorpay
+let razorpayInstance: Razorpay | null = null;
+const getRazorpayClient = () => {
+  if (!razorpayInstance) {
+    const key_id = process.env.RAZORPAY_KEY_ID || "rzp_test_TLdbeJzTprNsdX";
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || "hGD8X1kj8RlDPZtsuT8wbsjG";
+    razorpayInstance = new Razorpay({
+      key_id,
+      key_secret,
+    });
+  }
+  return razorpayInstance;
+};
 
 // Helper for Supabase credentials
 const getSupabaseConfig = () => {
@@ -229,9 +234,9 @@ async function startServer() {
     res.status(200).send(sitemapXml);
   });
 
-  // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", app: "Royal Epic Interior & Furniture" });
+  // Cloud Run & Uptime Health Check Endpoints (Supports HEAD and GET)
+  app.get(["/api/health", "/health", "/healthz", "/_ah/health"], (req, res) => {
+    res.status(200).json({ status: "ok", app: "Royal Epic Interior & Furniture" });
   });
 
   // -------------------------------------------------------------
@@ -897,6 +902,7 @@ async function startServer() {
         receipt: receipt || `rcpt_${Math.floor(Date.now() / 1000)}_${Math.floor(Math.random() * 1000)}`,
       };
 
+      const razorpay = getRazorpayClient();
       const order = await razorpay.orders.create(options);
 
       res.json({
@@ -904,7 +910,7 @@ async function startServer() {
         order_id: order.id,
         amount: order.amount,
         currency: order.currency,
-        key_id: razorpayKeyId
+        key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_TLdbeJzTprNsdX"
       });
     } catch (error: any) {
       console.error("Razorpay Create Order Error:", error);
@@ -927,9 +933,10 @@ async function startServer() {
         });
       }
 
+      const keySecret = process.env.RAZORPAY_KEY_SECRET || "hGD8X1kj8RlDPZtsuT8wbsjG";
       const body = razorpay_order_id + "|" + razorpay_payment_id;
       const expectedSignature = crypto
-        .createHmac("sha256", razorpayKeySecret)
+        .createHmac("sha256", keySecret)
         .update(body.toString())
         .digest("hex");
 
@@ -1792,8 +1799,14 @@ Provide a JSON response with the following keys:
     });
   });
 
-  // Vite middleware for development vs static serve for production
-  if (process.env.NODE_ENV !== "production") {
+  // Detect production: either explicitly NODE_ENV=production, or running compiled server.cjs
+  const isProduction =
+    process.env.NODE_ENV === "production" ||
+    Boolean(process.argv[1]?.endsWith(".cjs")) ||
+    (typeof __filename !== "undefined" && __filename.endsWith(".cjs"));
+
+  if (!isProduction) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -1830,13 +1843,24 @@ Provide a JSON response with the following keys:
       if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.path)) {
         return res.status(404).type("text/plain").send("Static Asset Not Found");
       }
-      res.sendFile(path.join(distPath, "index.html"));
+      res.sendFile(path.join(distPath, "index.html"), (err) => {
+        if (err && !res.headersSent) {
+          res.status(200).send("<!DOCTYPE html><html><head><title>Royal Epic</title></head><body>Loading...</body></html>");
+        }
+      });
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Royal Epic server running on http://localhost:${PORT}`);
+  });
+
+  server.on("error", (err: any) => {
+    console.error("Server listen error:", err);
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error("FATAL: Failed to start server:", err);
+  process.exit(1);
+});

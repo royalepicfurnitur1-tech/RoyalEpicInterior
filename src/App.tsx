@@ -24,6 +24,7 @@ import { AiConsultantModal } from './components/AiConsultantModal';
 import { InquiryPopup } from './components/InquiryPopup';
 import { Footer } from './components/Footer';
 import { ActiveTab } from './types';
+import { submitLeadToSupabase } from './lib/supabase';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -47,6 +48,87 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  const handleScrollToContact = () => {
+    if (currentPath !== '/') {
+      navigateTo('/');
+    }
+    if (activeTab !== 'home') {
+      setActiveTab('home');
+    }
+    setTimeout(() => {
+      const contactEl = document.getElementById('contact');
+      if (contactEl) {
+        contactEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }
+    }, 150);
+  };
+
+  // If user navigates to /contact-us, direct to bottom home contact form
+  useEffect(() => {
+    if (currentPath === '/contact-us') {
+      handleScrollToContact();
+    }
+  }, [currentPath]);
+
+  // Automated Enquiry Popup Trigger on page visit
+  useEffect(() => {
+    try {
+      const isDismissed = sessionStorage.getItem('royalepic_inquiry_popup_dismissed');
+      const isSubmitted = sessionStorage.getItem('royalepic_inquiry_popup_submitted');
+      if (!isDismissed && !isSubmitted) {
+        const timer = setTimeout(() => {
+          setShowInquiryPopup(true);
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    } catch (e) {
+      console.warn('Inquiry session check note:', e);
+    }
+  }, []);
+
+  // Global helper for opening enquiry popup
+  useEffect(() => {
+    (window as any).openInquiryPopup = () => setShowInquiryPopup(true);
+    return () => {
+      delete (window as any).openInquiryPopup;
+    };
+  }, []);
+
+  const handleCloseInquiryPopup = () => {
+    setShowInquiryPopup(false);
+    try {
+      sessionStorage.setItem('royalepic_inquiry_popup_dismissed', 'true');
+    } catch (e) {}
+  };
+
+  const handleInquiryLeadSubmit = async (
+    name: string,
+    phone: string,
+    email?: string,
+    description?: string,
+    projectType?: string,
+    budget?: string
+  ) => {
+    try {
+      await submitLeadToSupabase({
+        full_name: name,
+        phone: phone,
+        email: email || undefined,
+        service_type: projectType || 'Complete Turnkey Project',
+        estimated_budget: budget || '₹5 Lakhs - ₹15 Lakhs',
+        project_scope: description || '',
+        source: 'Website Enquiry Popup Form'
+      });
+      try {
+        sessionStorage.setItem('royalepic_inquiry_popup_submitted', 'true');
+      } catch (e) {}
+    } catch (err) {
+      console.warn('Inquiry popup submit note:', err);
+    }
+  };
+
   const handleOpenQuote = (title: string) => {
     setQuoteModalTitle(title);
   };
@@ -65,6 +147,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         onTabChange={setActiveTab} 
         onNavigate={navigateTo}
+        onContactClick={handleScrollToContact}
         wishlistCount={wishlistIds.length}
         cartCount={0}
         onOpenCart={() => {}}
@@ -83,7 +166,7 @@ export default function App() {
             onNavigate={navigateTo}
             onRequestQuote={(title) => handleOpenQuote(title)}
           />
-        ) : currentPath !== '/' && SEO_PAGES[currentPath] ? (
+        ) : currentPath !== '/' && currentPath !== '/contact-us' && SEO_PAGES[currentPath] ? (
           <SeoPageRenderer
             pageData={SEO_PAGES[currentPath]}
             onNavigate={navigateTo}
@@ -216,8 +299,8 @@ export default function App() {
 
       {showInquiryPopup && (
         <InquiryPopup
-          onClose={() => setShowInquiryPopup(false)}
-          onSubmitLead={(name, phone, email, description, projectType, budget) => {}}
+          onClose={handleCloseInquiryPopup}
+          onSubmitLead={handleInquiryLeadSubmit}
         />
       )}
     </div>

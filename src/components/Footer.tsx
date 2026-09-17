@@ -227,7 +227,22 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
               {['Privacy Policy', 'Terms & Conditions', 'Refund & Return Policy', 'Shipping Policy', 'Careers at Royal Epic', 'Contact Us'].map((item, idx) => (
                 <li key={idx}>
                   <button
-                    onClick={() => setPolicyModal(item)}
+                    onClick={() => {
+                      if (item === 'Contact Us') {
+                        if (typeof setActiveTab === 'function') setActiveTab('home');
+                        window.history.pushState({}, '', '/');
+                        setTimeout(() => {
+                          const contactEl = document.getElementById('contact');
+                          if (contactEl) {
+                            contactEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          } else {
+                            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                          }
+                        }, 150);
+                      } else {
+                        setPolicyModal(item);
+                      }
+                    }}
                     className="hover:text-white hover:underline transition-colors cursor-pointer text-left text-[11px]"
                   >
                     {item}
