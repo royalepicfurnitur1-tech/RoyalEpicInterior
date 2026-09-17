@@ -154,22 +154,6 @@ export const DeveloperDashboard: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <button
-              type="button"
-              onClick={() => {
-                setDevEmailInput('developer@royalepic.com');
-                setDevPasswordInput('RoyalDev2026!');
-              }}
-              className="w-full py-2 px-3 rounded-lg bg-neutral-800/80 hover:bg-neutral-800 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Key className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Auto-Fill Dev Credentials (developer@royalepic.com)</span>
-            </button>
-          </div>
-
-
-
           {user && (
             <button
               onClick={() => logout()}

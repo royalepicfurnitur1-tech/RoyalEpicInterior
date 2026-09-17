@@ -476,22 +476,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </button>
             </form>
 
-            <div className="pt-2 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminEmailInput('admin@royalepicinterior.in');
-                  setAdminPasswordInput('admin123');
-                }}
-                className="w-full py-2 px-3 rounded-lg bg-neutral-800/80 hover:bg-neutral-800 border border-gold/30 text-gold text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Key className="w-3.5 h-3.5" />
-                <span>Auto-Fill Admin Credentials (admin@royalepicinterior.in)</span>
-              </button>
-            </div>
-
-
-
             {user && (
               <button
                 onClick={() => logout()}

@@ -564,41 +564,6 @@ export const CustomersSubdomainPortal: React.FC<CustomersSubdomainPortalProps> =
                 )}
               </button>
             </form>
-
-            {/* Quick 1-Click Access for Testing */}
-            <div className="mt-6 pt-5 border-t border-white/10">
-              <div className="text-center mb-3">
-                <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">
-                  Quick Access Shortcuts
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoLogin('executive')}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-gold/10 border border-white/10 hover:border-gold/40 text-[10px] text-neutral-300 hover:text-gold transition text-center cursor-pointer"
-                >
-                  <Users className="w-3.5 h-3.5 mx-auto mb-1 text-gold" />
-                  <span>Marketing Staff</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoLogin('admin')}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-gold/10 border border-white/10 hover:border-gold/40 text-[10px] text-neutral-300 hover:text-gold transition text-center cursor-pointer"
-                >
-                  <Shield className="w-3.5 h-3.5 mx-auto mb-1 text-gold" />
-                  <span>Super Admin</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoLogin('customer')}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-gold/10 border border-white/10 hover:border-gold/40 text-[10px] text-neutral-300 hover:text-gold transition text-center cursor-pointer"
-                >
-                  <UserCheck className="w-3.5 h-3.5 mx-auto mb-1 text-gold" />
-                  <span>Client Demo</span>
-                </button>
-              </div>
-            </div>
           </div>
         </main>
 

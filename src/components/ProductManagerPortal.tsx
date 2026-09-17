@@ -353,17 +353,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
             </button>
           </form>
 
-          {/* Quick Demo Access for Testing */}
-          <div className="pt-3 border-t border-white/10 text-center">
-            <button
-              onClick={() => loginAsDemoAdmin('pm@royalepicinterior.in')}
-              className="text-[11px] text-gold hover:underline cursor-pointer font-mono"
-            >
-              ⚡ Quick Demo 1-Click Access (Product Manager)
-            </button>
-          </div>
-
-          <div className="flex justify-between text-[11px] text-neutral-500 pt-2 font-mono">
+          <div className="flex justify-between text-[11px] text-neutral-500 pt-3 border-t border-white/10 font-mono">
             {onBackToWebsite && (
               <button onClick={onBackToWebsite} className="hover:text-white cursor-pointer">
                 ← Return to Store
