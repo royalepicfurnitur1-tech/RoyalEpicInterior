@@ -156,6 +156,7 @@ export async function submitLeadToSupabase(payload: LeadInquiryPayload): Promise
 
   // 1. Dispatch through backend proxy route with full diagnostic logging
   let backendSuccess = false;
+  let serverAssignedId = generatedId;
   try {
     const backendRes = await fetch('/api/supabase/submit-lead', {
       method: 'POST',
@@ -166,6 +167,9 @@ export async function submitLeadToSupabase(payload: LeadInquiryPayload): Promise
       const bData = await backendRes.json();
       console.log('✅ Lead synced to Supabase via server API:', bData);
       backendSuccess = true;
+      if (bData?.id) {
+        serverAssignedId = bData.id;
+      }
     } else {
       const errJson = await backendRes.json().catch(() => null);
       console.warn('⚠️ Server Supabase submit warning:', errJson);
@@ -174,7 +178,13 @@ export async function submitLeadToSupabase(payload: LeadInquiryPayload): Promise
     console.warn('Backend proxy fetch note:', backendErr);
   }
 
-  // 2. Also attempt direct client-side Supabase client insert
+  // If server API successfully saved to Supabase, save to local cache and return immediately (no duplicate insert)
+  if (backendSuccess) {
+    saveLeadLocally(record);
+    return { success: true, id: serverAssignedId };
+  }
+
+  // 2. Direct client-side Supabase client insert ONLY as fallback if server API failed or was unavailable
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -184,9 +194,9 @@ export async function submitLeadToSupabase(payload: LeadInquiryPayload): Promise
         .single();
 
       if (error) {
-        console.warn('⚠️ Direct Supabase client insert returned:', error.message, error.details);
+        console.warn('⚠️ Direct Supabase client fallback insert returned:', error.message, error.details);
       } else {
-        console.log('✅ Direct Supabase client insert succeeded:', data?.id || generatedId);
+        console.log('✅ Direct Supabase client insert succeeded (fallback):', data?.id || generatedId);
         saveLeadLocally(record);
         return { success: true, id: data?.id || generatedId };
       }
@@ -198,7 +208,7 @@ export async function submitLeadToSupabase(payload: LeadInquiryPayload): Promise
   // Always save locally so no customer data is ever lost
   saveLeadLocally(record);
 
-  // Also notify local CRM endpoint
+  // Also notify local CRM endpoint as fallback
   try {
     fetch('/api/crm/leads', {
       method: 'POST',
