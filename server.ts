@@ -7,6 +7,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { generateSitemapXml, generateRobotsTxt } from "./src/utils/sitemap";
 import { PRODUCTS_DATA } from "./src/data/mockData";
+import { sendLeadNotificationEmail, getSmtpConfigStatus } from "./src/server/emailNotificationService";
 
 dotenv.config();
 
@@ -847,6 +848,12 @@ async function startServer() {
       if (response.ok) {
         const insertedData = await response.json();
         console.log("✅ Successfully inserted lead into Supabase:", leadRecord.id);
+
+        // Dispatch Hostinger SMTP email notification (non-blocking, fail-safe, deduplicated)
+        sendLeadNotificationEmail(leadRecord).catch((mailErr) => {
+          console.error("⚠️ [Hostinger SMTP] Notification send note:", mailErr?.message || mailErr);
+        });
+
         return res.json({
           success: true,
           id: leadRecord.id,
@@ -1107,6 +1114,22 @@ async function startServer() {
       crmLeads.unshift(newLead);
 
       console.log("🌟 New Lead saved to Royal Epic CRM:", newLead);
+
+      // Dispatch Hostinger SMTP email notification (deduplicated against other endpoints)
+      sendLeadNotificationEmail({
+        id: newLead.id,
+        full_name: newLead.name,
+        phone: newLead.phone,
+        email: newLead.email,
+        city: newLead.location,
+        service_type: newLead.projectType,
+        estimated_budget: newLead.budget,
+        project_scope: typeof newLead.discoveredInfo === 'object' ? JSON.stringify(newLead.discoveredInfo) : newLead.recommendations || '',
+        source: newLead.source,
+        created_at: newLead.createdAt
+      }).catch((mailErr) => {
+        console.error("⚠️ [Hostinger SMTP] CRM lead notification note:", mailErr?.message || mailErr);
+      });
 
       res.json({
         success: true,
@@ -1792,10 +1815,37 @@ Provide a JSON response with the following keys:
   app.post("/api/quote", (req, res) => {
     const quoteData = req.body;
     console.log("Received new quote request:", quoteData);
+
+    const leadRecord = {
+      id: `LEAD-QT-${Date.now().toString().slice(-6)}`,
+      full_name: quoteData.name || quoteData.full_name || 'Anonymous Inquiry',
+      phone: quoteData.phone || 'N/A',
+      email: quoteData.email || null,
+      city: quoteData.city || 'Bengaluru',
+      service_type: quoteData.projectType || quoteData.service_type || 'Architectural Consultation',
+      estimated_budget: quoteData.budget || quoteData.estimated_budget || 'Custom Quote',
+      project_scope: quoteData.message || (quoteData.drawingName ? `Uploaded Architectural Drawing: ${quoteData.drawingName}` : 'Custom Architectural Quotation Request'),
+      source: 'Free Architectural Consultation Modal',
+      created_at: new Date().toISOString()
+    };
+
+    // Dispatch notification email with deduplication (if already dispatched via /api/supabase/submit-lead, this is automatically suppressed)
+    sendLeadNotificationEmail(leadRecord).catch((mailErr) => {
+      console.error("⚠️ [Hostinger SMTP] Quote notification note:", mailErr?.message || mailErr);
+    });
+
     res.json({
       success: true,
       quoteId: `RE-QT-${Math.floor(100000 + Math.random() * 900000)}`,
       message: "Quotation request successfully logged. Senior designer will contact within 2 hours."
+    });
+  });
+
+  // Hostinger SMTP Status Diagnostic Endpoint (safe, no password exposure)
+  app.get("/api/smtp/status", (req, res) => {
+    res.json({
+      success: true,
+      ...getSmtpConfigStatus()
     });
   });
 
