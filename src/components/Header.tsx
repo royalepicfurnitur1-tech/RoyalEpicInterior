@@ -290,18 +290,8 @@ export const Header: React.FC<HeaderProps> = ({
           })}
         </nav>
 
-        {/* Header Action Buttons */}
+        {/* Header Action Buttons / Mobile Toggle */}
         <div className="flex items-center gap-2 sm:gap-3 relative">
-          {/* Top Contact Us Button */}
-          <button
-            onClick={handleContactClick}
-            className="flex items-center gap-2 px-3.5 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow-md hover:brightness-105 transition-all cursor-pointer border border-amber-600/30 whitespace-nowrap"
-            aria-label="Contact Us"
-          >
-            <Phone className="w-3.5 h-3.5 text-black shrink-0" />
-            <span>Contact Us</span>
-          </button>
-
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2.5 rounded-xl bg-[#f8f5ee] border border-gold/40 text-neutral-900 cursor-pointer hover:bg-gold transition-colors"

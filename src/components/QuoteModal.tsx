@@ -26,7 +26,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
     email: '',
     city: '',
     projectType: prefilledTitle || 'Residential Interior',
-    budget: prefilledBudget || '₹3,000,000 - ₹5,000,000',
+    budget: prefilledBudget || '₹5 Lakhs - ₹15 Lakhs',
     message: '',
     drawingName: '',
   });
@@ -218,8 +218,6 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
                     onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
                     className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-gold cursor-pointer"
                   >
-                    <option value="Under ₹2 Lakhs">Under ₹2 Lakhs</option>
-                    <option value="₹2 Lakhs - ₹5 Lakhs">₹2 Lakhs - ₹5 Lakhs</option>
                     <option value="₹5 Lakhs - ₹15 Lakhs">₹5 Lakhs - ₹15 Lakhs</option>
                     <option value="₹15 Lakhs - ₹30 Lakhs">₹15 Lakhs - ₹30 Lakhs</option>
                     <option value="₹30 Lakhs - ₹50 Lakhs">₹30 Lakhs - ₹50 Lakhs</option>
