@@ -14,7 +14,6 @@ import { BlogSection } from './components/BlogSection';
 import { ContactSection } from './components/ContactSection';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { DeveloperDashboard } from './components/DeveloperDashboard';
-import { ProductManagerPortal } from './components/ProductManagerPortal';
 import { ProductDetailPage } from './components/ProductDetailPage';
 import { QuoteModal } from './components/QuoteModal';
 import { SearchModal } from './components/SearchModal';
@@ -27,6 +26,7 @@ import { submitLeadToSupabase } from './lib/supabase';
 // Dynamically imported portal chunks to prevent giant monolithic bundle issues
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const CustomersSubdomainPortal = React.lazy(() => import('./components/CustomersSubdomainPortal').then(m => ({ default: m.CustomersSubdomainPortal })));
+const ProductManagerPortal = React.lazy(() => import('./components/ProductManagerPortal').then(m => ({ default: m.ProductManagerPortal })));
 
 const SubdomainLoadingFallback = () => (
   <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-white px-4">
@@ -54,6 +54,7 @@ function getResolvedHostname(): string {
     const subdomainParam = params.get('subdomain');
     if (subdomainParam === 'admin') return 'admin.royalepicinterior.com';
     if (subdomainParam === 'customers' || subdomainParam === 'customer') return 'customers.royalepicinterior.com';
+    if (subdomainParam === 'products' || subdomainParam === 'product') return 'products.royalepicinterior.com';
   } catch (_) {}
   return window.location.hostname.toLowerCase().trim();
 }
@@ -80,6 +81,12 @@ export default function App() {
     hostname.startsWith('customers.') || 
     hostname.startsWith('customer.');
 
+  const isProductsSubdomain = 
+    hostname === 'products.royalepicinterior.com' || 
+    hostname === 'product.royalepicinterior.com' || 
+    hostname.startsWith('products.') || 
+    hostname.startsWith('product.');
+
   const navigateTo = (path: string) => {
     window.history.pushState({}, '', path);
     setCurrentPath(path);
@@ -102,8 +109,10 @@ export default function App() {
       document.title = 'Royal Epic Admin Dashboard | ERP & Management Portal';
     } else if (isCustomersSubdomain) {
       document.title = 'Royal Epic Customer Portal | Client & Executive Workspace';
+    } else if (isProductsSubdomain) {
+      document.title = 'Royal Epic Product Hub | Luxury Furniture & Architectural Elements';
     }
-  }, [isAdminSubdomain, isCustomersSubdomain]);
+  }, [isAdminSubdomain, isCustomersSubdomain, isProductsSubdomain]);
 
   const handleSubdomainBackToWebsite = () => {
     if (window.location.hostname.endsWith('royalepicinterior.com')) {
@@ -136,6 +145,17 @@ export default function App() {
     } else {
       const url = new URL(window.location.href);
       url.searchParams.set('subdomain', 'customers');
+      window.history.pushState({}, '', url.pathname + url.search);
+      setHostname(getResolvedHostname());
+    }
+  };
+
+  const handleSubdomainNavigateToProducts = () => {
+    if (window.location.hostname.endsWith('royalepicinterior.com')) {
+      window.location.href = 'https://products.royalepicinterior.com';
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set('subdomain', 'products');
       window.history.pushState({}, '', url.pathname + url.search);
       setHostname(getResolvedHostname());
     }
@@ -249,6 +269,7 @@ export default function App() {
             onProductsUpdated={fetchProducts}
             onBackToWebsite={handleSubdomainBackToWebsite}
             onNavigateToCustomers={handleSubdomainNavigateToCustomers}
+            onNavigateToProducts={handleSubdomainNavigateToProducts}
           />
         </React.Suspense>
       </div>
@@ -276,6 +297,24 @@ export default function App() {
               prefilledTitle={quoteModalTitle}
             />
           )}
+        </React.Suspense>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 3. DEDICATED PRODUCTS SUBDOMAIN (products.royalepicinterior.com)
+  // When visited at https://products.royalepicinterior.com, load the
+  // dedicated Product Manager Portal & Catalog Suite directly.
+  // -------------------------------------------------------------
+  if (isProductsSubdomain) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white font-sans">
+        <React.Suspense fallback={<SubdomainLoadingFallback />}>
+          <ProductManagerPortal
+            onBackToWebsite={handleSubdomainBackToWebsite}
+            onNavigateToAdmin={handleSubdomainNavigateToAdmin}
+          />
         </React.Suspense>
       </div>
     );
@@ -408,10 +447,12 @@ export default function App() {
             )}
 
             {(activeTab === 'product-manager' || activeTab === 'product-management') && (
-              <ProductManagerPortal
-                onBackToWebsite={() => setActiveTab('home')}
-                onNavigateToAdmin={() => setActiveTab('admin')}
-              />
+              <React.Suspense fallback={<SubdomainLoadingFallback />}>
+                <ProductManagerPortal
+                  onBackToWebsite={() => setActiveTab('home')}
+                  onNavigateToAdmin={() => setActiveTab('admin')}
+                />
+              </React.Suspense>
             )}
 
             {(activeTab === 'admin' || currentPath === '/admin') && (
@@ -421,6 +462,7 @@ export default function App() {
                   onProductsUpdated={fetchProducts}
                   onBackToWebsite={() => { setActiveTab('home'); navigateTo('/'); }}
                   onNavigateToCustomers={() => { setActiveTab('customers'); navigateTo('/customers'); }}
+                  onNavigateToProducts={handleSubdomainNavigateToProducts}
                 />
               </React.Suspense>
             )}
