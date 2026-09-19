@@ -13,8 +13,6 @@ import { PortfolioSection } from './components/PortfolioSection';
 import { BlogSection } from './components/BlogSection';
 import { ContactSection } from './components/ContactSection';
 import { CustomerDashboard } from './components/CustomerDashboard';
-import { AdminDashboard } from './components/AdminDashboard';
-import { CustomersSubdomainPortal } from './components/CustomersSubdomainPortal';
 import { DeveloperDashboard } from './components/DeveloperDashboard';
 import { ProductManagerPortal } from './components/ProductManagerPortal';
 import { ProductDetailPage } from './components/ProductDetailPage';
@@ -25,6 +23,17 @@ import { InquiryPopup } from './components/InquiryPopup';
 import { Footer } from './components/Footer';
 import { ActiveTab } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
+
+// Dynamically imported portal chunks to prevent giant monolithic bundle issues
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const CustomersSubdomainPortal = React.lazy(() => import('./components/CustomersSubdomainPortal').then(m => ({ default: m.CustomersSubdomainPortal })));
+
+const SubdomainLoadingFallback = () => (
+  <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-white px-4">
+    <div className="w-10 h-10 border-2 border-gold/30 border-t-gold rounded-full animate-spin mb-4" />
+    <p className="text-xs uppercase tracking-widest text-neutral-400 font-medium">Loading Royal Epic Workspace...</p>
+  </div>
+);
 
 /**
  * Helper to detect current hostname.
@@ -234,12 +243,14 @@ export default function App() {
   if (isAdminSubdomain) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white font-sans">
-        <AdminDashboard
-          products={products}
-          onProductsUpdated={fetchProducts}
-          onBackToWebsite={handleSubdomainBackToWebsite}
-          onNavigateToCustomers={handleSubdomainNavigateToCustomers}
-        />
+        <React.Suspense fallback={<SubdomainLoadingFallback />}>
+          <AdminDashboard
+            products={products}
+            onProductsUpdated={fetchProducts}
+            onBackToWebsite={handleSubdomainBackToWebsite}
+            onNavigateToCustomers={handleSubdomainNavigateToCustomers}
+          />
+        </React.Suspense>
       </div>
     );
   }
@@ -252,18 +263,20 @@ export default function App() {
   if (isCustomersSubdomain) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white font-sans">
-        <CustomersSubdomainPortal
-          onBackToWebsite={handleSubdomainBackToWebsite}
-          onNavigateToAdmin={handleSubdomainNavigateToAdmin}
-          onOpenQuote={(title) => handleOpenQuote(title || '')}
-        />
-        {quoteModalTitle && (
-          <QuoteModal
-            isOpen={!!quoteModalTitle}
-            onClose={() => setQuoteModalTitle('')}
-            prefilledTitle={quoteModalTitle}
+        <React.Suspense fallback={<SubdomainLoadingFallback />}>
+          <CustomersSubdomainPortal
+            onBackToWebsite={handleSubdomainBackToWebsite}
+            onNavigateToAdmin={handleSubdomainNavigateToAdmin}
+            onOpenQuote={(title) => handleOpenQuote(title || '')}
           />
-        )}
+          {quoteModalTitle && (
+            <QuoteModal
+              isOpen={!!quoteModalTitle}
+              onClose={() => setQuoteModalTitle('')}
+              prefilledTitle={quoteModalTitle}
+            />
+          )}
+        </React.Suspense>
       </div>
     );
   }
@@ -381,11 +394,13 @@ export default function App() {
             )}
 
             {(activeTab === 'customers' || currentPath === '/customers' || currentPath === '/customer') && (
-              <CustomersSubdomainPortal
-                onBackToWebsite={() => { setActiveTab('home'); navigateTo('/'); }}
-                onNavigateToAdmin={() => { setActiveTab('admin'); navigateTo('/admin'); }}
-                onOpenQuote={(title) => handleOpenQuote(title || '')}
-              />
+              <React.Suspense fallback={<SubdomainLoadingFallback />}>
+                <CustomersSubdomainPortal
+                  onBackToWebsite={() => { setActiveTab('home'); navigateTo('/'); }}
+                  onNavigateToAdmin={() => { setActiveTab('admin'); navigateTo('/admin'); }}
+                  onOpenQuote={(title) => handleOpenQuote(title || '')}
+                />
+              </React.Suspense>
             )}
 
             {activeTab === 'developer' && (
@@ -400,12 +415,14 @@ export default function App() {
             )}
 
             {(activeTab === 'admin' || currentPath === '/admin') && (
-              <AdminDashboard 
-                products={products} 
-                onProductsUpdated={fetchProducts}
-                onBackToWebsite={() => { setActiveTab('home'); navigateTo('/'); }}
-                onNavigateToCustomers={() => { setActiveTab('customers'); navigateTo('/customers'); }}
-              />
+              <React.Suspense fallback={<SubdomainLoadingFallback />}>
+                <AdminDashboard 
+                  products={products} 
+                  onProductsUpdated={fetchProducts}
+                  onBackToWebsite={() => { setActiveTab('home'); navigateTo('/'); }}
+                  onNavigateToCustomers={() => { setActiveTab('customers'); navigateTo('/customers'); }}
+                />
+              </React.Suspense>
             )}
           </>
         )}
