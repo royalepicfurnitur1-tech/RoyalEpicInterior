@@ -26,8 +26,32 @@ import { Footer } from './components/Footer';
 import { ActiveTab } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
 
+/**
+ * Helper to detect current hostname.
+ * Detects:
+ * - admin.royalepicinterior.com -> Admin Dashboard directly
+ * - customers.royalepicinterior.com -> Customer Subdomain Portal directly
+ * - royalepicinterior.com / www.royalepicinterior.com -> Normal public homepage
+ * Also supports ?hostname=, ?host=, or ?subdomain= parameters for test/preview simulation.
+ */
+function getResolvedHostname(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const hostParam = params.get('hostname') || params.get('host');
+    if (hostParam) {
+      return hostParam.toLowerCase().trim();
+    }
+    const subdomainParam = params.get('subdomain');
+    if (subdomainParam === 'admin') return 'admin.royalepicinterior.com';
+    if (subdomainParam === 'customers' || subdomainParam === 'customer') return 'customers.royalepicinterior.com';
+  } catch (_) {}
+  return window.location.hostname.toLowerCase().trim();
+}
+
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [hostname, setHostname] = useState<string>(getResolvedHostname);
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [products, setProducts] = useState(PRODUCTS_DATA);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
@@ -35,18 +59,78 @@ export default function App() {
   const [isAiConsultantOpen, setIsAiConsultantOpen] = useState(false);
   const [showInquiryPopup, setShowInquiryPopup] = useState(false);
   const [quoteModalTitle, setQuoteModalTitle] = useState('');
-  
+
+  // Subdomain identification
+  const isAdminSubdomain = 
+    hostname === 'admin.royalepicinterior.com' || 
+    hostname.startsWith('admin.');
+
+  const isCustomersSubdomain = 
+    hostname === 'customers.royalepicinterior.com' || 
+    hostname === 'customer.royalepicinterior.com' ||
+    hostname.startsWith('customers.') || 
+    hostname.startsWith('customer.');
+
   const navigateTo = (path: string) => {
     window.history.pushState({}, '', path);
     setCurrentPath(path);
+    setHostname(getResolvedHostname());
     window.scrollTo(0, 0);
   };
 
   useEffect(() => {
-    const handlePopState = () => setCurrentPath(window.location.pathname);
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+      setHostname(getResolvedHostname());
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Update document title for dedicated subdomains
+  useEffect(() => {
+    if (isAdminSubdomain) {
+      document.title = 'Royal Epic Admin Dashboard | ERP & Management Portal';
+    } else if (isCustomersSubdomain) {
+      document.title = 'Royal Epic Customer Portal | Client & Executive Workspace';
+    }
+  }, [isAdminSubdomain, isCustomersSubdomain]);
+
+  const handleSubdomainBackToWebsite = () => {
+    if (window.location.hostname.endsWith('royalepicinterior.com')) {
+      window.location.href = 'https://royalepicinterior.com';
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('subdomain');
+      url.searchParams.delete('hostname');
+      url.searchParams.delete('host');
+      window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
+      setHostname(getResolvedHostname());
+      setActiveTab('home');
+    }
+  };
+
+  const handleSubdomainNavigateToAdmin = () => {
+    if (window.location.hostname.endsWith('royalepicinterior.com')) {
+      window.location.href = 'https://admin.royalepicinterior.com';
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set('subdomain', 'admin');
+      window.history.pushState({}, '', url.pathname + url.search);
+      setHostname(getResolvedHostname());
+    }
+  };
+
+  const handleSubdomainNavigateToCustomers = () => {
+    if (window.location.hostname.endsWith('royalepicinterior.com')) {
+      window.location.href = 'https://customers.royalepicinterior.com';
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set('subdomain', 'customers');
+      window.history.pushState({}, '', url.pathname + url.search);
+      setHostname(getResolvedHostname());
+    }
+  };
 
   const handleScrollToContact = () => {
     if (currentPath !== '/') {
@@ -72,8 +156,10 @@ export default function App() {
     }
   }, [currentPath]);
 
-  // Automated Enquiry Popup Trigger on page visit
+  // Automated Enquiry Popup Trigger on page visit (only on main public site)
   useEffect(() => {
+    if (isAdminSubdomain || isCustomersSubdomain) return;
+
     try {
       const isDismissed = sessionStorage.getItem('royalepic_inquiry_popup_dismissed');
       const isSubmitted = sessionStorage.getItem('royalepic_inquiry_popup_submitted');
@@ -86,7 +172,7 @@ export default function App() {
     } catch (e) {
       console.warn('Inquiry session check note:', e);
     }
-  }, []);
+  }, [isAdminSubdomain, isCustomersSubdomain]);
 
   // Global helper for opening enquiry popup
   useEffect(() => {
@@ -140,6 +226,52 @@ export default function App() {
   const handleToggleWishlist = (p: any) => {};
   const fetchProducts = async () => {};
 
+  // -------------------------------------------------------------
+  // 1. DEDICATED ADMIN SUBDOMAIN (admin.royalepicinterior.com)
+  // When visited at https://admin.royalepicinterior.com, load the
+  // existing Admin Dashboard directly.
+  // -------------------------------------------------------------
+  if (isAdminSubdomain) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white font-sans">
+        <AdminDashboard
+          products={products}
+          onProductsUpdated={fetchProducts}
+          onBackToWebsite={handleSubdomainBackToWebsite}
+          onNavigateToCustomers={handleSubdomainNavigateToCustomers}
+        />
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 2. DEDICATED CUSTOMERS SUBDOMAIN (customers.royalepicinterior.com)
+  // When visited at https://customers.royalepicinterior.com, load the
+  // existing Customer Portal directly.
+  // -------------------------------------------------------------
+  if (isCustomersSubdomain) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white font-sans">
+        <CustomersSubdomainPortal
+          onBackToWebsite={handleSubdomainBackToWebsite}
+          onNavigateToAdmin={handleSubdomainNavigateToAdmin}
+          onOpenQuote={(title) => handleOpenQuote(title || '')}
+        />
+        {quoteModalTitle && (
+          <QuoteModal
+            isOpen={!!quoteModalTitle}
+            onClose={() => setQuoteModalTitle('')}
+            prefilledTitle={quoteModalTitle}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 3. MAIN DOMAIN & WWW (royalepicinterior.com / www.royalepicinterior.com)
+  // Loads normal public website with all existing path-based routes preserved.
+  // -------------------------------------------------------------
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col font-sans">
       <Header 
@@ -248,10 +380,10 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'customers' && (
+            {(activeTab === 'customers' || currentPath === '/customers' || currentPath === '/customer') && (
               <CustomersSubdomainPortal
-                onBackToWebsite={() => setActiveTab('home')}
-                onNavigateToAdmin={() => setActiveTab('admin')}
+                onBackToWebsite={() => { setActiveTab('home'); navigateTo('/'); }}
+                onNavigateToAdmin={() => { setActiveTab('admin'); navigateTo('/admin'); }}
                 onOpenQuote={(title) => handleOpenQuote(title || '')}
               />
             )}
@@ -267,8 +399,13 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'admin' && (
-              <AdminDashboard products={products} onProductsUpdated={fetchProducts} />
+            {(activeTab === 'admin' || currentPath === '/admin') && (
+              <AdminDashboard 
+                products={products} 
+                onProductsUpdated={fetchProducts}
+                onBackToWebsite={() => { setActiveTab('home'); navigateTo('/'); }}
+                onNavigateToCustomers={() => { setActiveTab('customers'); navigateTo('/customers'); }}
+              />
             )}
           </>
         )}
