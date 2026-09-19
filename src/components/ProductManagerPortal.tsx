@@ -15,13 +15,23 @@ import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } f
 interface ProductManagerPortalProps {
   onBackToWebsite?: () => void;
   onNavigateToAdmin?: () => void;
+  onProductsUpdated?: () => void;
 }
 
 const CATEGORIES = [
+  'Sofas',
+  'Modular Kitchens',
+  'Main Entrance Doors',
+  'WPC Bathroom Doors',
+  'Sliding Wardrobes',
+  'TV Units',
+  'Dining Tables',
+  'Commercial Furniture',
+  'Kitchen Equipment',
+  'Glass Partitions',
   'Living Room Luxury',
   'Dining & Crockery',
   'Master Bedroom Suites',
-  'Modular Kitchens',
   'WPC Waterproof Doors',
   'Accent Chairs & Loungers',
   'Luxury Sofas & Sectionals',
@@ -31,7 +41,8 @@ const CATEGORIES = [
 
 export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
   onBackToWebsite,
-  onNavigateToAdmin
+  onNavigateToAdmin,
+  onProductsUpdated
 }) => {
   const { user, profile, isAdmin, loginWithEmail, loginAsDemoAdmin, logout } = useAuth();
 
@@ -217,6 +228,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
         setIsModalOpen(false);
         setEditingProduct(null);
         await loadProducts();
+        onProductsUpdated?.();
         showToast('success', `Product "${payload.name}" successfully saved to Supabase!`);
       } else {
         showToast('error', `Failed to save: ${res.error}`);
@@ -234,6 +246,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
       if (res.success) {
         setDeletingId(null);
         await loadProducts();
+        onProductsUpdated?.();
         showToast('success', 'Product permanently deleted.');
       } else {
         showToast('error', `Delete error: ${res.error}`);

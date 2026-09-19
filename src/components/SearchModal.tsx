@@ -8,6 +8,7 @@ interface SearchModalProps {
   onClose: () => void;
   onSelectProduct: (p: Product) => void;
   onRequestQuote: (title: string) => void;
+  products?: Product[];
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({
@@ -15,14 +16,21 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onClose,
   onSelectProduct,
   onRequestQuote,
+  products
 }) => {
   const [query, setQuery] = useState('');
 
   if (!isOpen) return null;
 
+  const activeProducts = products && products.length > 0 ? products : PRODUCTS_DATA;
+
   const matchingProducts = query
-    ? PRODUCTS_DATA.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()))
-    : PRODUCTS_DATA.slice(0, 4);
+    ? activeProducts.filter(p => 
+        p.name.toLowerCase().includes(query.toLowerCase()) || 
+        p.category.toLowerCase().includes(query.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(query.toLowerCase()))
+      )
+    : activeProducts.slice(0, 4);
 
   const matchingServices = query
     ? SERVICES_DATA.filter(s => s.title.toLowerCase().includes(query.toLowerCase()))

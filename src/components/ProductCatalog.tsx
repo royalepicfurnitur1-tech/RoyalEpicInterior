@@ -50,19 +50,26 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     }
   }, [initialSearch]);
 
-  const categories = [
-    'All',
-    'Main Entrance Doors',
-    'WPC Bathroom Doors',
-    'Modular Kitchens',
-    'Sliding Wardrobes',
-    'TV Units',
-    'Sofas',
-    'Dining Tables',
-    'Commercial Furniture',
-    'Kitchen Equipment',
-    'Glass Partitions',
-  ];
+  const categories = useMemo(() => {
+    const base = [
+      'All',
+      'Main Entrance Doors',
+      'WPC Bathroom Doors',
+      'Modular Kitchens',
+      'Sliding Wardrobes',
+      'TV Units',
+      'Sofas',
+      'Dining Tables',
+      'Commercial Furniture',
+      'Kitchen Equipment',
+      'Glass Partitions',
+    ];
+    if (!products || products.length === 0) return base;
+    const additional = products
+      .map(p => p.category)
+      .filter(c => Boolean(c) && !base.includes(c));
+    return [...base, ...Array.from(new Set(additional))];
+  }, [products]);
 
   const equipmentCategories = [
     'All',
@@ -88,7 +95,22 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+      const matchesCategory = 
+        selectedCategory === 'All' || 
+        p.category === selectedCategory ||
+        (selectedCategory === 'Sofas' && (
+          p.category === 'Luxury Sofas & Sectionals' || 
+          p.category === 'Living Room Luxury' || 
+          p.name.toLowerCase().includes('sofa')
+        )) ||
+        (selectedCategory === 'Main Entrance Doors' && (
+          p.category === 'Doors' || 
+          p.name.toLowerCase().includes('main entrance door')
+        )) ||
+        (selectedCategory === 'WPC Bathroom Doors' && (
+          p.category === 'WPC Waterproof Doors' || 
+          p.name.toLowerCase().includes('wpc')
+        ));
       const matchesPrice = p.price <= priceMax;
 
       return matchesSearch && matchesCategory && matchesPrice;

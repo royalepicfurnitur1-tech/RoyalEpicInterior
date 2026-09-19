@@ -30,7 +30,7 @@ export function mapRowToProduct(row: any): Product {
     price: Number(row.price || 0),
     originalPrice: row.original_price ? Number(row.original_price) : Math.round(Number(row.price || 0) * 1.2),
     discount: Number(row.discount || 0),
-    discountPrice: specs.discountPrice || (row.discount ? Math.round(Number(row.price) * (1 - row.discount / 100)) : undefined),
+    discountPrice: specs.discountPrice || Number(row.price || 0),
     taxGst: specs.taxGst ? Number(specs.taxGst) : 18,
     stockQuantity: specs.stockQuantity !== undefined ? Number(specs.stockQuantity) : (row.in_stock ? 10 : 0),
     rating: Number(row.rating || 4.9),

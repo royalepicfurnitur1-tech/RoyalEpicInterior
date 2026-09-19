@@ -263,6 +263,20 @@ export default function App() {
 
   useEffect(() => {
     fetchProducts();
+    const handleFocus = () => {
+      fetchProducts();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProducts();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleSelectProduct = (p: any) => {
@@ -338,6 +352,7 @@ export default function App() {
       <div className="min-h-screen bg-neutral-950 text-white font-sans">
         <React.Suspense fallback={<SubdomainLoadingFallback />}>
           <ProductManagerPortal
+            onProductsUpdated={fetchProducts}
             onBackToWebsite={handleSubdomainBackToWebsite}
             onNavigateToAdmin={handleSubdomainNavigateToAdmin}
           />
@@ -475,6 +490,7 @@ export default function App() {
             {(activeTab === 'product-manager' || activeTab === 'product-management') && (
               <React.Suspense fallback={<SubdomainLoadingFallback />}>
                 <ProductManagerPortal
+                  onProductsUpdated={fetchProducts}
                   onBackToWebsite={() => setActiveTab('home')}
                   onNavigateToAdmin={() => setActiveTab('admin')}
                 />
@@ -511,6 +527,7 @@ export default function App() {
         onClose={() => setIsSearchOpen(false)}
         onSelectProduct={(p) => handleSelectProduct(p)}
         onRequestQuote={(title) => handleOpenQuote(title)}
+        products={products}
       />
 
       <AiConsultantModal
