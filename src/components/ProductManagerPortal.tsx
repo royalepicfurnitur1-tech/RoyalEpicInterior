@@ -245,14 +245,24 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
 
   const handleQuickToggleStock = async (p: Product) => {
     const updated = { ...p, inStock: !p.inStock };
-    await saveProduct(updated);
-    setProducts(prev => prev.map(item => item.id === p.id ? updated : item));
+    const res = await saveProduct(updated);
+    if (res.success) {
+      setProducts(prev => prev.map(item => item.id === p.id ? (res.product || updated) : item));
+      showToast('success', `Stock status updated for ${p.name}`);
+    } else {
+      showToast('error', `Failed to update stock: ${res.error}`);
+    }
   };
 
   const handleQuickToggleHot = async (p: Product) => {
     const updated = { ...p, isHot: !p.isHot };
-    await saveProduct(updated);
-    setProducts(prev => prev.map(item => item.id === p.id ? updated : item));
+    const res = await saveProduct(updated);
+    if (res.success) {
+      setProducts(prev => prev.map(item => item.id === p.id ? (res.product || updated) : item));
+      showToast('success', `Featured status updated for ${p.name}`);
+    } else {
+      showToast('error', `Failed to update featured status: ${res.error}`);
+    }
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {

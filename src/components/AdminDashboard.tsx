@@ -531,6 +531,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setIsModalOpen(false);
         setEditingProduct(null);
         await fetchCmsProducts();
+        onProductsUpdated?.();
       } else {
         alert('Failed to save product: ' + res.error);
       }
@@ -547,6 +548,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (res.success) {
         setDeletingProductId(null);
         await fetchCmsProducts();
+        onProductsUpdated?.();
+      } else {
+        alert('Failed to delete product: ' + (res.error || 'Unknown error'));
       }
     } catch (err: any) {
       console.error('Delete error:', err);

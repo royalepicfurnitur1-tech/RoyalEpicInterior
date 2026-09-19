@@ -1,5 +1,6 @@
 import { getSupabase } from '../lib/supabase';
 import { Product, ProductVariation } from '../types';
+import { getProducts, saveProduct, deleteProductById } from './productService';
 
 export interface CategoryItem {
   id: string;
@@ -397,72 +398,54 @@ export async function deleteAttribute(id: string): Promise<{ success: boolean; e
   }
 }
 
-// PRODUCT OPERATIONS
+// Helper to convert frontend Product to ProductItem
+export function productToProductItem(p: Product): ProductItem {
+  return {
+    id: p.id,
+    name: p.name,
+    category: p.category,
+    subCategory: p.subCategory || '',
+    sku: p.sku || `RE-SKU-${p.id}`,
+    price: p.price,
+    discountPrice: p.discountPrice,
+    taxGst: p.taxGst || 18,
+    shortDescription: p.shortDescription || '',
+    description: p.description || '',
+    material: p.material || (p.specifications?.material || ''),
+    finish: p.finish || (p.specifications?.finish || ''),
+    size: p.dimensions || (p.specifications?.size || ''),
+    dimensions: p.dimensions || (p.specifications?.size || ''),
+    warranty: p.specifications?.warranty || '10 Years Warranty',
+    stock: p.stockQuantity !== undefined ? p.stockQuantity : (p.inStock ? 10 : 0),
+    coverImage: p.image,
+    galleryImages: Array.isArray(p.galleryImages) && p.galleryImages.length > 0 ? p.galleryImages : [p.image],
+    selectedAttributes: (p.attributes as Record<string, string[]>) || {},
+    variations: p.variations || [],
+    specifications: (p.specifications as Record<string, string>) || {},
+    status: (p.status as 'Active' | 'Inactive' | 'Draft') || (p.inStock ? 'Active' : 'Inactive'),
+    createdAt: (p as any).created_at,
+    updatedAt: (p as any).updated_at
+  };
+}
+
+// PRODUCT OPERATIONS: Unified directly with canonical Supabase products table
 export async function getAddonProducts(): Promise<ProductItem[]> {
   try {
-    const sb = getSupabase();
-    if (sb) {
-      const { data, error } = await sb.from('addon_products').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        const items: ProductItem[] = data.map((d: any) => ({
-          id: d.id,
-          name: d.name,
-          category: d.category,
-          subCategory: d.sub_category || d.subCategory || '',
-          sku: d.sku || '',
-          price: Number(d.price) || 0,
-          discountPrice: d.discount_price ? Number(d.discount_price) : (d.discountPrice ? Number(d.discountPrice) : undefined),
-          taxGst: d.tax_gst ? Number(d.tax_gst) : (d.taxGst ? Number(d.taxGst) : 18),
-          shortDescription: d.short_description || d.shortDescription || '',
-          description: d.description || '',
-          material: d.material || '',
-          finish: d.finish || '',
-          size: d.size || '',
-          dimensions: d.dimensions || '',
-          warranty: d.warranty || '',
-          stock: Number(d.stock) || 0,
-          coverImage: d.cover_image || d.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
-          galleryImages: Array.isArray(d.gallery_images) ? d.gallery_images : (d.galleryImages || []),
-          selectedAttributes: d.selected_attributes || d.selectedAttributes || {},
-          variations: d.variations || [],
-          specifications: d.specifications || {},
-          status: (d.status as 'Active' | 'Inactive' | 'Draft') || 'Active',
-          createdAt: d.created_at,
-          updatedAt: d.updated_at
-        }));
-        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items));
-        return items;
-      }
+    const res = await getProducts();
+    if (res && res.products && res.products.length > 0) {
+      return res.products.map(productToProductItem);
     }
   } catch (e) {
-    console.warn('Supabase addon_products fetch notice:', e);
-  }
-
-  if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem(PRODUCTS_KEY);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Exclude legacy mock seed duplicate items
-          const cleaned = parsed.filter((p: any) => 
-            p && p.id && !['prod-addon-door-1', 'prod-addon-1', 'prod-addon-2'].includes(p.id)
-          );
-          if (cleaned.length !== parsed.length) {
-            localStorage.setItem(PRODUCTS_KEY, JSON.stringify(cleaned));
-          }
-          return cleaned;
-        }
-      } catch {}
-    }
+    console.warn('Error fetching unified products for product management module:', e);
   }
   return DEFAULT_ADDON_PRODUCTS;
 }
 
 export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ success: boolean; product?: ProductItem; error?: string }> {
   try {
-    const fullProd: ProductItem = {
-      id: prod.id || `prod-addon-${Date.now()}`,
+    const id = prod.id || `prod-${Date.now()}`;
+    const productPayload: Partial<Product> = {
+      id,
       name: prod.name?.trim() || 'New Product',
       category: prod.category || 'Modular Kitchens',
       subCategory: prod.subCategory || '',
@@ -474,62 +457,33 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
       description: prod.description?.trim() || '',
       material: prod.material?.trim() || '',
       finish: prod.finish?.trim() || '',
-      size: prod.size?.trim() || '',
-      dimensions: prod.dimensions?.trim() || '',
-      warranty: prod.warranty?.trim() || '10 Years Warranty',
-      stock: Number(prod.stock) || 0,
-      coverImage: prod.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
-      galleryImages: Array.isArray(prod.galleryImages) && prod.galleryImages.length > 0 ? prod.galleryImages : [prod.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'],
-      selectedAttributes: prod.selectedAttributes || {},
-      variations: Array.isArray(prod.variations) ? prod.variations : [],
-      specifications: prod.specifications || {},
+      dimensions: prod.dimensions?.trim() || prod.size?.trim() || '',
+      stockQuantity: prod.stock !== undefined ? Number(prod.stock) : 10,
+      image: prod.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
+      galleryImages: Array.isArray(prod.galleryImages) && prod.galleryImages.length > 0 
+        ? prod.galleryImages 
+        : [prod.coverImage || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'],
+      attributes: prod.selectedAttributes,
+      variations: prod.variations,
+      specifications: {
+        ...(prod.specifications || {}),
+        material: prod.material || '',
+        finish: prod.finish || '',
+        size: prod.size || prod.dimensions || '',
+        warranty: prod.warranty || '10 Years Warranty',
+        sku: prod.sku || ''
+      },
       status: prod.status || 'Active',
-      createdAt: prod.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      inStock: prod.status !== 'Inactive' && (prod.stock === undefined || prod.stock > 0)
     };
 
-    try {
-      const sb = getSupabase();
-      if (sb) {
-        await sb.from('addon_products').upsert({
-          id: fullProd.id,
-          name: fullProd.name,
-          category: fullProd.category,
-          sub_category: fullProd.subCategory,
-          sku: fullProd.sku,
-          price: fullProd.price,
-          discount_price: fullProd.discountPrice,
-          tax_gst: fullProd.taxGst,
-          short_description: fullProd.shortDescription,
-          description: fullProd.description,
-          material: fullProd.material,
-          finish: fullProd.finish,
-          size: fullProd.size,
-          dimensions: fullProd.dimensions,
-          warranty: fullProd.warranty,
-          stock: fullProd.stock,
-          cover_image: fullProd.coverImage,
-          gallery_images: fullProd.galleryImages,
-          selected_attributes: fullProd.selectedAttributes,
-          variations: fullProd.variations,
-          status: fullProd.status,
-          updated_at: new Date().toISOString()
-        });
-      }
-    } catch (e) {
-      console.warn('Supabase addon_products upsert notice:', e);
+    const res = await saveProduct(productPayload);
+    if (!res.success) {
+      return { success: false, error: res.error || 'Failed to save product to database' };
     }
 
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(PRODUCTS_KEY);
-      let list: ProductItem[] = cached ? JSON.parse(cached) : [...DEFAULT_ADDON_PRODUCTS];
-      const idx = list.findIndex(p => p.id === fullProd.id);
-      if (idx >= 0) list[idx] = fullProd;
-      else list.unshift(fullProd);
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
-    }
-
-    return { success: true, product: fullProd };
+    const savedItem = productToProductItem(res.product || (productPayload as Product));
+    return { success: true, product: savedItem };
   } catch (err: any) {
     return { success: false, error: err.message };
   }
@@ -537,20 +491,9 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
 
 export async function deleteAddonProduct(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    try {
-      const sb = getSupabase();
-      if (sb) {
-        await sb.from('addon_products').delete().eq('id', id);
-      }
-    } catch (e) {
-      console.warn('Supabase addon_products delete notice:', e);
-    }
-
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(PRODUCTS_KEY);
-      let list: ProductItem[] = cached ? JSON.parse(cached) : [...DEFAULT_ADDON_PRODUCTS];
-      list = list.filter(p => p.id !== id);
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
+    const res = await deleteProductById(id);
+    if (!res.success) {
+      return { success: false, error: res.error || 'Failed to delete product from database' };
     }
     return { success: true };
   } catch (err: any) {

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PRODUCTS_DATA } from './data/mockData';
+import { getProducts } from './services/productService';
+import { findProductBySlug, getProductSlug, findCategoryBySlug } from './utils/productSlug';
 import { SEO_PAGES } from './data/seoPages';
 import { SeoPageRenderer } from './components/SeoPageRenderer';
 import { Header } from './components/Header';
@@ -248,12 +250,36 @@ export default function App() {
     setQuoteModalTitle(title);
   };
 
-  const findCategoryBySlug = (slug: string) => null;
-  const findProductBySlug = (prods: any[], slug: string) => prods.find(p => p.id === slug);
-  const handleSelectProduct = (p: any) => {};
-  const handleAddToCart = (p: any) => {};
-  const handleToggleWishlist = (p: any) => {};
-  const fetchProducts = async () => {};
+  const fetchProducts = async () => {
+    try {
+      const res = await getProducts();
+      if (res && res.products && res.products.length > 0) {
+        setProducts(res.products);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live products:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleSelectProduct = (p: any) => {
+    if (p) {
+      const slug = getProductSlug(p);
+      navigateTo(`/products/${slug}`);
+    }
+  };
+  const handleAddToCart = (p: any) => {
+    handleOpenQuote(`Product Inquiry / Order: ${p?.name || 'Luxury Furniture'}`);
+  };
+  const handleToggleWishlist = (p: any) => {
+    if (!p || !p.id) return;
+    setWishlistIds(prev => 
+      prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+    );
+  };
 
   // -------------------------------------------------------------
   // 1. DEDICATED ADMIN SUBDOMAIN (admin.royalepicinterior.com)

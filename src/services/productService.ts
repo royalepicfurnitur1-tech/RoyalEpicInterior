@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Product } from '../types';
 import { PRODUCTS_DATA } from '../data/mockData';
-import { getAddonProducts, ProductItem } from './productManagementService';
 import { deduplicateProducts } from '../utils/productSlug';
 
 // Supabase Connection Credentials (with fallbacks)
@@ -18,198 +17,137 @@ const SUPABASE_ANON_KEY =
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const LOCAL_STORAGE_KEY = 'royal_epic_products_cache';
-
-// Convert ProductItem from Admin Product Management into public Product
-export function mapProductItemToProduct(item: ProductItem): Product {
-  const originalPrice = item.discountPrice && item.discountPrice < item.price 
-    ? item.price 
-    : Math.round(item.price * 1.2);
-  const effectivePrice = item.discountPrice && item.discountPrice > 0 ? item.discountPrice : item.price;
-  const discountPercent = originalPrice > effectivePrice 
-    ? Math.round(((originalPrice - effectivePrice) / originalPrice) * 100)
-    : 0;
-
-  return {
-    id: item.id,
-    name: item.name,
-    sku: item.sku,
-    category: item.category,
-    categorySlug: (item.category || 'furniture').toLowerCase().replace(/[^a-z0-9]/g, '-'),
-    subCategory: item.subCategory,
-    price: effectivePrice,
-    originalPrice: originalPrice,
-    discount: discountPercent,
-    discountPrice: item.discountPrice,
-    taxGst: item.taxGst || 18,
-    stockQuantity: item.stock,
-    rating: 4.9,
-    reviewsCount: 14,
-    image: item.coverImage,
-    galleryImages: item.galleryImages && item.galleryImages.length > 0 ? item.galleryImages : [item.coverImage],
-    shortDescription: item.shortDescription || item.description?.slice(0, 120),
-    description: item.description,
-    dimensions: item.dimensions || item.size,
-    material: item.material,
-    finish: item.finish,
-    specifications: {
-      material: item.material || 'Solid Teak / HDHMR Core',
-      size: item.size || item.dimensions || 'Standard',
-      finish: item.finish || 'Italian PU Matte / Satin',
-      warranty: item.warranty || '15 Years Guarantee',
-      brand: 'Royal Epic Interior',
-      origin: 'Bengaluru Factory'
-    },
-    features: [
-      '100% Termite Resistant & Marine Grade',
-      'German Soft-Close Hardware Included',
-      'Direct Factory Pricing & 15-Yr Warranty'
-    ],
-    attributes: item.selectedAttributes,
-    variations: item.variations || [],
-    isHot: true,
-    isNew: true,
-    inStock: item.stock > 0 && item.status !== 'Inactive',
-    status: item.status
-  };
-}
-
 // Helper to convert database snake_case row to frontend Product interface
 export function mapRowToProduct(row: any): Product {
+  const specs = typeof row.specifications === 'object' && row.specifications !== null ? row.specifications : {};
   return {
-    id: row.id,
-    name: row.name,
-    sku: row.sku,
-    category: row.category,
+    id: String(row.id),
+    name: row.name || 'Untitled Product',
+    sku: specs.sku || row.sku || `RE-SKU-${row.id}`,
+    category: row.category || 'Living Room Luxury',
     categorySlug: row.category_slug || (row.category || 'furniture').toLowerCase().replace(/[^a-z0-9]/g, '-'),
-    subCategory: row.sub_category || row.subCategory,
-    price: Number(row.price),
-    originalPrice: row.original_price ? Number(row.original_price) : Number(row.price) * 1.2,
+    subCategory: specs.subCategory || row.sub_category || row.subCategory || '',
+    price: Number(row.price || 0),
+    originalPrice: row.original_price ? Number(row.original_price) : Math.round(Number(row.price || 0) * 1.2),
     discount: Number(row.discount || 0),
-    discountPrice: row.discount_price ? Number(row.discount_price) : undefined,
-    taxGst: row.tax_gst ? Number(row.tax_gst) : 18,
-    stockQuantity: row.stock ? Number(row.stock) : 10,
+    discountPrice: specs.discountPrice || (row.discount ? Math.round(Number(row.price) * (1 - row.discount / 100)) : undefined),
+    taxGst: specs.taxGst ? Number(specs.taxGst) : 18,
+    stockQuantity: specs.stockQuantity !== undefined ? Number(specs.stockQuantity) : (row.in_stock ? 10 : 0),
     rating: Number(row.rating || 4.9),
     reviewsCount: Number(row.reviews_count || 12),
-    image: row.image,
-    galleryImages: Array.isArray(row.gallery_images) ? row.gallery_images : (row.image ? [row.image] : []),
-    shortDescription: row.short_description || row.description?.slice(0, 120),
+    image: row.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
+    galleryImages: Array.isArray(row.gallery_images) && row.gallery_images.length > 0 ? row.gallery_images : (row.image ? [row.image] : []),
+    shortDescription: specs.shortDescription || row.description?.slice(0, 120),
     description: row.description || 'Custom crafted luxury interior piece by Royal Epic Interior.',
-    dimensions: row.dimensions || row.size,
-    material: row.material,
-    finish: row.finish,
-    specifications: typeof row.specifications === 'object' && row.specifications !== null 
-      ? row.specifications 
-      : {
-          material: row.material || 'Solid Teak / HDHMR Plywood Core',
-          size: row.size || 'Custom Factory Dimensions',
-          finish: row.finish || 'Italian PU Matte / High Gloss',
-          warranty: '10 Years Factory Guarantee',
-          brand: 'Royal Epic Interior',
-          origin: 'Bengaluru Factory'
-        },
-    features: Array.isArray(row.features) 
+    dimensions: specs.dimensions || specs.size || 'Custom Factory Dimensions',
+    material: specs.material || 'Solid Teak / HDHMR Plywood Core',
+    finish: specs.finish || 'Italian PU Matte / Satin',
+    specifications: {
+      material: specs.material || 'Solid Teak / HDHMR Plywood Core',
+      size: specs.dimensions || specs.size || 'Custom Factory Dimensions',
+      finish: specs.finish || 'Italian PU Matte / Satin',
+      warranty: specs.warranty || '10 Years Factory Guarantee',
+      brand: specs.brand || 'Royal Epic Interior',
+      origin: specs.origin || 'Bengaluru Factory',
+      ...specs
+    },
+    features: Array.isArray(row.features) && row.features.length > 0 
       ? row.features 
       : ['100% Termite Resistant', 'German Soft-Close Hardware', 'Factory Finish Guarantee'],
-    attributes: row.attributes || row.selected_attributes,
-    variations: row.variations || [],
+    attributes: specs.attributes,
+    variations: specs.variations || [],
     isHot: Boolean(row.is_hot),
     isNew: Boolean(row.is_new),
     has3dViewer: Boolean(row.has_3d_viewer),
     inStock: row.in_stock !== false,
-    status: row.status || 'Active',
+    status: specs.status || (row.in_stock !== false ? 'Active' : 'Inactive'),
     brochureUrl: row.brochure_url || undefined
   };
 }
 
-// Helper to convert frontend Product to database row
+/**
+ * Helper to convert frontend Product to database row strictly matching
+ * the live Supabase `products` table columns:
+ * [id, name, category, category_slug, price, original_price, discount,
+ *  rating, reviews_count, image, gallery_images, description,
+ *  specifications, features, is_hot, is_new, has_3d_viewer, in_stock,
+ *  brochure_url, updated_at]
+ *
+ * Additional attributes, SKU, status, stockQuantity, dimensions, material,
+ * finish, etc. are safely embedded in the `specifications` JSONB column.
+ */
 export function mapProductToRow(product: Partial<Product>): any {
+  const existingSpecs = typeof product.specifications === 'object' && product.specifications !== null 
+    ? product.specifications 
+    : {};
+
+  const specs = {
+    ...existingSpecs,
+    sku: product.sku || existingSpecs.sku,
+    material: product.material || existingSpecs.material || 'Solid Burma Teak Core',
+    finish: product.finish || existingSpecs.finish || 'Italian PU Matte',
+    dimensions: product.dimensions || existingSpecs.dimensions || existingSpecs.size || 'Custom Dimensions',
+    warranty: existingSpecs.warranty || '10 Years Factory Guarantee',
+    brand: existingSpecs.brand || 'Royal Epic Interior',
+    origin: existingSpecs.origin || 'Bengaluru Factory',
+    status: product.status || (product.inStock === false ? 'Inactive' : 'Active'),
+    taxGst: product.taxGst || existingSpecs.taxGst || 18,
+    stockQuantity: product.stockQuantity !== undefined ? product.stockQuantity : (existingSpecs.stockQuantity !== undefined ? existingSpecs.stockQuantity : 10),
+    subCategory: product.subCategory || existingSpecs.subCategory,
+    attributes: product.attributes || existingSpecs.attributes,
+    variations: product.variations || existingSpecs.variations
+  };
+
   return {
-    id: product.id,
-    name: product.name,
-    sku: product.sku,
-    category: product.category,
+    id: String(product.id),
+    name: product.name || 'Untitled Product',
+    category: product.category || 'Living Room Luxury',
     category_slug: product.categorySlug || (product.category || 'furniture').toLowerCase().replace(/[^a-z0-9]/g, '-'),
-    sub_category: product.subCategory,
-    price: Number(product.price),
-    original_price: product.originalPrice ? Number(product.originalPrice) : Math.round(Number(product.price) * 1.2),
+    price: Number(product.price || 0),
+    original_price: product.originalPrice ? Number(product.originalPrice) : Math.round(Number(product.price || 0) * 1.2),
     discount: Number(product.discount || 0),
-    discount_price: product.discountPrice,
-    tax_gst: product.taxGst || 18,
-    stock: product.stockQuantity || 10,
     rating: Number(product.rating || 4.9),
     reviews_count: Number(product.reviewsCount || 12),
-    image: product.image,
-    gallery_images: product.galleryImages || (product.image ? [product.image] : []),
-    short_description: product.shortDescription,
-    description: product.description || '',
-    dimensions: product.dimensions,
-    material: product.material,
-    finish: product.finish,
-    specifications: product.specifications || {},
-    features: product.features || [],
-    attributes: product.attributes,
-    variations: product.variations,
+    image: product.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
+    gallery_images: Array.isArray(product.galleryImages) && product.galleryImages.length > 0 
+      ? product.galleryImages 
+      : [product.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'],
+    description: product.description || 'Factory-made luxury furniture piece by Royal Epic Interior.',
+    specifications: specs,
+    features: Array.isArray(product.features) && product.features.length > 0 
+      ? product.features 
+      : ['100% Termite Resistant', 'Factory Finish Guarantee'],
     is_hot: Boolean(product.isHot),
     is_new: Boolean(product.isNew),
     has_3d_viewer: Boolean(product.has3dViewer),
     in_stock: product.inStock !== false,
-    status: product.status || 'Active',
     brochure_url: product.brochureUrl || null,
     updated_at: new Date().toISOString()
   };
 }
 
 /**
- * Fetch all products:
- * Merges Catalog Products with Admin Addon Products
+ * Fetch all products from the single Supabase `products` source of truth.
  */
-export async function getProducts(): Promise<{ products: Product[]; source: 'supabase' | 'cache' | 'default'; error?: string }> {
+export async function getProducts(): Promise<{ products: Product[]; source: 'supabase' | 'default'; error?: string }> {
   try {
-    // 1. Fetch addon products created by Admin
-    let addonProducts: Product[] = [];
-    try {
-      const addons = await getAddonProducts();
-      addonProducts = addons
-        .filter(a => a.status !== 'Inactive')
-        .map(mapProductItemToProduct);
-    } catch (e) {
-      console.warn("Could not fetch addon products:", e);
-    }
-
-    // 2. Fetch base products
-    let baseProducts: Product[] = PRODUCTS_DATA;
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data && data.length > 0) {
-      baseProducts = data.map(mapRowToProduct);
-    } else {
-      const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            baseProducts = parsed;
-          }
-        } catch {}
-      }
+    if (error) {
+      console.warn('Supabase getProducts error, falling back to default catalog:', error.message);
+      return { products: deduplicateProducts(PRODUCTS_DATA), source: 'default', error: error.message };
     }
 
-    // Merge and deduplicate by canonical ID, SKU, and slug (addon products take priority)
-    const rawMerged = [
-      ...addonProducts,
-      ...baseProducts
-    ];
-    const merged = deduplicateProducts(rawMerged);
+    if (data && data.length > 0) {
+      const liveProducts = data.map(mapRowToProduct);
+      return { products: deduplicateProducts(liveProducts), source: 'supabase' };
+    }
 
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
-    } catch {}
-
-    return { products: merged, source: 'supabase' };
+    // If Supabase table is completely empty, fallback to catalog
+    return { products: deduplicateProducts(PRODUCTS_DATA), source: 'default' };
   } catch (err: any) {
     console.error('getProducts exception:', err);
     return { products: deduplicateProducts(PRODUCTS_DATA), source: 'default', error: err.message };
@@ -217,7 +155,8 @@ export async function getProducts(): Promise<{ products: Product[]; source: 'sup
 }
 
 /**
- * Save or Update a Product
+ * Save or Update a Product directly to Supabase products table.
+ * Never silently report success on failure; never use browser-only fallback.
  */
 export async function saveProduct(product: Partial<Product>): Promise<{ success: boolean; product?: Product; error?: string }> {
   try {
@@ -225,7 +164,7 @@ export async function saveProduct(product: Partial<Product>): Promise<{ success:
     const productWithId = { ...product, id };
     const row = mapProductToRow(productWithId);
 
-    // Upsert into Supabase
+    // Upsert directly into Supabase products table
     const { data, error } = await supabase
       .from('products')
       .upsert(row)
@@ -233,26 +172,23 @@ export async function saveProduct(product: Partial<Product>): Promise<{ success:
       .single();
 
     if (error) {
-      console.warn('Supabase upsert error:', error.message);
-      updateLocalCache(productWithId as Product);
+      console.error('Supabase upsert error:', error.message);
       return { 
-        success: true, 
-        product: productWithId as Product, 
-        error: `Saved to local cache (${error.message})` 
+        success: false, 
+        error: `Database save error: ${error.message}` 
       };
     }
 
     const savedProduct = mapRowToProduct(data || row);
-    updateLocalCache(savedProduct);
     return { success: true, product: savedProduct };
   } catch (err: any) {
     console.error('saveProduct exception:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err.message || 'Unknown database save exception' };
   }
 }
 
 /**
- * Delete a Product by ID
+ * Delete a Product by ID permanently from Supabase products table.
  */
 export async function deleteProductById(id: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -261,34 +197,24 @@ export async function deleteProductById(id: string): Promise<{ success: boolean;
       .delete()
       .eq('id', id);
 
-    removeLocalCache(id);
-
     if (error) {
-      console.warn('Supabase delete warning:', error.message);
-      return { success: true, error: `Removed locally (${error.message})` };
+      console.error('Supabase delete error:', error.message);
+      return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err: any) {
     console.error('deleteProductById exception:', err);
-    removeLocalCache(id);
     return { success: false, error: err.message };
   }
 }
 
+/**
+ * Sync / Seed default catalog to Supabase products table using the valid schema.
+ */
 export async function seedProductsToSupabase(): Promise<{ success: boolean; count: number; error?: string }> {
   try {
-    const productsToSeed = PRODUCTS_DATA.map(p => ({
-      id: p.id,
-      name: p.name,
-      category: p.category,
-      price: p.price,
-      image_url: p.image,
-      stock: p.stockQuantity ?? 10,
-      in_stock: p.inStock ?? true,
-      description: p.description || p.shortDescription || '',
-      updated_at: new Date().toISOString()
-    }));
+    const productsToSeed = PRODUCTS_DATA.map(p => mapProductToRow(p));
 
     const { error } = await supabase
       .from('products')
@@ -301,29 +227,5 @@ export async function seedProductsToSupabase(): Promise<{ success: boolean; coun
   } catch (err: any) {
     return { success: false, count: 0, error: err.message };
   }
-}
-
-// Local storage helper utilities
-function updateLocalCache(product: Product) {
-  try {
-    const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
-    let items: Product[] = cached ? JSON.parse(cached) : [...PRODUCTS_DATA];
-    const index = items.findIndex(p => p.id === product.id);
-    if (index >= 0) {
-      items[index] = product;
-    } else {
-      items.unshift(product);
-    }
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-  } catch {}
-}
-
-function removeLocalCache(id: string) {
-  try {
-    const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
-    let items: Product[] = cached ? JSON.parse(cached) : [...PRODUCTS_DATA];
-    items = items.filter(p => p.id !== id);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-  } catch {}
 }
 
