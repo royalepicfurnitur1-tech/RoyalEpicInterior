@@ -1866,13 +1866,38 @@ Provide a JSON response with the following keys:
     const distPath = path.join(process.cwd(), "dist");
 
     // Guard against relative asset requests originating from nested subpaths (e.g. /products/assets/* -> /assets/*)
-    app.use(/^\/(?:products|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res) => {
+    app.use(/^\/(?:products|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res, next) => {
       const assetFileName = req.params[0];
       const targetFilePath = path.join(distPath, "assets", assetFileName);
       if (fs.existsSync(targetFilePath)) {
         return res.sendFile(targetFilePath);
       }
-      res.status(404).type("text/plain").send("Asset Not Found");
+      next();
+    });
+
+    // Stale/Legacy bundle forwarder: if a client requests an outdated index bundle (e.g. index-BtADXeFP.js),
+    // map it dynamically to the current active index-*.js bundle instead of failing with 404 or corrupted cache.
+    app.get("/assets/:filename", (req, res, next) => {
+      const filename = req.params.filename;
+      const targetFilePath = path.join(distPath, "assets", filename);
+      if (fs.existsSync(targetFilePath)) {
+        return next();
+      }
+      if (/^index-[A-Za-z0-9_-]+\.js$/.test(filename)) {
+        try {
+          const files = fs.readdirSync(path.join(distPath, "assets"));
+          const activeIndex = files.find(f => /^index-[A-Za-z0-9_-]+\.js$/.test(f) && f !== filename);
+          if (activeIndex) {
+            console.log(`[Asset Forwarder] Serving active bundle ${activeIndex} in place of stale ${filename}`);
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+            return res.sendFile(path.join(distPath, "assets", activeIndex));
+          }
+        } catch (err) {
+          console.error("Asset forwarder lookup failed:", err);
+        }
+      }
+      next();
     });
 
     // Primary static assets directory with long-term caching
@@ -1883,8 +1908,16 @@ Provide a JSON response with the following keys:
     }));
 
     // Serve public root static files (favicon, manifest, robots, images, etc.)
+    // Explicitly enforce no-cache for any HTML documents so index.html is always fresh
     app.use(express.static(distPath, {
-      maxAge: "1h"
+      maxAge: "1h",
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".html")) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+          res.setHeader("Pragma", "no-cache");
+          res.setHeader("Expires", "0");
+        }
+      }
     }));
 
     // Catch-all SPA route - strictly for HTML document navigation
@@ -1893,6 +1926,9 @@ Provide a JSON response with the following keys:
       if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.path)) {
         return res.status(404).type("text/plain").send("Static Asset Not Found");
       }
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
       res.sendFile(path.join(distPath, "index.html"), (err) => {
         if (err && !res.headersSent) {
           res.status(200).send("<!DOCTYPE html><html><head><title>Royal Epic</title></head><body>Loading...</body></html>");

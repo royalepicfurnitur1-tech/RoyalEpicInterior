@@ -51,6 +51,29 @@
     <meta name="geo.position" content="13.0601;77.6258" />
     <meta name="ICBM" content="13.0601, 77.6258" />
 
+    <!-- Auto-recovery from stale/truncated browser bundle caches -->
+    <script>
+      (function() {
+        window.addEventListener('error', function(e) {
+          var msg = (e && e.message) ? e.message : '';
+          var src = (e && e.filename) ? e.filename : '';
+          if (msg.indexOf('SyntaxError') !== -1 || msg.indexOf('Unexpected token') !== -1 || msg.indexOf('import') !== -1 || src.indexOf('index-BtADXeFP') !== -1) {
+            var recoverKey = 're_cache_auto_flushed_v3';
+            if (!sessionStorage.getItem(recoverKey)) {
+              sessionStorage.setItem(recoverKey, '1');
+              if ('caches' in window) {
+                caches.keys().then(function(keys) {
+                  keys.forEach(function(k) { caches.delete(k); });
+                });
+              }
+              // Force hard reload bypassing cache
+              window.location.search = (window.location.search ? window.location.search + '&' : '?') + 'rec=' + Date.now();
+            }
+          }
+        });
+      })();
+    </script>
+
     <!-- Schema.org WebSite JSON-LD with Sitelinks Search Box -->
     <script type="application/ld+json">
       {
