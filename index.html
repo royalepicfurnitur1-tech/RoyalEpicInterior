@@ -51,14 +51,30 @@
     <meta name="geo.position" content="13.0601;77.6258" />
     <meta name="ICBM" content="13.0601, 77.6258" />
 
-    <!-- Auto-recovery from stale/truncated browser bundle caches -->
+    <!-- Auto-recovery from stale/truncated browser bundle caches & DOM appendChild protection -->
     <script>
       (function() {
+        // Guard against DOM appendChild exceptions from browser extensions or modulepreload link injection
+        if (typeof Node !== 'undefined' && Node.prototype && Node.prototype.appendChild) {
+          var origAppendChild = Node.prototype.appendChild;
+          Node.prototype.appendChild = function(child) {
+            try {
+              return origAppendChild.apply(this, arguments);
+            } catch (err) {
+              if (err && (err.name === 'SyntaxError' || (err.message && (err.message.indexOf('appendChild') !== -1 || err.message.indexOf('Unexpected end') !== -1)))) {
+                console.warn('[RoyalEpic] Intercepted non-fatal appendChild exception:', err.message);
+                return child;
+              }
+              throw err;
+            }
+          };
+        }
+
         window.addEventListener('error', function(e) {
           var msg = (e && e.message) ? e.message : '';
           var src = (e && e.filename) ? e.filename : '';
           if (msg.indexOf('SyntaxError') !== -1 || msg.indexOf('Unexpected token') !== -1 || msg.indexOf('import') !== -1 || src.indexOf('index-BtADXeFP') !== -1) {
-            var recoverKey = 're_cache_auto_flushed_v3';
+            var recoverKey = 're_cache_auto_flushed_v4';
             if (!sessionStorage.getItem(recoverKey)) {
               sessionStorage.setItem(recoverKey, '1');
               if ('caches' in window) {

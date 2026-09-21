@@ -25,10 +25,28 @@ import { Footer } from './components/Footer';
 import { ActiveTab } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
 
-// Dynamically imported portal chunks to prevent giant monolithic bundle issues
-const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const CustomersSubdomainPortal = React.lazy(() => import('./components/CustomersSubdomainPortal').then(m => ({ default: m.CustomersSubdomainPortal })));
-const ProductManagerPortal = React.lazy(() => import('./components/ProductManagerPortal').then(m => ({ default: m.ProductManagerPortal })));
+// Safe lazy loader that gracefully retries if a chunk load experiences a transient network or preload hiccup
+function safeLazy<T extends React.ComponentType<any>>(
+  factory: () => Promise<any>,
+  namedExport?: string
+): React.LazyExoticComponent<T> {
+  return React.lazy<T>(async () => {
+    try {
+      const module = await factory();
+      return { default: namedExport ? module[namedExport] : (module.default || module) };
+    } catch (firstErr) {
+      console.warn('[RoyalEpic] Chunk load encountered issue, retrying...', firstErr);
+      await new Promise(r => setTimeout(r, 150));
+      const module = await factory();
+      return { default: namedExport ? module[namedExport] : (module.default || module) };
+    }
+  });
+}
+
+// Dynamically imported portal chunks with resilient auto-retry
+const AdminDashboard = safeLazy<typeof import('./components/AdminDashboard').AdminDashboard>(() => import('./components/AdminDashboard'), 'AdminDashboard');
+const CustomersSubdomainPortal = safeLazy<typeof import('./components/CustomersSubdomainPortal').CustomersSubdomainPortal>(() => import('./components/CustomersSubdomainPortal'), 'CustomersSubdomainPortal');
+const ProductManagerPortal = safeLazy<typeof import('./components/ProductManagerPortal').ProductManagerPortal>(() => import('./components/ProductManagerPortal'), 'ProductManagerPortal');
 
 const SubdomainLoadingFallback = () => (
   <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-white px-4">

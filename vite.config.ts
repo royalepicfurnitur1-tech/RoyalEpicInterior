@@ -3,10 +3,28 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+function safePreloadPlugin() {
+  return {
+    name: 'safe-preload-appendChild',
+    renderChunk(code: string) {
+      if (code.includes('document.head.appendChild(')) {
+        return {
+          code: code.replace(
+            /document\.head\.appendChild\(([^)]+)\)/g,
+            '(()=>{try{return document.head.appendChild($1)}catch(e){return $1}})()'
+          ),
+          map: null,
+        };
+      }
+      return null;
+    },
+  };
+}
+
 export default defineConfig(() => {
   return {
     base: '/',
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), safePreloadPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -21,6 +39,7 @@ export default defineConfig(() => {
     },
     build: {
       chunkSizeWarningLimit: 1200,
+      modulePreload: false,
       rollupOptions: {
         output: {
           manualChunks(id) {
