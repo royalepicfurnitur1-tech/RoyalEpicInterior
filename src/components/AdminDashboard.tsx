@@ -436,7 +436,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     required
                     value={adminEmailInput}
                     onChange={(e) => setAdminEmailInput(e.target.value)}
-                    placeholder="admin@royalepic.com"
                     className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none"
                   />
                 </div>

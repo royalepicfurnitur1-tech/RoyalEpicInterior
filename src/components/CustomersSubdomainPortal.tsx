@@ -489,7 +489,6 @@ export const CustomersSubdomainPortal: React.FC<CustomersSubdomainPortalProps> =
                         required
                         value={emailInput}
                         onChange={e => setEmailInput(e.target.value)}
-                        placeholder="executive@royalepic.in or admin@royalepicinterior.in"
                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder:text-neutral-600 text-xs focus:border-gold focus:outline-none transition"
                       />
                     </div>

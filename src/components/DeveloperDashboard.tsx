@@ -114,7 +114,6 @@ export const DeveloperDashboard: React.FC = () => {
                   required
                   value={devEmailInput}
                   onChange={(e) => setDevEmailInput(e.target.value)}
-                  placeholder="developer@royalepic.com"
                   className="w-full bg-black/80 border border-neutral-700 focus:border-emerald-500 rounded-xl pl-10 pr-4 py-2.5 text-xs text-emerald-300 font-mono placeholder-neutral-600 focus:outline-none"
                 />
               </div>

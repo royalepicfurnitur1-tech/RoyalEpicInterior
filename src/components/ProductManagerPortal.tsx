@@ -341,7 +341,6 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                 <input
                   type="email"
                   required
-                  placeholder="pm@royalepicinterior.in"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   className="w-full bg-black/80 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none pl-10 transition-colors"
