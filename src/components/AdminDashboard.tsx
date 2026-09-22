@@ -1847,11 +1847,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <CategorySelectorField
                     value={editingProduct.category || ''}
                     onChange={(catName, catSlug) =>
-                      setEditingProduct({
-                        ...editingProduct,
+                      setEditingProduct(prev => prev ? ({
+                        ...prev,
                         category: catName,
                         categorySlug: catSlug
-                      })
+                      }) : null)
                     }
                   />
                 </div>

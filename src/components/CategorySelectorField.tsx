@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, Check, X, AlertCircle, Loader2, Tag, 
-  Sparkles, Layers, Edit2, Trash2, ShieldAlert
+  Sparkles, Layers, Edit2, Trash2, ShieldAlert, ChevronDown
 } from 'lucide-react';
 import { 
   CategoryItem, 
   getCategories, 
   saveCategory, 
-  deleteCategory 
+  deleteCategory,
+  DEFAULT_CATEGORIES
 } from '../services/productManagementService';
 
 interface CategorySelectorFieldProps {
@@ -27,9 +28,14 @@ export const CategorySelectorField: React.FC<CategorySelectorFieldProps> = ({
   onCategoriesChanged,
   className = ''
 }) => {
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [categories, setCategories] = useState<CategoryItem[]>(DEFAULT_CATEGORIES);
   
+  // Ref to hold onCategoriesChanged callback without causing infinite effect re-runs
+  const onCategoriesChangedRef = useRef(onCategoriesChanged);
+  useEffect(() => {
+    onCategoriesChangedRef.current = onCategoriesChanged;
+  }, [onCategoriesChanged]);
+
   // Inline Creator State
   const [isCreatingInline, setIsCreatingInline] = useState<boolean>(false);
   const [newCategoryName, setNewCategoryName] = useState<string>('');
@@ -46,28 +52,45 @@ export const CategorySelectorField: React.FC<CategorySelectorFieldProps> = ({
   const [managerSuccess, setManagerSuccess] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
 
-  const fetchCategories = useCallback(async () => {
-    setIsLoading(true);
+  const loadCategoriesFromDb = async () => {
     try {
       const list = await getCategories();
-      setCategories(list);
-      if (onCategoriesChanged) {
-        onCategoriesChanged(list);
+      if (list && list.length > 0) {
+        setCategories(list);
+        if (onCategoriesChangedRef.current) {
+          onCategoriesChangedRef.current(list);
+        }
       }
     } catch (e) {
-      console.error('Failed to load categories:', e);
-    } finally {
-      setIsLoading(false);
+      console.warn('Failed to load categories in selector:', e);
     }
-  }, [onCategoriesChanged]);
+  };
 
+  // Load from Supabase on mount only
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    loadCategoriesFromDb();
+  }, []);
+
+  // Deduplicate categories by lowercase name
+  const uniqueCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const result: CategoryItem[] = [];
+    for (const cat of categories) {
+      if (!cat || !cat.name) continue;
+      const key = cat.name.trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(cat);
+      }
+    }
+    return result;
+  }, [categories]);
 
   // Handle select dropdown change
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedVal = e.target.value;
+    if (!selectedVal) return;
+
     if (selectedVal === '__CREATE_NEW__') {
       setIsCreatingInline(true);
       setCreatorError(null);
@@ -75,9 +98,13 @@ export const CategorySelectorField: React.FC<CategorySelectorFieldProps> = ({
       return;
     }
 
-    const matched = categories.find(c => c.name === selectedVal);
-    const slug = matched ? matched.slug : selectedVal.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    onChange(selectedVal, slug);
+    const matched = categories.find(
+      c => c.name.trim().toLowerCase() === selectedVal.trim().toLowerCase()
+    );
+    const finalName = matched ? matched.name : selectedVal;
+    const finalSlug = matched?.slug || finalName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    
+    onChange(finalName, finalSlug);
   };
 
   // Create new category inline without leaving the product form
@@ -109,8 +136,16 @@ export const CategorySelectorField: React.FC<CategorySelectorFieldProps> = ({
       onChange(res.category.name, res.category.slug);
       setCreatorSuccess(`Category "${res.category.name}" created and applied!`);
       
-      // Refresh list
-      await fetchCategories();
+      // Update local state immediately so option is instantly available in dropdown
+      const newCat = res.category;
+      setCategories(prev => {
+        const exists = prev.some(c => c.name.trim().toLowerCase() === newCat.name.trim().toLowerCase());
+        if (exists) return prev;
+        return [newCat, ...prev];
+      });
+
+      // Background refresh
+      loadCategoriesFromDb();
 
       // Reset and close after brief feedback
       setTimeout(() => {
@@ -154,7 +189,7 @@ export const CategorySelectorField: React.FC<CategorySelectorFieldProps> = ({
       setManagerSuccess(`Category renamed to "${res.category.name}" and all assigned products updated!`);
       setEditingCatId(null);
       setEditNameInput('');
-      await fetchCategories();
+      await loadCategoriesFromDb();
     } catch (err: any) {
       setManagerError(err.message || 'Failed to edit category.');
     } finally {
@@ -178,7 +213,7 @@ export const CategorySelectorField: React.FC<CategorySelectorFieldProps> = ({
       }
 
       setManagerSuccess(`Category "${cat.name}" deleted successfully.`);
-      await fetchCategories();
+      await loadCategoriesFromDb();
       
       // If deleted category was selected, fallback to first available
       if (value === cat.name) {
@@ -236,37 +271,37 @@ export const CategorySelectorField: React.FC<CategorySelectorFieldProps> = ({
           value={value || ''}
           onChange={handleSelectChange}
           required={required}
-          disabled={isLoading}
-          className="w-full bg-black/80 border border-white/20 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 rounded-xl p-3 text-white text-sm focus:outline-none transition-all disabled:opacity-50"
+          className="w-full bg-black/90 border border-white/20 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 rounded-xl p-3 pr-10 text-white text-sm focus:outline-none transition-colors cursor-pointer appearance-none"
         >
-          {categories.length === 0 && (
-            <option value={value || 'Living Room Luxury'}>
-              {value || 'Loading categories...'}
+          <option value="" disabled className="bg-neutral-900 text-neutral-400">
+            -- Select a Category --
+          </option>
+
+          {/* If the current value is not in uniqueCategories, keep it visible */}
+          {value && !uniqueCategories.some(c => c.name.trim().toLowerCase() === value.trim().toLowerCase()) && (
+            <option value={value} className="bg-neutral-900 text-white font-semibold">
+              {value}
             </option>
           )}
-          
-          {/* Ensure current value is in the options even if not yet loaded */}
-          {value && !categories.some(c => c.name === value) && (
-            <option value={value}>{value}</option>
-          )}
 
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.name}>
+          {uniqueCategories.map((cat) => (
+            <option key={cat.id || cat.name} value={cat.name} className="bg-neutral-900 text-white py-1">
               {cat.name} {cat.productCount !== undefined && cat.productCount > 0 ? `(${cat.productCount})` : ''}
             </option>
           ))}
 
-          <option disabled>──────────</option>
-          <option value="__CREATE_NEW__" className="text-amber-400 font-bold">
+          <option disabled className="bg-neutral-900 text-neutral-600">
+            ──────────────────────────────
+          </option>
+          <option value="__CREATE_NEW__" className="bg-neutral-900 text-amber-400 font-bold py-1">
             + Create New Category...
           </option>
         </select>
 
-        {isLoading && (
-          <div className="absolute right-3 top-3.5 pointer-events-none">
-            <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
-          </div>
-        )}
+        {/* Custom Chevron Indicator */}
+        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+          <ChevronDown className="w-4 h-4" />
+        </div>
       </div>
 
       {/* Inline Quick Category Creator */}

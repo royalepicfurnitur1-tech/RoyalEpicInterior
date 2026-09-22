@@ -930,11 +930,11 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                   <CategorySelectorField
                     value={editingProduct.category || ''}
                     onChange={(catName, catSlug) =>
-                      setEditingProduct({
-                        ...editingProduct,
+                      setEditingProduct(prev => prev ? ({
+                        ...prev,
                         category: catName,
                         categorySlug: catSlug
-                      })
+                      }) : null)
                     }
                     onCategoriesChanged={(cats) => {
                       setDbCategories(cats.map(c => c.name));
