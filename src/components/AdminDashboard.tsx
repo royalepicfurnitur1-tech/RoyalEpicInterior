@@ -24,6 +24,7 @@ import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supaba
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 import { getPortfolioProjects, savePortfolioProject, deletePortfolioProject, seedPortfolioToSupabase } from '../services/portfolioService';
 import { uploadProductImage } from '../services/storageService';
+import { CategorySelectorField } from './CategorySelectorField';
 
 
 interface AdminDashboardProps {
@@ -1843,21 +1844,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Category</label>
-                  <select
-                    value={editingProduct.category || 'Living Room Luxury'}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
-                  >
-                    <option>Living Room Luxury</option>
-                    <option>Dining & Crockery</option>
-                    <option>Master Bedroom Suites</option>
-                    <option>Modular Kitchens</option>
-                    <option>WPC Waterproof Doors</option>
-                    <option>Accent Chairs & Loungers</option>
-                    <option>Luxury Sofas & Sectionals</option>
-                    <option>Commercial & Spa Interiors</option>
-                  </select>
+                  <CategorySelectorField
+                    value={editingProduct.category || ''}
+                    onChange={(catName, catSlug) =>
+                      setEditingProduct({
+                        ...editingProduct,
+                        category: catName,
+                        categorySlug: catSlug
+                      })
+                    }
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">

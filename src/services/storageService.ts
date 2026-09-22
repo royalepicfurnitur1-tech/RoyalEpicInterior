@@ -62,7 +62,35 @@ export async function uploadProductImage(
       });
 
     if (error) {
-      console.error('Supabase storage upload error:', error);
+      console.warn('Supabase storage upload notice:', error.message || error);
+      // Fallback: If input was base64 string or fileBlob, upload to /api/storage/upload
+      try {
+        let base64Payload: string = '';
+        if (typeof fileOrBase64 === 'string') {
+          base64Payload = fileOrBase64;
+        } else {
+          // Convert Blob to Base64
+          base64Payload = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(fileBlob);
+          });
+        }
+
+        const fallbackRes = await fetch('/api/storage/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64Payload, filenamePrefix })
+        });
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.success && fallbackData.url) {
+          return { success: true, url: fallbackData.url };
+        }
+      } catch (fallbackErr) {
+        console.error('Local fallback upload error:', fallbackErr);
+      }
+
       return { success: false, error: error.message || 'Failed to upload image to Supabase Storage.' };
     }
 

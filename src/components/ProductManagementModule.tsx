@@ -14,6 +14,7 @@ import {
   getAddonProducts, saveAddonProduct, deleteAddonProduct
 } from '../services/productManagementService';
 import { uploadProductImage } from '../services/storageService';
+import { CategorySelectorField } from './CategorySelectorField';
 
 interface ProductManagementModuleProps {
   onBackToWebsite?: () => void;
@@ -274,7 +275,10 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
   };
 
   // CATEGORY HANDLERS
+  const [originalCategoryName, setOriginalCategoryName] = useState<string | null>(null);
+
   const handleOpenAddCategory = () => {
+    setOriginalCategoryName(null);
     setEditingCategory({
       name: '',
       slug: '',
@@ -284,6 +288,7 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
   };
 
   const handleOpenEditCategory = (cat: CategoryItem) => {
+    setOriginalCategoryName(cat.name);
     setEditingCategory({ ...cat });
     setIsCategoryModalOpen(true);
   };
@@ -293,11 +298,12 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
     if (!editingCategory?.name) return;
     setIsSavingCategory(true);
     try {
-      const res = await saveCategory(editingCategory);
+      const res = await saveCategory(editingCategory, originalCategoryName || undefined);
       if (res.success) {
         showNotification('success', `Category "${editingCategory.name}" saved.`);
         setIsCategoryModalOpen(false);
         setEditingCategory(null);
+        setOriginalCategoryName(null);
         await loadAllData();
       } else {
         showNotification('error', res.error || 'Failed to save category.');
@@ -316,6 +322,8 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
         showNotification('success', 'Category deleted.');
         setDeletingCategoryId(null);
         await loadAllData();
+      } else {
+        showNotification('error', res.error || 'Failed to delete category.');
       }
     } catch (err: any) {
       showNotification('error', err.message);
@@ -1125,11 +1133,9 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
               {/* Category & Sub Category */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Category *</label>
-                  <select
-                    value={editingProduct.category || categories[0]?.name || ''}
-                    onChange={(e) => {
-                      const newCat = e.target.value;
+                  <CategorySelectorField
+                    value={editingProduct.category || ''}
+                    onChange={(newCat) => {
                       const parent = categories.find(c => c.name === newCat);
                       const subList = parent ? subCategories.filter(s => s.categoryId === parent.id) : [];
                       setEditingProduct({ 
@@ -1138,12 +1144,10 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
                         subCategory: subList[0]?.name || ''
                       });
                     }}
-                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
+                    onCategoriesChanged={(cats) => {
+                      setCategories(cats);
+                    }}
+                  />
                 </div>
 
                 <div>

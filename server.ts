@@ -1869,6 +1869,34 @@ Provide a JSON response with the following keys:
     }
   }));
 
+  // Image Upload fallback route
+  app.post("/api/storage/upload", express.json({ limit: "50mb" }), (req, res) => {
+    try {
+      const { image, filenamePrefix = "prod" } = req.body;
+      if (!image || typeof image !== "string") {
+        return res.status(400).json({ success: false, error: "Image data is required" });
+      }
+
+      const match = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (!match) {
+        return res.status(400).json({ success: false, error: "Invalid image format" });
+      }
+
+      const ext = match[1] === "jpeg" ? "jpg" : match[1];
+      const buffer = Buffer.from(match[2], "base64");
+      const cleanPrefix = filenamePrefix.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const filename = `${cleanPrefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
+      const filePath = path.join(STORAGE_DIR, filename);
+
+      fs.writeFileSync(filePath, buffer);
+      const publicUrl = `/storage/products/${filename}`;
+      return res.json({ success: true, url: publicUrl });
+    } catch (err: any) {
+      console.error("Storage upload route error:", err);
+      return res.status(500).json({ success: false, error: err.message || "Failed to save image" });
+    }
+  });
+
   // Detect production: either explicitly NODE_ENV=production, or running compiled server.cjs
   const isProduction =
     process.env.NODE_ENV === "production" ||

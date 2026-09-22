@@ -8,6 +8,7 @@ import {
   ChefHat, Table, Grid, Printer, Download, Image as ImageIcon, X, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getCategories, DEFAULT_CATEGORIES } from '../services/productManagementService';
 
 interface ProductCatalogProps {
   products?: Product[];
@@ -50,26 +51,58 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     }
   }, [initialSearch]);
 
+  const [supabaseCategories, setSupabaseCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    getCategories()
+      .then((cats) => {
+        if (isMounted && cats && cats.length > 0) {
+          setSupabaseCategories(cats.map(c => c.name));
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch categories in ProductCatalog:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const categories = useMemo(() => {
-    const base = [
-      'All',
-      'Main Entrance Doors',
-      'WPC Bathroom Doors',
-      'Modular Kitchens',
-      'Sliding Wardrobes',
-      'TV Units',
-      'Sofas',
-      'Dining Tables',
-      'Commercial Furniture',
-      'Kitchen Equipment',
-      'Glass Partitions',
-    ];
-    if (!products || products.length === 0) return base;
-    const additional = products
-      .map(p => p.category)
-      .filter(c => Boolean(c) && !base.includes(c));
-    return [...base, ...Array.from(new Set(additional))];
-  }, [products]);
+    const list = ['All'];
+    const seen = new Set<string>(['All']);
+
+    // First add categories from Supabase
+    supabaseCategories.forEach((name) => {
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        list.push(name);
+      }
+    });
+
+    // Next add any categories currently on products
+    if (products && products.length > 0) {
+      products.forEach((p) => {
+        if (p.category && !seen.has(p.category)) {
+          seen.add(p.category);
+          list.push(p.category);
+        }
+      });
+    }
+
+    // Fallback if network hasn't returned yet
+    if (list.length === 1) {
+      DEFAULT_CATEGORIES.forEach((c) => {
+        if (!seen.has(c.name)) {
+          seen.add(c.name);
+          list.push(c.name);
+        }
+      });
+    }
+
+    return list;
+  }, [supabaseCategories, products]);
 
   const equipmentCategories = [
     'All',

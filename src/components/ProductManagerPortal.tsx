@@ -12,6 +12,8 @@ import { TurnkeyManager } from './TurnkeyManager';
 import { useAuth } from '../context/AuthContext';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 import { uploadProductImage } from '../services/storageService';
+import { CategorySelectorField } from './CategorySelectorField';
+import { getCategories, DEFAULT_CATEGORIES } from '../services/productManagementService';
 
 interface ProductManagerPortalProps {
   onBackToWebsite?: () => void;
@@ -19,26 +21,7 @@ interface ProductManagerPortalProps {
   onProductsUpdated?: () => void;
 }
 
-const CATEGORIES = [
-  'Sofas',
-  'Modular Kitchens',
-  'Main Entrance Doors',
-  'WPC Bathroom Doors',
-  'Sliding Wardrobes',
-  'TV Units',
-  'Dining Tables',
-  'Commercial Furniture',
-  'Kitchen Equipment',
-  'Glass Partitions',
-  'Living Room Luxury',
-  'Dining & Crockery',
-  'Master Bedroom Suites',
-  'WPC Waterproof Doors',
-  'Accent Chairs & Loungers',
-  'Luxury Sofas & Sectionals',
-  'Commercial & Spa Interiors',
-  'Home Office & Study'
-];
+const FALLBACK_CATEGORIES = DEFAULT_CATEGORIES.map(c => c.name);
 
 export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
   onBackToWebsite,
@@ -83,11 +66,28 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState<boolean>(false);
 
+  // Dynamic Supabase Categories
+  const [dbCategories, setDbCategories] = useState<string[]>(FALLBACK_CATEGORIES);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await getCategories();
+      if (cats && cats.length > 0) {
+        setDbCategories(cats.map(c => c.name));
+      }
+    } catch (e) {
+      console.warn('Failed to load categories:', e);
+    }
+  };
+
   // Fetch Products
   const loadProducts = async () => {
     setIsLoading(true);
     try {
-      const res = await getProducts();
+      const [res] = await Promise.all([
+        getProducts(),
+        loadCategories()
+      ]);
       if (res.products) {
         setProducts(res.products);
         setDataSource(res.source);
@@ -101,6 +101,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
 
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
 
   // Quick Flash Notification
@@ -572,7 +573,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
               className="bg-black/70 border border-white/15 focus:border-gold rounded-xl p-2.5 text-white focus:outline-none"
             >
               <option value="All">All Categories</option>
-              {CATEGORIES.map((cat) => (
+              {dbCategories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
@@ -926,18 +927,19 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">
-                    Category *
-                  </label>
-                  <select
-                    value={editingProduct.category || 'Living Room Luxury'}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  <CategorySelectorField
+                    value={editingProduct.category || ''}
+                    onChange={(catName, catSlug) =>
+                      setEditingProduct({
+                        ...editingProduct,
+                        category: catName,
+                        categorySlug: catSlug
+                      })
+                    }
+                    onCategoriesChanged={(cats) => {
+                      setDbCategories(cats.map(c => c.name));
+                    }}
+                  />
                 </div>
               </div>
 

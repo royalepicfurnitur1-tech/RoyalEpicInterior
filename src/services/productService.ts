@@ -160,6 +160,7 @@ export async function getProducts(): Promise<{ products: Product[]; source: 'sup
     const { data, error } = await supabase
       .from('products')
       .select(PRODUCT_COLUMNS)
+      .neq('category', '__SYSTEM__')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -168,7 +169,9 @@ export async function getProducts(): Promise<{ products: Product[]; source: 'sup
     }
 
     if (data && data.length > 0) {
-      const liveProducts = data.map(mapRowToProduct);
+      const liveProducts = (data as any[])
+        .filter(row => !String(row.id).startsWith('__') && row.category !== '__SYSTEM__')
+        .map(mapRowToProduct);
       return { products: deduplicateProducts(liveProducts), source: 'supabase' };
     }
 
@@ -254,4 +257,11 @@ export async function seedProductsToSupabase(): Promise<{ success: boolean; coun
     return { success: false, count: 0, error: err.message };
   }
 }
+
+export {
+  getCategories,
+  saveCategory,
+  deleteCategory,
+  type CategoryItem
+} from './productManagementService';
 
