@@ -126,14 +126,40 @@ export function mapProductToRow(product: Partial<Product>): any {
   };
 }
 
+export const PRODUCT_COLUMNS = [
+  'id',
+  'name',
+  'category',
+  'category_slug',
+  'price',
+  'original_price',
+  'discount',
+  'rating',
+  'reviews_count',
+  'image',
+  'gallery_images',
+  'description',
+  'specifications',
+  'features',
+  'is_hot',
+  'is_new',
+  'has_3d_viewer',
+  'in_stock',
+  'brochure_url',
+  'created_at',
+  'updated_at'
+].join(',');
+
 /**
  * Fetch all products from the single Supabase `products` source of truth.
+ * Uses explicit lightweight column selection to optimize PostgreSQL execution
+ * and prevent statement timeouts.
  */
 export async function getProducts(): Promise<{ products: Product[]; source: 'supabase' | 'default'; error?: string }> {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select(PRODUCT_COLUMNS)
       .order('created_at', { ascending: false });
 
     if (error) {

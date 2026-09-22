@@ -13,6 +13,7 @@ import {
   getAttributes, saveAttribute, deleteAttribute,
   getAddonProducts, saveAddonProduct, deleteAddonProduct
 } from '../services/productManagementService';
+import { uploadProductImage } from '../services/storageService';
 
 interface ProductManagementModuleProps {
   onBackToWebsite?: () => void;
@@ -124,17 +125,20 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
     return subCategories.filter(s => s.categoryId === parentCat.id);
   }, [editingProduct?.category, categories, subCategories]);
 
-  // Image Upload helper (converts to base64 for direct browser and cloud persistence)
-  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image Upload helper (uploads to Storage to prevent base64 bloat)
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setEditingProduct(prev => prev ? { ...prev, coverImage: reader.result as string } : null);
+      try {
+        const uploadRes = await uploadProductImage(file, editingProduct?.sku || 'prod');
+        if (uploadRes.success && uploadRes.url) {
+          setEditingProduct(prev => prev ? { ...prev, coverImage: uploadRes.url } : null);
+        } else {
+          showNotification('error', uploadRes.error || 'Failed to upload image.');
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        showNotification('error', err.message);
+      }
     }
   };
 
@@ -214,7 +218,33 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
     if (!editingProduct?.name || !editingProduct?.category) return;
     setIsSavingProduct(true);
     try {
-      const res = await saveAddonProduct(editingProduct);
+      const sanitized = { ...editingProduct };
+
+      // Ensure coverImage is uploaded if base64
+      if (sanitized.coverImage && sanitized.coverImage.startsWith('data:')) {
+        const uploadRes = await uploadProductImage(sanitized.coverImage, sanitized.sku || 'prod');
+        if (uploadRes.success && uploadRes.url) {
+          sanitized.coverImage = uploadRes.url;
+        }
+      }
+
+      // Ensure gallery images are uploaded if base64
+      if (Array.isArray(sanitized.galleryImages)) {
+        const cleaned: string[] = [];
+        for (const img of sanitized.galleryImages) {
+          if (img && img.startsWith('data:')) {
+            const uploadRes = await uploadProductImage(img, sanitized.sku || 'prod');
+            if (uploadRes.success && uploadRes.url) {
+              cleaned.push(uploadRes.url);
+            }
+          } else if (img) {
+            cleaned.push(img);
+          }
+        }
+        sanitized.galleryImages = cleaned;
+      }
+
+      const res = await saveAddonProduct(sanitized);
       if (res.success) {
         showNotification('success', `Product "${editingProduct.name}" saved.`);
         setIsProductModalOpen(false);

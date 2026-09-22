@@ -23,6 +23,7 @@ import { TurnkeyManager } from './TurnkeyManager';
 import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supabase';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 import { getPortfolioProjects, savePortfolioProject, deletePortfolioProject, seedPortfolioToSupabase } from '../services/portfolioService';
+import { uploadProductImage } from '../services/storageService';
 
 
 interface AdminDashboardProps {
@@ -181,6 +182,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   // Fetch Tenants
@@ -525,7 +527,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!editingProduct?.name || !editingProduct?.price) return;
     setIsSavingProduct(true);
     try {
-      const res = await saveProduct(editingProduct);
+      const sanitizedProduct = { ...editingProduct };
+
+      // Ensure any remaining raw base64 data URL is safely uploaded before saving to Supabase
+      if (sanitizedProduct.image && sanitizedProduct.image.startsWith('data:')) {
+        const uploadRes = await uploadProductImage(sanitizedProduct.image, sanitizedProduct.id || 'prod');
+        if (uploadRes.success && uploadRes.url) {
+          sanitizedProduct.image = uploadRes.url;
+        }
+      }
+
+      if (Array.isArray(sanitizedProduct.galleryImages)) {
+        const cleanedGallery: string[] = [];
+        for (const g of sanitizedProduct.galleryImages) {
+          if (g && g.startsWith('data:')) {
+            const uploadRes = await uploadProductImage(g, sanitizedProduct.id || 'prod');
+            if (uploadRes.success && uploadRes.url) {
+              cleanedGallery.push(uploadRes.url);
+            }
+          } else if (g) {
+            cleanedGallery.push(g);
+          }
+        }
+        sanitizedProduct.galleryImages = cleanedGallery.length > 0 ? cleanedGallery : [sanitizedProduct.image || ''];
+      }
+
+      const res = await saveProduct(sanitizedProduct);
       if (res.success) {
         setIsModalOpen(false);
         setEditingProduct(null);
@@ -1870,30 +1897,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                   {/* File Upload Box */}
                   <label className="border-2 border-dashed border-white/20 hover:border-gold/60 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer bg-neutral-950/60 hover:bg-neutral-900 transition-all text-center">
-                    <Upload className="w-5 h-5 text-gold mb-1" />
-                    <span className="text-[11px] font-bold text-neutral-200">Click to Upload PNG / JPG</span>
-                    <span className="text-[9px] text-neutral-500 mt-0.5">Supports high-res PNG from your computer</span>
+                    {isUploadingProductImage ? (
+                      <RefreshCw className="w-5 h-5 text-gold animate-spin mb-1" />
+                    ) : (
+                      <Upload className="w-5 h-5 text-gold mb-1" />
+                    )}
+                    <span className="text-[11px] font-bold text-neutral-200">
+                      {isUploadingProductImage ? 'Uploading to Storage...' : 'Click to Upload PNG / JPG'}
+                    </span>
+                    <span className="text-[9px] text-neutral-500 mt-0.5">
+                      {isUploadingProductImage ? 'Optimizing & saving to CDN...' : 'Uploads directly to Storage URL'}
+                    </span>
                     <input
                       type="file"
                       accept="image/png, image/jpeg, image/webp, image/svg+xml"
                       className="hidden"
-                      onChange={(e) => {
+                      disabled={isUploadingProductImage}
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          if (file.size > 8 * 1024 * 1024) {
-                            alert('Please select an image smaller than 8MB.');
+                          if (file.size > 12 * 1024 * 1024) {
+                            alert('Please select an image smaller than 12MB.');
                             return;
                           }
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            const base64Url = reader.result as string;
-                            setEditingProduct({
-                              ...editingProduct,
-                              image: base64Url,
-                              galleryImages: [base64Url, ...(editingProduct.galleryImages || []).slice(1)]
-                            });
-                          };
-                          reader.readAsDataURL(file);
+                          setIsUploadingProductImage(true);
+                          try {
+                            const result = await uploadProductImage(file, editingProduct?.id || 'prod');
+                            if (result.success && result.url) {
+                              setEditingProduct(prev => prev ? ({
+                                ...prev,
+                                image: result.url,
+                                galleryImages: [result.url!, ...(prev.galleryImages || []).filter(g => g && !g.startsWith('data:'))]
+                              }) : null);
+                            } else {
+                              alert('Image upload failed: ' + (result.error || 'Unknown error'));
+                            }
+                          } catch (err: any) {
+                            alert('Upload error: ' + err.message);
+                          } finally {
+                            setIsUploadingProductImage(false);
+                          }
                         }
                       }}
                     />

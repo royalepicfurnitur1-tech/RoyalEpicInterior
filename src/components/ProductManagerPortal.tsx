@@ -11,6 +11,7 @@ import { HeritageHomesManager } from './HeritageHomesManager';
 import { TurnkeyManager } from './TurnkeyManager';
 import { useAuth } from '../context/AuthContext';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
+import { uploadProductImage } from '../services/storageService';
 
 interface ProductManagerPortalProps {
   onBackToWebsite?: () => void;
@@ -69,6 +70,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -195,8 +197,33 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
       const originalPrice = Number(editingProduct.originalPrice) || Math.round(price * 1.2);
       const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
       
+      const productId = editingProduct.id || `prod-${Date.now()}`;
+      let finalImage = editingProduct.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
+
+      // Ensure any raw base64 data URL is uploaded to storage
+      if (finalImage.startsWith('data:')) {
+        const uploadRes = await uploadProductImage(finalImage, productId);
+        if (uploadRes.success && uploadRes.url) {
+          finalImage = uploadRes.url;
+        }
+      }
+
+      let finalGallery = editingProduct.galleryImages && editingProduct.galleryImages.length > 0 ? [...editingProduct.galleryImages] : [finalImage];
+      const cleanedGallery: string[] = [];
+      for (const g of finalGallery) {
+        if (g && g.startsWith('data:')) {
+          const uploadRes = await uploadProductImage(g, productId);
+          if (uploadRes.success && uploadRes.url) {
+            cleanedGallery.push(uploadRes.url);
+          }
+        } else if (g) {
+          cleanedGallery.push(g);
+        }
+      }
+      finalGallery = cleanedGallery.length > 0 ? cleanedGallery : [finalImage];
+
       const payload: Product = {
-        id: editingProduct.id || `prod-${Date.now()}`,
+        id: productId,
         name: editingProduct.name,
         category: editingProduct.category || 'Living Room Luxury',
         categorySlug: (editingProduct.category || 'furniture').toLowerCase().replace(/[^a-z0-9]/g, '-'),
@@ -205,8 +232,8 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
         discount,
         rating: Number(editingProduct.rating) || 4.9,
         reviewsCount: Number(editingProduct.reviewsCount) || 12,
-        image: editingProduct.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
-        galleryImages: editingProduct.galleryImages && editingProduct.galleryImages.length > 0 ? editingProduct.galleryImages : [editingProduct.image || ''],
+        image: finalImage,
+        galleryImages: finalGallery,
         description: editingProduct.description || 'Custom crafted luxury interior piece by Royal Epic.',
         specifications: editingProduct.specifications || {
           material: 'Solid Burma Teak Core',
@@ -966,30 +993,46 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                   
                   {/* File Upload Button */}
                   <label className="border-2 border-dashed border-white/20 hover:border-gold/60 rounded-xl p-3.5 flex flex-col items-center justify-center cursor-pointer bg-neutral-950/60 hover:bg-neutral-900 transition-all text-center">
-                    <Upload className="w-5 h-5 text-gold mb-1" />
-                    <span className="text-[11px] font-bold text-neutral-200">Upload PNG / JPG Image</span>
-                    <span className="text-[9px] text-neutral-500 mt-0.5">High-resolution furniture render/photo</span>
+                    {isUploadingImage ? (
+                      <RefreshCw className="w-5 h-5 text-gold animate-spin mb-1" />
+                    ) : (
+                      <Upload className="w-5 h-5 text-gold mb-1" />
+                    )}
+                    <span className="text-[11px] font-bold text-neutral-200">
+                      {isUploadingImage ? 'Uploading to Storage...' : 'Upload PNG / JPG Image'}
+                    </span>
+                    <span className="text-[9px] text-neutral-500 mt-0.5">
+                      {isUploadingImage ? 'Optimizing & saving to CDN...' : 'Saves directly to Storage URL'}
+                    </span>
                     <input
                       type="file"
                       accept="image/png, image/jpeg, image/webp, image/svg+xml"
                       className="hidden"
-                      onChange={(e) => {
+                      disabled={isUploadingImage}
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          if (file.size > 8 * 1024 * 1024) {
-                            alert('Please select an image smaller than 8MB.');
+                          if (file.size > 12 * 1024 * 1024) {
+                            alert('Please select an image smaller than 12MB.');
                             return;
                           }
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            const base64Url = reader.result as string;
-                            setEditingProduct({
-                              ...editingProduct,
-                              image: base64Url,
-                              galleryImages: [base64Url, ...(editingProduct.galleryImages || []).slice(1)]
-                            });
-                          };
-                          reader.readAsDataURL(file);
+                          setIsUploadingImage(true);
+                          try {
+                            const result = await uploadProductImage(file, editingProduct?.id || 'prod');
+                            if (result.success && result.url) {
+                              setEditingProduct(prev => prev ? ({
+                                ...prev,
+                                image: result.url,
+                                galleryImages: [result.url!, ...(prev.galleryImages || []).filter(g => g && !g.startsWith('data:'))]
+                              }) : null);
+                            } else {
+                              alert('Image upload failed: ' + (result.error || 'Unknown error'));
+                            }
+                          } catch (err: any) {
+                            alert('Upload error: ' + err.message);
+                          } finally {
+                            setIsUploadingImage(false);
+                          }
                         }
                       }}
                     />

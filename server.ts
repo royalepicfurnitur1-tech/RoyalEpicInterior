@@ -1849,6 +1849,86 @@ Provide a JSON response with the following keys:
     });
   });
 
+  // =========================================================================
+  // STORAGE & ASSET MANAGEMENT API
+  // Ensures product photos uploaded via Admin & Manager portals are stored
+  // as persistent media files instead of bloated inline database base64 strings.
+  // =========================================================================
+  const STORAGE_DIR = path.join(process.cwd(), "public", "storage", "products");
+  if (!fs.existsSync(STORAGE_DIR)) {
+    try {
+      fs.mkdirSync(STORAGE_DIR, { recursive: true });
+    } catch (_) {}
+  }
+
+  // Serve storage files statically
+  app.use("/storage/products", express.static(STORAGE_DIR, {
+    maxAge: "30d",
+    setHeaders: (res) => {
+      res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+    }
+  }));
+
+  // Image Upload Endpoint (supports both base64 JSON payload and multipart binary)
+  app.post("/api/storage/upload", (req, res) => {
+    try {
+      const contentType = req.headers["content-type"] || "";
+      
+      if (contentType.includes("application/json")) {
+        const { image, filename } = req.body;
+        if (!image) {
+          return res.status(400).json({ success: false, error: "No image data provided" });
+        }
+
+        const match = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+        if (!match) {
+          // If already a valid URL, return as-is
+          if (image.startsWith("http://") || image.startsWith("https://") || image.startsWith("/storage/")) {
+            return res.json({ success: true, url: image });
+          }
+          return res.status(400).json({ success: false, error: "Invalid image format" });
+        }
+
+        const ext = match[1] === "jpeg" ? "jpg" : match[1];
+        const safeName = filename 
+          ? filename.replace(/[^a-zA-Z0-9._-]/g, "_")
+          : `prod-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}.${ext}`;
+        
+        const buffer = Buffer.from(match[2], "base64");
+        const filePath = path.join(STORAGE_DIR, safeName);
+        fs.writeFileSync(filePath, buffer);
+
+        const publicUrl = `/storage/products/${safeName}`;
+        return res.json({ success: true, url: publicUrl });
+      }
+
+      // If sent with raw octet-stream or multipart
+      let bodyData: Buffer[] = [];
+      req.on("data", (chunk) => bodyData.push(chunk));
+      req.on("end", () => {
+        const buffer = Buffer.concat(bodyData);
+        if (!buffer || buffer.length === 0) {
+          return res.status(400).json({ success: false, error: "Empty upload" });
+        }
+
+        // Search for image signatures (PNG, JPEG, WEBP)
+        let ext = "png";
+        if (buffer[0] === 0xff && buffer[1] === 0xd8) ext = "jpg";
+        else if (buffer.toString("utf8", 8, 12) === "WEBP") ext = "webp";
+
+        const safeName = `prod-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}.${ext}`;
+        const filePath = path.join(STORAGE_DIR, safeName);
+        fs.writeFileSync(filePath, buffer);
+
+        const publicUrl = `/storage/products/${safeName}`;
+        res.json({ success: true, url: publicUrl });
+      });
+    } catch (err: any) {
+      console.error("Storage upload error:", err);
+      res.status(500).json({ success: false, error: err.message || "Upload failed" });
+    }
+  });
+
   // Detect production: either explicitly NODE_ENV=production, or running compiled server.cjs
   const isProduction =
     process.env.NODE_ENV === "production" ||
