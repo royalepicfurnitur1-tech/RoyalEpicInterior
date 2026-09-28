@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { CartItem } from '../types';
 import { 
-  X, Trash2, ShoppingBag, ArrowRight, Tag, ShieldCheck, CreditCard, Lock, AlertCircle, LogIn 
+  X, Trash2, ShoppingBag, ArrowRight, AlertCircle, LogIn 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,10 +25,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onNavigateToAuth,
 }) => {
   const { user } = useAuth();
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState(0); // percentage
-  const [couponMsg, setCouponMsg] = useState<string | null>(null);
-  const [showAuthWarning, setShowAuthWarning] = useState(false);
 
   if (!isOpen) return null;
 
@@ -36,27 +32,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     const itemPrice = item.unitPrice || item.selectedVariation?.price || item.product.price;
     return acc + itemPrice * item.quantity;
   }, 0);
-  const discountAmount = Math.round((subtotal * appliedDiscount) / 100);
-  const finalTotal = subtotal - discountAmount;
-
-  const handleApplyCoupon = () => {
-    if (couponCode.trim().toUpperCase() === 'ROYAL10') {
-      setAppliedDiscount(10);
-      setCouponMsg('10% Royal Discount Applied!');
-    } else if (couponCode.trim().toUpperCase() === 'EPICVIP') {
-      setAppliedDiscount(20);
-      setCouponMsg('20% VIP Coupon Applied!');
-    } else {
-      setCouponMsg('Invalid Coupon Code (Try: ROYAL10)');
-    }
-  };
+  const finalTotal = subtotal;
 
   const handleCheckoutClick = () => {
     if (!user) {
-      setShowAuthWarning(true);
       return;
     }
-    onProceedCheckout(subtotal, discountAmount);
+    onProceedCheckout(subtotal, 0);
   };
 
   return (
@@ -177,43 +159,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {cartItems.length > 0 && (
           <div className="pt-4 border-t border-white/10 space-y-3">
             
-            {/* Coupon Code Row */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Tag className="w-3.5 h-3.5 text-gold absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  placeholder="Coupon (e.g. ROYAL10)"
-                  className="w-full bg-black/60 border border-white/15 rounded-xl pl-9 pr-3 py-2 text-xs text-white uppercase font-mono focus:outline-none focus:border-gold"
-                />
-              </div>
-              <button
-                onClick={handleApplyCoupon}
-                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-gold hover:text-black text-white text-xs font-bold uppercase transition-all cursor-pointer"
-              >
-                Apply
-              </button>
-            </div>
-            {couponMsg && (
-              <p className={`text-[10px] ${appliedDiscount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {couponMsg}
-              </p>
-            )}
-
             {/* Subtotal Calculation */}
             <div className="space-y-1 text-xs">
               <div className="flex justify-between text-neutral-400">
                 <span>Subtotal</span>
                 <span className="font-mono">₹{subtotal.toLocaleString('en-IN')}</span>
               </div>
-              {appliedDiscount > 0 && (
-                <div className="flex justify-between text-emerald-400 font-bold">
-                  <span>Coupon Discount ({appliedDiscount}%)</span>
-                  <span className="font-mono">-₹{discountAmount.toLocaleString('en-IN')}</span>
-                </div>
-              )}
               <div className="flex justify-between text-base font-bold text-white pt-2 border-t border-white/10">
                 <span>Grand Total</span>
                 <span className="font-mono text-gold">₹{finalTotal.toLocaleString('en-IN')}</span>

@@ -11,7 +11,6 @@ interface ProductDetailModalProps {
   product: Product | null;
   onClose: () => void;
   onAddToCart: (product: Product, quantity: number, variation?: ProductVariation, selectedAttributes?: Record<string, string>) => void;
-  onBuyNow: (product: Product, variation?: ProductVariation, selectedAttributes?: Record<string, string>) => void;
   onRequestQuote: (productName: string) => void;
   isWishlisted: boolean;
   onToggleWishlist: (product: Product) => void;
@@ -21,7 +20,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   product,
   onClose,
   onAddToCart,
-  onBuyNow,
   onRequestQuote,
   isWishlisted,
   onToggleWishlist,
@@ -600,16 +598,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => onBuyNow(product, selectedVariation || undefined, selectedAttributes)}
-                  className="py-3 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider shadow-lg hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
-                >
-                  Buy Now
-                </button>
+              <div>
                 <button
                   onClick={() => onRequestQuote(product.name)}
-                  className="py-3 rounded-xl bg-amber-600/80 hover:bg-amber-600 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-amber-600/80 hover:bg-amber-600 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <FileText className="w-4 h-4" /> Request Quote
                 </button>

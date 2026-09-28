@@ -7,11 +7,11 @@ import {
   Globe, LayoutDashboard, Database, Smartphone, Wrench, Share2, Mail, Phone,
   FileSpreadsheet, Download, Send, Clock, AlertTriangle, Building, Briefcase,
   HelpCircle, Eye, Cpu, Radio, ChevronRight, CheckSquare, ShieldX, Sparkle, Upload,
-  Home, Hammer
+  Home, Hammer, MessageSquare, Star
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AdminOrdersManagement } from "./AdminOrdersManagement";
-import { Product, PortfolioProject } from '../types';
+import { Product, PortfolioProject, WebsiteFeedback } from '../types';
 import { DashboardReports } from './DashboardReports';
 import { CrmKanbanBoard } from './CrmKanbanBoard';
 import { AdminActivityLogger } from './AdminActivityLogger';
@@ -20,7 +20,7 @@ import { AccessControlPanel } from './AccessControlPanel';
 import { ProductManagementModule } from './ProductManagementModule';
 import { HeritageHomesManager } from './HeritageHomesManager';
 import { TurnkeyManager } from './TurnkeyManager';
-import { isSupabaseConfigured, checkSupabaseLiveConnection } from '../lib/supabase';
+import { isSupabaseConfigured, checkSupabaseLiveConnection, fetchWebsiteFeedback } from '../lib/supabase';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 import { getPortfolioProjects, savePortfolioProject, deletePortfolioProject, seedPortfolioToSupabase } from '../services/portfolioService';
 import { uploadProductImage } from '../services/storageService';
@@ -114,7 +114,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     | 'heritage-homes' 
     | 'turnkey'
     | 'security'
+    | 'feedback'
   >('overview');
+
+  // Website Feedback State
+  const [feedbackList, setFeedbackList] = useState<WebsiteFeedback[]>([]);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
+  const [feedbackSearch, setFeedbackSearch] = useState('');
+  const [feedbackRatingFilter, setFeedbackRatingFilter] = useState<string>('all');
 
   // API Data States
   const [apiLeads, setApiLeads] = useState<any[]>([]);
@@ -285,6 +292,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Fetch Website Feedback from Supabase
+  const fetchFeedbackData = async () => {
+    setIsLoadingFeedback(true);
+    try {
+      const items = await fetchWebsiteFeedback();
+      setFeedbackList(items || []);
+    } catch (e) {
+      console.error('Failed to fetch website feedback:', e);
+    } finally {
+      setIsLoadingFeedback(false);
+    }
+  };
+
   useEffect(() => {
     fetchTenants();
     fetchCmsProducts();
@@ -293,6 +313,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     fetchMaterials();
     fetchAiConfig();
     fetchCmsContent();
+    fetchFeedbackData();
   }, []);
 
   // Save CMS Content
@@ -662,6 +683,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: "product-management", label: "🛍️ Product Management (Variations/SKUs)", icon: Package },
     { id: 'overview', label: '📊 Dashboard Overview', icon: LayoutDashboard },
     { id: 'cms', label: '🌐 Website CMS', icon: Globe },
+    { id: 'feedback', label: `💬 Website Feedback (${feedbackList.length})`, icon: MessageSquare },
     { id: 'ai-manager', label: '🤖 AI Voice Manager', icon: Bot },
     { id: 'crm', label: '📈 CRM Lead Pipeline', icon: Users },
     { id: 'quotation', label: '📄 Quotation Generator', icon: FileText },
@@ -961,6 +983,240 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* WEBSITE FEEDBACK SECTION (Supabase website_feedback table) */}
+          {activeTab === 'feedback' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-4 gap-4">
+                <div>
+                  <h2 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+                    <MessageSquare className="w-6 h-6 text-gold" /> Website Feedback Submissions
+                  </h2>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Visitor reviews and website ratings stored in Supabase table <code className="text-gold font-mono">website_feedback</code>, ordered newest first.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={fetchFeedbackData}
+                    disabled={isLoadingFeedback}
+                    className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-gold border border-gold/30 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingFeedback ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Feedback Summary Analytics */}
+              {(() => {
+                const total = feedbackList.length;
+                const avgRating = total > 0 
+                  ? (feedbackList.reduce((acc, f) => acc + Number(f.rating || 5), 0) / total).toFixed(1)
+                  : '5.0';
+                const fiveStars = feedbackList.filter(f => Number(f.rating) === 5).length;
+                const withEmail = feedbackList.filter(f => f.email && f.email.trim()).length;
+
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-black/60 border border-white/10 rounded-2xl p-4">
+                      <span className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">Total Submissions</span>
+                      <span className="text-2xl font-serif font-bold text-white font-mono">{total}</span>
+                      <span className="text-[10px] text-neutral-500 block mt-1">All-time reviews</span>
+                    </div>
+
+                    <div className="bg-black/60 border border-white/10 rounded-2xl p-4">
+                      <span className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">Average Rating</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-2xl font-serif font-bold text-amber-400 font-mono">{avgRating}</span>
+                        <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
+                      </div>
+                      <span className="text-[10px] text-neutral-500 block mt-1">Out of 5.0 stars</span>
+                    </div>
+
+                    <div className="bg-black/60 border border-white/10 rounded-2xl p-4">
+                      <span className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">5-Star Ratings</span>
+                      <span className="text-2xl font-serif font-bold text-emerald-400 font-mono">{fiveStars}</span>
+                      <span className="text-[10px] text-emerald-400/80 block mt-1">
+                        {total > 0 ? `${Math.round((fiveStars / total) * 100)}% of total` : '100%'}
+                      </span>
+                    </div>
+
+                    <div className="bg-black/60 border border-white/10 rounded-2xl p-4">
+                      <span className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">With Email Contact</span>
+                      <span className="text-2xl font-serif font-bold text-gold font-mono">{withEmail}</span>
+                      <span className="text-[10px] text-neutral-500 block mt-1">Follow-up candidates</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Filter & Search Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-black/40 border border-white/10 p-3 rounded-2xl">
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={feedbackSearch}
+                    onChange={(e) => setFeedbackSearch(e.target.value)}
+                    placeholder="Search by name, email, or message..."
+                    className="w-full bg-neutral-900 border border-white/15 focus:border-gold rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 mr-1 font-mono">Rating:</span>
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: '5', label: '5 ★' },
+                    { id: '4', label: '4 ★' },
+                    { id: '3', label: '3 ★' },
+                    { id: 'low', label: '1-2 ★' }
+                  ].map((filter) => (
+                    <button
+                      key={filter.id}
+                      onClick={() => setFeedbackRatingFilter(filter.id)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        feedbackRatingFilter === filter.id
+                          ? 'bg-gold text-black shadow-sm'
+                          : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Feedback Records List */}
+              {isLoadingFeedback ? (
+                <div className="py-16 text-center text-neutral-400 space-y-3">
+                  <div className="w-8 h-8 border-2 border-gold/40 border-t-gold rounded-full animate-spin mx-auto" />
+                  <p className="text-xs uppercase tracking-wider font-mono">Loading feedback from Supabase...</p>
+                </div>
+              ) : (() => {
+                const filtered = feedbackList.filter(item => {
+                  const q = feedbackSearch.toLowerCase().trim();
+                  const matchesQuery = !q || 
+                    (item.name || '').toLowerCase().includes(q) ||
+                    (item.email || '').toLowerCase().includes(q) ||
+                    (item.message || '').toLowerCase().includes(q);
+
+                  if (!matchesQuery) return false;
+
+                  const r = Number(item.rating || 5);
+                  if (feedbackRatingFilter === '5') return r === 5;
+                  if (feedbackRatingFilter === '4') return r === 4;
+                  if (feedbackRatingFilter === '3') return r === 3;
+                  if (feedbackRatingFilter === 'low') return r <= 2;
+                  return true;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-16 text-center bg-black/40 border border-white/10 rounded-3xl p-8 space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-neutral-800 border border-white/10 flex items-center justify-center mx-auto text-neutral-500">
+                        <MessageSquare className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-base font-serif font-bold text-white">No Feedback Submissions Found</h4>
+                      <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
+                        {feedbackSearch || feedbackRatingFilter !== 'all'
+                          ? 'No results match your current filter. Clear your search or filter to see all feedback.'
+                          : 'When visitors submit feedback through the "Website Feedback" button in the footer, their reviews will appear here ordered newest first.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3">
+                    {filtered.map((item, index) => {
+                      const numRating = Number(item.rating || 5);
+                      const formattedDate = item.created_at 
+                        ? new Date(item.created_at).toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        : 'Recent';
+
+                      return (
+                        <div
+                          key={item.id || index}
+                          className="bg-black/60 border border-white/10 hover:border-gold/40 rounded-2xl p-4 sm:p-5 transition-all space-y-3"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+                            <div className="flex items-center gap-3">
+                              {/* Star Rating Display */}
+                              <div className="flex items-center gap-1 bg-neutral-900 border border-gold/30 px-2.5 py-1 rounded-xl">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-3.5 h-3.5 ${
+                                      star <= numRating
+                                        ? 'text-amber-400 fill-amber-400'
+                                        : 'text-neutral-700'
+                                    }`}
+                                  />
+                                ))}
+                                <span className="text-xs font-bold text-amber-300 ml-1 font-mono">
+                                  {numRating}.0
+                                </span>
+                              </div>
+
+                              {/* Sender Name */}
+                              <div className="flex items-center gap-1.5 text-white font-bold text-sm">
+                                <User className="w-3.5 h-3.5 text-gold shrink-0" />
+                                <span>{item.name}</span>
+                              </div>
+
+                              {/* Sender Email */}
+                              {item.email ? (
+                                <a
+                                  href={`mailto:${item.email}`}
+                                  className="text-xs text-neutral-400 hover:text-gold flex items-center gap-1 font-mono transition-colors"
+                                >
+                                  <Mail className="w-3 h-3 text-neutral-500" />
+                                  <span>{item.email}</span>
+                                </a>
+                              ) : (
+                                <span className="text-[10px] text-neutral-600 italic">
+                                  (No email provided)
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Meta Badges */}
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-[10px] font-mono text-neutral-400 bg-neutral-900 px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-neutral-500" />
+                                {formattedDate}
+                              </span>
+                              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                                ● Supabase
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Feedback Message Body */}
+                          <div className="bg-neutral-950/80 border border-white/5 rounded-xl p-3.5 text-xs text-neutral-200 leading-relaxed">
+                            <p className="whitespace-pre-wrap">{item.message}</p>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-neutral-500 font-mono pt-1">
+                            <span>ID: {item.id || 'N/A'}</span>
+                            <span>Stored in: public.website_feedback</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 

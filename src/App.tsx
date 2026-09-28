@@ -21,6 +21,7 @@ import { QuoteModal } from './components/QuoteModal';
 import { SearchModal } from './components/SearchModal';
 import { AiConsultantModal } from './components/AiConsultantModal';
 import { InquiryPopup } from './components/InquiryPopup';
+import { FeedbackModal } from './components/FeedbackModal';
 import { Footer } from './components/Footer';
 import { ActiveTab } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
@@ -89,6 +90,7 @@ export default function App() {
   const [isAiConsultantOpen, setIsAiConsultantOpen] = useState(false);
   const [showInquiryPopup, setShowInquiryPopup] = useState(false);
   const [quoteModalTitle, setQuoteModalTitle] = useState('');
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   // Subdomain identification
   const isAdminSubdomain = 
@@ -530,7 +532,11 @@ export default function App() {
         )}
       </main>
 
-      <Footer setActiveTab={setActiveTab} onOpenQuote={() => handleOpenQuote('')} />
+      <Footer 
+        setActiveTab={setActiveTab} 
+        onOpenQuote={() => handleOpenQuote('')} 
+        onOpenFeedback={() => setIsFeedbackOpen(true)}
+      />
 
       {quoteModalTitle && (
         <QuoteModal
@@ -539,6 +545,11 @@ export default function App() {
           prefilledTitle={quoteModalTitle}
         />
       )}
+
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
 
       <SearchModal
         isOpen={isSearchOpen}

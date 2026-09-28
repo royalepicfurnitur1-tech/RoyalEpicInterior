@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Product, ProductVariation } from '../types';
 import { getProductSlug, getCategorySlug } from '../utils/productSlug';
+import { fetchPublicReviews } from '../services/reviewService';
+import { ReviewsSection } from './ReviewsSection';
 import { 
   Heart, ShoppingBag, Rotate3d, CheckCircle2, ShieldCheck, 
   Sparkles, Download, Phone, MessageSquare, ChevronRight,
@@ -14,7 +16,6 @@ interface ProductDetailPageProps {
   allProducts: Product[];
   onNavigate: (path: string) => void;
   onAddToCart: (product: Product, quantity: number, variation?: ProductVariation, selectedAttributes?: Record<string, string>) => void;
-  onBuyNow: (product: Product, variation?: ProductVariation, selectedAttributes?: Record<string, string>) => void;
   onRequestQuote: (productName: string) => void;
   isWishlisted: boolean;
   onToggleWishlist: (product: Product) => void;
@@ -25,7 +26,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   allProducts,
   onNavigate,
   onAddToCart,
-  onBuyNow,
   onRequestQuote,
   isWishlisted,
   onToggleWishlist
@@ -36,6 +36,32 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [isZoomed, setIsZoomed] = useState<boolean>(false);
   const [arScanning, setArScanning] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  // Live Calculated Ratings & Reviews State
+  const [liveRating, setLiveRating] = useState<number>(product?.rating || 4.9);
+  const [liveReviewsCount, setLiveReviewsCount] = useState<number>(product?.reviewsCount || 12);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    const fetchLiveProductReviews = async () => {
+      try {
+        const res = await fetchPublicReviews({ productId: product.id });
+        if (res.totalReviews > 0) {
+          setLiveRating(res.averageRating);
+          setLiveReviewsCount(res.totalReviews);
+        } else {
+          setLiveRating(product.rating || 4.9);
+          setLiveReviewsCount(product.reviewsCount || 12);
+        }
+      } catch (_) {}
+    };
+
+    fetchLiveProductReviews();
+
+    const handleUpdate = () => fetchLiveProductReviews();
+    window.addEventListener('royalepic-reviews-updated', handleUpdate);
+    return () => window.removeEventListener('royalepic-reviews-updated', handleUpdate);
+  }, [product?.id]);
 
   // Variations & Attributes Selection State
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(() => {
@@ -460,10 +486,18 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 {product.name}
               </h1>
               <div className="flex items-center gap-3 mt-2">
-                <div className="flex items-center gap-1 text-amber-500">
+                <a
+                  href="#product-reviews"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-1.5 text-amber-500 hover:text-amber-600 transition-colors cursor-pointer group"
+                >
                   <Star className="w-4 h-4 fill-amber-500" />
-                  <span className="text-xs font-bold text-neutral-900">{product.rating || 4.9}</span>
-                </div>
+                  <span className="text-xs font-bold text-neutral-900 group-hover:underline">{liveRating.toFixed(1)}</span>
+                  <span className="text-xs text-neutral-500">({liveReviewsCount} reviews)</span>
+                </a>
                 <span className="text-xs text-neutral-400">•</span>
                 <span className="text-xs text-neutral-500 font-mono">SKU: {currentSku}</span>
                 <span className="text-xs text-neutral-400">•</span>
@@ -559,16 +593,10 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  onClick={() => onBuyNow(product, selectedVariation || undefined, selectedAttributes)}
-                  className="py-3 px-4 rounded-xl bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                >
-                  <Sparkles className="w-4 h-4" /> Buy Now
-                </button>
+              <div>
                 <button
                   onClick={() => onRequestQuote(product.name)}
-                  className="py-3 px-4 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-900 font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-neutral-200"
+                  className="w-full py-3 px-4 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-900 font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-neutral-200"
                 >
                   <MessageSquare className="w-4 h-4" /> Request BOQ Quote
                 </button>
@@ -651,6 +679,17 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               </dl>
             </div>
           </div>
+        </div>
+
+        {/* 4. VERIFIED CUSTOMER REVIEWS & FEEDBACK */}
+        <div id="product-reviews" className="mt-16 pt-12 border-t border-neutral-200 scroll-mt-24">
+          <ReviewsSection
+            productId={product.id}
+            product={product}
+            title={`Customer Reviews for ${product.name}`}
+            subtitle={`Verified reviews, ratings, and woodwork experiences for ${product.name} from Bengaluru homeowners.`}
+            allowSubmit={true}
+          />
         </div>
 
         {/* 4. RELATED PRODUCTS FROM SAME CATEGORY */}

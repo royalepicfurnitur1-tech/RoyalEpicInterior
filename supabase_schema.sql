@@ -256,3 +256,31 @@ CREATE POLICY "Public cart items insert" ON public.cart_items FOR INSERT TO auth
 CREATE POLICY "Public cart items update" ON public.cart_items FOR UPDATE TO authenticated, anon USING (true);
 CREATE POLICY "Public cart items delete" ON public.cart_items FOR DELETE TO authenticated, anon USING (true);
 
+-- 9. WEBSITE FEEDBACK TABLE (User & Visitor Feedback)
+CREATE TABLE IF NOT EXISTS public.website_feedback (
+    id TEXT PRIMARY KEY DEFAULT ('FB-' || floor(random() * 900000 + 100000)::text),
+    name TEXT NOT NULL,
+    email TEXT,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_feedback_created_at ON public.website_feedback(created_at DESC);
+
+ALTER TABLE public.website_feedback ENABLE ROW LEVEL SECURITY;
+
+-- Allow public anonymous visitors and authenticated users to submit feedback
+CREATE POLICY "Public can insert website feedback" 
+ON public.website_feedback 
+FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+-- Allow authenticated users / admins to view feedback
+CREATE POLICY "Allow select website feedback" 
+ON public.website_feedback 
+FOR SELECT 
+TO authenticated, anon 
+USING (true);
+

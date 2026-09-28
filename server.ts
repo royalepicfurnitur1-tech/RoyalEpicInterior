@@ -45,6 +45,7 @@ const getSupabaseConfig = () => {
 const DB_DIR = path.join(process.cwd(), "data");
 const CARTS_FILE = path.join(DB_DIR, "carts.json");
 const USERS_FILE = path.join(DB_DIR, "users.json");
+const FEEDBACK_FILE = path.join(DB_DIR, "feedback.json");
 
 if (!fs.existsSync(DB_DIR)) {
   try {
@@ -88,6 +89,7 @@ interface ServerUser {
 let dbCarts: Record<string, ServerCart> = {}; // keyed by cart id
 let dbCartItems: Record<string, ServerCartItem> = {}; // keyed by item id
 let dbUsers: Record<string, ServerUser> = {}; // keyed by normalized email
+let dbFeedback: any[] = [];
 
 // Load persisted data on startup
 try {
@@ -111,6 +113,24 @@ try {
 } catch (e) {
   console.warn("Could not read users DB file:", e);
 }
+
+try {
+  if (fs.existsSync(FEEDBACK_FILE)) {
+    const raw = fs.readFileSync(FEEDBACK_FILE, "utf-8");
+    dbFeedback = JSON.parse(raw) || [];
+    console.log(`💬 Loaded ${dbFeedback.length} feedback items from database.`);
+  }
+} catch (e) {
+  console.warn("Could not read feedback DB file:", e);
+}
+
+const saveFeedbackDb = () => {
+  try {
+    fs.writeFileSync(FEEDBACK_FILE, JSON.stringify(dbFeedback, null, 2));
+  } catch (e) {
+    console.warn("Failed to persist feedback to disk:", e);
+  }
+};
 
 const saveCartsDb = () => {
   try {
@@ -881,6 +901,114 @@ async function startServer() {
         success: false,
         error: err.message || "Failed to reach Supabase"
       });
+    }
+  });
+
+  // =========================================================================
+  // WEBSITE FEEDBACK ENDPOINTS (Supabase website_feedback table)
+  // No emails, No localStorage, Stored in Supabase
+  // =========================================================================
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { name, email, rating, message } = req.body;
+
+      if (!name || !name.trim()) {
+        return res.status(400).json({ success: false, error: "Name is required." });
+      }
+      if (!message || !message.trim()) {
+        return res.status(400).json({ success: false, error: "Feedback message is required." });
+      }
+
+      const numRating = Math.max(1, Math.min(5, Math.round(Number(rating) || 5)));
+      const feedbackRecord = {
+        id: `FB-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`,
+        name: name.trim(),
+        email: email && email.trim() ? email.trim() : null,
+        rating: numRating,
+        message: message.trim(),
+        created_at: new Date().toISOString()
+      };
+
+      const { url, key } = getSupabaseConfig();
+      let savedToSupabase = false;
+
+      try {
+        const sbRes = await fetch(`${url}/rest/v1/website_feedback`, {
+          method: "POST",
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+          },
+          body: JSON.stringify(feedbackRecord)
+        });
+
+        if (sbRes.ok) {
+          savedToSupabase = true;
+          const inserted = await sbRes.json();
+          if (Array.isArray(inserted) && inserted[0]) {
+            feedbackRecord.id = inserted[0].id || feedbackRecord.id;
+          }
+          console.log("✅ Website feedback saved to Supabase:", feedbackRecord.id);
+        } else {
+          const errText = await sbRes.text();
+          console.warn("⚠️ Supabase website_feedback note (table may need creation in Supabase SQL editor):", sbRes.status, errText);
+        }
+      } catch (sbErr) {
+        console.warn("⚠️ Supabase website_feedback fetch exception:", sbErr);
+      }
+
+      // Persist to server database file
+      dbFeedback.unshift(feedbackRecord);
+      saveFeedbackDb();
+
+      return res.json({
+        success: true,
+        feedback: feedbackRecord,
+        savedToSupabase
+      });
+    } catch (err: any) {
+      console.error("Error processing website feedback:", err);
+      return res.status(500).json({ success: false, error: err.message || "Failed to submit feedback" });
+    }
+  });
+
+  app.get("/api/feedback", async (req, res) => {
+    try {
+      const { url, key } = getSupabaseConfig();
+
+      try {
+        const sbRes = await fetch(`${url}/rest/v1/website_feedback?select=*&order=created_at.desc`, {
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`
+          }
+        });
+
+        if (sbRes.ok) {
+          const rows = await sbRes.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            const existingIds = new Set(rows.map((r: any) => r.id));
+            for (const item of dbFeedback) {
+              if (!existingIds.has(item.id)) {
+                rows.push(item);
+              }
+            }
+            rows.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            return res.json({ success: true, feedback: rows, source: "supabase" });
+          }
+        }
+      } catch (sbErr) {
+        console.warn("Could not query Supabase website_feedback directly:", sbErr);
+      }
+
+      const sorted = [...dbFeedback].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      return res.json({ success: true, feedback: sorted, source: "server_db" });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || "Failed to fetch feedback" });
     }
   });
 

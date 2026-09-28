@@ -2,18 +2,29 @@ import React, { useState } from 'react';
 import { ActiveTab } from '../types';
 import { 
   Crown, Phone, Mail, MapPin, Send, ArrowRight, Instagram, 
-  Facebook, Youtube, Linkedin, ShieldCheck, Heart, Sparkles, Globe 
+  Facebook, Youtube, Linkedin, ShieldCheck, Heart, Sparkles, Globe, MessageSquare 
 } from 'lucide-react';
+import { FeedbackModal } from './FeedbackModal';
 
 interface FooterProps {
   setActiveTab?: (tab: ActiveTab) => void;
   onOpenQuote?: () => void;
+  onOpenFeedback?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => {
+export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpenFeedback }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [policyModal, setPolicyModal] = useState<string | null>(null);
+  const [isLocalFeedbackOpen, setIsLocalFeedbackOpen] = useState(false);
+
+  const handleTriggerFeedback = () => {
+    if (onOpenFeedback) {
+      onOpenFeedback();
+    } else {
+      setIsLocalFeedbackOpen(true);
+    }
+  };
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,6 +235,15 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
               Legal & Support
             </h4>
             <ul className="space-y-1.5 text-xs text-neutral-400">
+              <li>
+                <button
+                  onClick={handleTriggerFeedback}
+                  className="hover:text-gold transition-colors cursor-pointer text-left text-[11px] font-medium flex items-center gap-1.5 text-amber-300"
+                >
+                  <MessageSquare className="w-3 h-3 text-gold" />
+                  Website Feedback
+                </button>
+              </li>
               {['Privacy Policy', 'Terms & Conditions', 'Refund & Return Policy', 'Shipping Policy', 'Careers at Royal Epic', 'Contact Us'].map((item, idx) => (
                 <li key={idx}>
                   <button
@@ -256,6 +276,14 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
               className="mt-6 w-full py-2.5 rounded-xl bg-gold text-black font-bold text-xs uppercase tracking-wider shadow-md hover:scale-105 transition-transform cursor-pointer"
             >
               Get Free Quote
+            </button>
+
+            <button
+              onClick={handleTriggerFeedback}
+              className="mt-2.5 w-full py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 hover:border-gold/50 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-gold" />
+              Website Feedback
             </button>
 
             <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between gap-2 flex-wrap">
@@ -364,6 +392,12 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote }) => 
           </div>
         </div>
       )}
+
+      {/* Website Feedback Modal */}
+      <FeedbackModal
+        isOpen={isLocalFeedbackOpen}
+        onClose={() => setIsLocalFeedbackOpen(false)}
+      />
     </footer>
   );
 };

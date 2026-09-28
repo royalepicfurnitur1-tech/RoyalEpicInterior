@@ -193,6 +193,15 @@ export interface ProjectMilestone {
   notes?: string;
 }
 
+export interface WebsiteFeedback {
+  id?: string;
+  name: string;
+  email?: string | null;
+  rating: number;
+  message: string;
+  created_at?: string;
+}
+
 export type ActiveTab = 
   | 'home' 
   | 'services' 

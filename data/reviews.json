@@ -1,0 +1,18 @@
+{
+  "rev_1790579581803_4593": {
+    "id": "rev_1790579581803_4593",
+    "name": "Siddharth Rao",
+    "email": "siddharth.rao@example.com",
+    "phone": "+91 98450 12345",
+    "rating": 5,
+    "review_title": "Bespoke Burma Teak Dining Table & Living Room Partitions",
+    "review_message": "The craftsmanship and precision joinery by Royal Epic exceeded our highest expectations. 15-year warranty was backed with documented material certificates.",
+    "product_id": "prod-teak-dining-01",
+    "product_name": "Royal Imperial Burma Teak Dining Table",
+    "project_type": "Luxury Residential Interior",
+    "status": "pending",
+    "admin_notes": null,
+    "created_at": "2026-09-28T07:13:01.803Z",
+    "updated_at": "2026-09-28T07:13:01.803Z"
+  }
+}

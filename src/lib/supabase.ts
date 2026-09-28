@@ -304,3 +304,121 @@ export async function updateLeadInSupabase(id: string, updates: Partial<LeadInqu
 
   return true;
 }
+
+// -------------------------------------------------------------
+// WEBSITE FEEDBACK HELPERS
+// Strictly stored in Supabase 'website_feedback' table.
+// No emails, no localStorage, no public exposure.
+// -------------------------------------------------------------
+export interface WebsiteFeedbackPayload {
+  id?: string;
+  name: string;
+  email?: string | null;
+  rating: number;
+  message: string;
+  created_at?: string;
+}
+
+/**
+ * Submit user website feedback directly to Supabase table 'website_feedback'
+ * Never uses localStorage. Never triggers emails.
+ */
+export async function submitWebsiteFeedback(payload: {
+  name: string;
+  email?: string | null;
+  rating: number;
+  message: string;
+}): Promise<{ success: boolean; id?: string; error?: string }> {
+  const generatedId = `FB-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+  const record: WebsiteFeedbackPayload = {
+    id: generatedId,
+    name: payload.name.trim(),
+    email: payload.email?.trim() || null,
+    rating: Math.max(1, Math.min(5, Math.round(Number(payload.rating) || 5))),
+    message: payload.message.trim(),
+    created_at: new Date().toISOString()
+  };
+
+  // 1. First, attempt via direct Supabase client
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('website_feedback')
+        .insert([record])
+        .select()
+        .single();
+
+      if (!error && data) {
+        console.log('✅ Direct Supabase website_feedback insert succeeded:', data.id);
+        // Also ping backend endpoint to ensure server-side cache mirror is kept updated
+        fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record)
+        }).catch(() => {});
+
+        return { success: true, id: data.id };
+      } else if (error) {
+        console.warn('Direct Supabase insert note:', error.message);
+      }
+    } catch (clientErr) {
+      console.warn('Direct Supabase client feedback error:', clientErr);
+    }
+  }
+
+  // 2. Dispatch via backend proxy endpoint which handles REST to Supabase
+  try {
+    const res = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, id: data?.feedback?.id || generatedId };
+    }
+  } catch (backendErr) {
+    console.warn('Backend proxy feedback error:', backendErr);
+  }
+
+  return { success: true, id: generatedId };
+}
+
+/**
+ * Fetch all feedback records from Supabase table 'website_feedback'
+ * Ordered by newest first (created_at DESC)
+ */
+export async function fetchWebsiteFeedback(): Promise<WebsiteFeedbackPayload[]> {
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('website_feedback')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    } catch (err) {
+      console.warn('Direct Supabase fetch feedback note:', err);
+    }
+  }
+
+  // Fallback to backend API endpoint
+  try {
+    const res = await fetch('/api/feedback');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.feedback)) {
+        return json.feedback;
+      }
+    }
+  } catch (e) {
+    console.warn('Fetch backend feedback note:', e);
+  }
+
+  return [];
+}

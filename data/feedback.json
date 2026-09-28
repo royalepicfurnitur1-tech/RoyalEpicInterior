@@ -1,0 +1,18 @@
+[
+  {
+    "id": "FB-572822-317",
+    "name": "Pooja Hegde",
+    "email": null,
+    "rating": 4,
+    "message": "Great collection of modular kitchens and teak doors.",
+    "created_at": "2026-09-28T07:46:12.822Z"
+  },
+  {
+    "id": "FB-567039-119",
+    "name": "Suresh Menon",
+    "email": "suresh.menon@example.com",
+    "rating": 5,
+    "message": "Loved the 3D interior design preview and fast customer response!",
+    "created_at": "2026-09-28T07:46:07.039Z"
+  }
+]

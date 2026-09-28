@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PORTFOLIO_PROJECTS as DEFAULT_PROJECTS } from '../data/mockData';
-import { PortfolioProject } from '../types';
+import { PortfolioProject, CustomerReview } from '../types';
 import { getPortfolioProjects } from '../services/portfolioService';
+import { fetchPublicReviews } from '../services/reviewService';
 import { 
   Sparkles, MapPin, Calendar, Maximize2, Star, Quote, 
   Rotate3d, ArrowLeftRight, Check, Eye
@@ -18,6 +19,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
   const [sliderPosition, setSliderPosition] = useState<number>(50); // percentage 0 to 100
   const [activeProject, setActiveProject] = useState<PortfolioProject>(DEFAULT_PROJECTS[0]);
   const [activeTab, setActiveTab] = useState<'before-after' | 'walkthrough' | 'gallery'>('before-after');
+  const [approvedServiceReviews, setApprovedServiceReviews] = useState<CustomerReview[]>([]);
 
   useEffect(() => {
     getPortfolioProjects().then(res => {
@@ -26,6 +28,21 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
         setActiveProject(res.projects[0]);
       }
     });
+
+    const loadServiceReviews = async () => {
+      try {
+        const res = await fetchPublicReviews();
+        if (res.reviews && res.reviews.length > 0) {
+          setApprovedServiceReviews(res.reviews);
+        }
+      } catch (_) {}
+    };
+
+    loadServiceReviews();
+
+    const handleUpdate = () => loadServiceReviews();
+    window.addEventListener('royalepic-reviews-updated', handleUpdate);
+    return () => window.removeEventListener('royalepic-reviews-updated', handleUpdate);
   }, []);
 
   const categories = ['All', 'Residential', 'Commercial', 'Modular Kitchen', 'Hospitality', 'Architectural'];
@@ -238,16 +255,41 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
                   </div>
                 </div>
 
-                {/* Client Review Box */}
-                <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-800/80 to-black border border-gold/20 mb-6 relative">
-                  <Quote className="w-6 h-6 text-gold/30 absolute top-3 right-3" />
-                  <p className="text-xs text-neutral-300 italic leading-relaxed mb-3">
-                    "{activeProject.clientReview}"
-                  </p>
-                  <span className="text-xs font-bold text-gold block">
-                    — {activeProject.clientName}
-                  </span>
-                </div>
+                {/* Client Review Box (Live Approved Review from Supabase or Fallback Demo) */}
+                {(() => {
+                  // Find approved review matching project category or title, or take latest approved review
+                  const matchedReview = approvedServiceReviews.find(
+                    r => (r.project_type && r.project_type.toLowerCase().includes(activeProject.category.toLowerCase())) ||
+                         (r.project_type && r.project_type.toLowerCase().includes(activeProject.title.toLowerCase()))
+                  ) || (approvedServiceReviews.length > 0 ? approvedServiceReviews[0] : null);
+
+                  const reviewText = matchedReview ? matchedReview.review_message : activeProject.clientReview;
+                  const reviewerName = matchedReview ? matchedReview.name : activeProject.clientName;
+                  const reviewTitle = matchedReview ? matchedReview.review_title : null;
+                  const isVerifiedLive = Boolean(matchedReview);
+
+                  return (
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-800/80 to-black border border-gold/20 mb-6 relative">
+                      <Quote className="w-6 h-6 text-gold/30 absolute top-3 right-3" />
+                      {reviewTitle && (
+                        <h5 className="text-xs font-bold text-white mb-1.5 line-clamp-1">{reviewTitle}</h5>
+                      )}
+                      <p className="text-xs text-neutral-300 italic leading-relaxed mb-3">
+                        "{reviewText}"
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-gold block">
+                          — {reviewerName}
+                        </span>
+                        {isVerifiedLive && (
+                          <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Live Verified
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <button

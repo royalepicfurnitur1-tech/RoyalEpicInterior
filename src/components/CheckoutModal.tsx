@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CartItem } from '../types';
 import { 
-  X, CreditCard, ShieldCheck, CheckCircle2, Download, Truck, 
-  MapPin, Phone, Mail, User, Lock, Sparkles, AlertCircle, LogIn, ArrowRight 
+  X, CreditCard, ShieldCheck, CheckCircle2, Truck, 
+  MapPin, Phone, Mail, User, Lock, Sparkles, AlertCircle, LogIn 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createOrder } from '../services/orderService';
@@ -23,14 +23,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onClose,
   cartItems,
   subtotal,
-  discountAmount,
+  discountAmount = 0,
   onOrderSuccess,
   onNavigateToAuth,
   onNavigateToTrackOrder,
 }) => {
   const { user, profile } = useAuth();
 
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'upi' | 'card' | 'cod'>('razorpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [orderId, setOrderId] = useState('');
@@ -103,7 +102,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         discount_amount: discountAmount,
         status: status,
         payment_status: (payment_status as any) || 'Paid',
-        payment_method: extraData?.payment_method || (paymentMethod === 'cod' ? 'Cash on Delivery' : 'Pay Online (Razorpay)'),
+        payment_method: extraData?.payment_method || 'Pay Online (Razorpay)',
         delivery_address: {
           ...formData,
           email: formData.email || user.email || '',
@@ -144,101 +143,96 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setIsProcessing(true);
 
     try {
-      if (paymentMethod === 'cod') {
-        // Cash on Delivery
-        await submitOrder('Order Placed', 'Pending', { payment_method: 'Cash on Delivery' });
-      } else {
-        // Online Payment Gateway (Razorpay)
-        let rzpOrderId = '';
-        let keyId = 'rzp_test_TLdbeJzTprNsdX';
+      // Online Payment Gateway (Razorpay)
+      let rzpOrderId = '';
+      let keyId = 'rzp_test_TLdbeJzTprNsdX';
 
-        try {
-          const createOrderRes = await fetch('/api/create-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              amount: finalTotal,
-              currency: 'INR',
-              receipt: `rcpt_${Date.now()}`
-            })
-          });
+      try {
+        const createOrderRes = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: finalTotal,
+            currency: 'INR',
+            receipt: `rcpt_${Date.now()}`
+          })
+        });
 
-          if (createOrderRes.ok) {
-            const rzpData = await createOrderRes.json();
-            if (rzpData && rzpData.order_id) {
-              rzpOrderId = rzpData.order_id;
-              if (rzpData.key_id) keyId = rzpData.key_id;
+        if (createOrderRes.ok) {
+          const rzpData = await createOrderRes.json();
+          if (rzpData && rzpData.order_id) {
+            rzpOrderId = rzpData.order_id;
+            if (rzpData.key_id) keyId = rzpData.key_id;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("Razorpay API order creation note:", apiErr);
+      }
+
+      if (typeof window !== 'undefined' && (window as any).Razorpay) {
+        const options = {
+          key: keyId,
+          amount: Math.round(finalTotal * 100),
+          currency: 'INR',
+          name: 'Royal Epic Interior & Furniture',
+          description: `Order Payment (${cartItems.length} item${cartItems.length > 1 ? 's' : ''})`,
+          order_id: rzpOrderId || undefined,
+          prefill: {
+            name: formData.name,
+            email: formData.email,
+            contact: formData.phone
+          },
+          theme: {
+            color: '#D4AF37'
+          },
+          modal: {
+            ondismiss: () => {
+              setIsProcessing(false);
+            }
+          },
+          handler: async (response: any) => {
+            try {
+              if (response.razorpay_signature && response.razorpay_order_id) {
+                const verifyRes = await fetch('/api/verify-payment', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature
+                  })
+                });
+                const verifyData = await verifyRes.json();
+                if (!verifyData.success || !verifyData.verified) {
+                  setIsProcessing(false);
+                  setErrorMessage('Payment verification signature check failed.');
+                  return;
+                }
+              }
+
+              await submitOrder('Order Placed', 'Paid', {
+                payment_method: 'Pay Online (Razorpay)',
+                payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id
+              });
+            } catch (e: any) {
+              setIsProcessing(false);
+              setErrorMessage(e.message || 'Payment processing error.');
             }
           }
-        } catch (apiErr) {
-          console.warn("Razorpay API order creation note:", apiErr);
-        }
+        };
 
-        if (typeof window !== 'undefined' && (window as any).Razorpay) {
-          const options = {
-            key: keyId,
-            amount: Math.round(finalTotal * 100),
-            currency: 'INR',
-            name: 'Royal Epic Interior & Furniture',
-            description: `Order Payment (${cartItems.length} item${cartItems.length > 1 ? 's' : ''})`,
-            order_id: rzpOrderId || undefined,
-            prefill: {
-              name: formData.name,
-              email: formData.email,
-              contact: formData.phone
-            },
-            theme: {
-              color: '#D4AF37'
-            },
-            modal: {
-              ondismiss: () => {
-                setIsProcessing(false);
-              }
-            },
-            handler: async (response: any) => {
-              try {
-                if (response.razorpay_signature && response.razorpay_order_id) {
-                  const verifyRes = await fetch('/api/verify-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      razorpay_order_id: response.razorpay_order_id,
-                      razorpay_payment_id: response.razorpay_payment_id,
-                      razorpay_signature: response.razorpay_signature
-                    })
-                  });
-                  const verifyData = await verifyRes.json();
-                  if (!verifyData.success || !verifyData.verified) {
-                    setIsProcessing(false);
-                    setErrorMessage('Payment verification signature check failed.');
-                    return;
-                  }
-                }
-
-                await submitOrder('Order Placed', 'Paid', {
-                  payment_method: 'Pay Online (Razorpay)',
-                  payment_id: response.razorpay_payment_id,
-                  razorpay_order_id: response.razorpay_order_id
-                });
-              } catch (e: any) {
-                setIsProcessing(false);
-                setErrorMessage(e.message || 'Payment processing error.');
-              }
-            }
-          };
-
-          const rzp = new (window as any).Razorpay(options);
-          rzp.on('payment.failed', (response: any) => {
-            setIsProcessing(false);
-            setErrorMessage(response.error?.description || 'Online payment was cancelled or declined.');
-          });
-          rzp.open();
-        } else {
-          // Fallback if Razorpay SDK is blocked by browser or offline
-          setTimeout(async () => {
-            await submitOrder('Order Placed', 'Paid', { payment_method: 'Pay Online' });
-          }, 800);
-        }
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', (response: any) => {
+          setIsProcessing(false);
+          setErrorMessage(response.error?.description || 'Online payment was cancelled or declined.');
+        });
+        rzp.open();
+      } else {
+        // Fallback if Razorpay SDK is blocked by browser or offline
+        setTimeout(async () => {
+          await submitOrder('Order Placed', 'Paid', { payment_method: 'Pay Online' });
+        }, 800);
       }
     } catch (err: any) {
       setIsProcessing(false);
@@ -267,7 +261,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <span className="text-xs text-neutral-400">Payment Status</span>
               <span className="text-xs font-bold text-emerald-400 font-mono">
-                {paymentMethod === 'cod' ? 'Cash on Delivery (Pending)' : 'Paid Online (Confirmed)'}
+                Paid Online (Confirmed)
               </span>
             </div>
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
@@ -463,80 +457,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
           </div>
 
-          {/* Payment Method Selector */}
+          {/* Payment Method */}
           <div>
             <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-amber-400" /> 2. Payment Method
             </h3>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Option 1: Pay Online */}
-              <button 
-                type="button"
-                id="payment-method-online"
-                onClick={() => setPaymentMethod('razorpay')} 
-                className={`relative p-4 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-start gap-3.5 ${
-                  paymentMethod === 'razorpay' 
-                    ? 'bg-amber-950/30 border-amber-400 text-white shadow-lg ring-1 ring-amber-400/50' 
-                    : 'bg-neutral-950/70 border-neutral-700 text-neutral-200 hover:border-neutral-500 hover:bg-neutral-900'
-                }`}
-              >
-                {/* Radio Indicator */}
-                <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                  paymentMethod === 'razorpay' ? 'border-amber-400 bg-amber-400' : 'border-neutral-500 bg-transparent'
-                }`}>
-                  {paymentMethod === 'razorpay' && (
-                    <div className="w-2 h-2 rounded-full bg-neutral-950" />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className={`w-4 h-4 ${paymentMethod === 'razorpay' ? 'text-amber-400' : 'text-neutral-400'}`} />
-                    <span className="text-sm font-bold text-white">Pay Online</span>
-                  </div>
-                  <p className="text-xs text-neutral-300 mt-1 leading-snug">
-                    UPI, Credit/Debit Cards, NetBanking & Wallets
-                  </p>
-                  <span className="inline-block mt-2 text-[10px] font-semibold tracking-wide text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+            <div className="p-4 rounded-2xl bg-neutral-950/70 border border-neutral-700/80 flex items-start gap-3.5">
+              <div className="mt-0.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white">Online Payment</span>
+                  <span className="text-[10px] font-semibold tracking-wide text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                     Instant Confirmation
                   </span>
                 </div>
-              </button>
-
-              {/* Option 2: Cash on Delivery */}
-              <button 
-                type="button"
-                id="payment-method-cod"
-                onClick={() => setPaymentMethod('cod')} 
-                className={`relative p-4 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-start gap-3.5 ${
-                  paymentMethod === 'cod' 
-                    ? 'bg-amber-950/30 border-amber-400 text-white shadow-lg ring-1 ring-amber-400/50' 
-                    : 'bg-neutral-950/70 border-neutral-700 text-neutral-200 hover:border-neutral-500 hover:bg-neutral-900'
-                }`}
-              >
-                {/* Radio Indicator */}
-                <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                  paymentMethod === 'cod' ? 'border-amber-400 bg-amber-400' : 'border-neutral-500 bg-transparent'
-                }`}>
-                  {paymentMethod === 'cod' && (
-                    <div className="w-2 h-2 rounded-full bg-neutral-950" />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Truck className={`w-4 h-4 ${paymentMethod === 'cod' ? 'text-amber-400' : 'text-neutral-400'}`} />
-                    <span className="text-sm font-bold text-white">Cash on Delivery</span>
-                  </div>
-                  <p className="text-xs text-neutral-300 mt-1 leading-snug">
-                    Pay via cash or UPI upon delivery at your doorstep
-                  </p>
-                  <span className="inline-block mt-2 text-[10px] font-semibold tracking-wide text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                    Pay on Arrival
-                  </span>
-                </div>
-              </button>
+                <p className="text-xs text-neutral-300 mt-1 leading-snug">
+                  Pay securely via UPI, Credit/Debit Cards, NetBanking & Wallets powered by Razorpay.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -604,7 +545,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
               {discountAmount > 0 && (
                 <div className="flex justify-between items-center text-emerald-400 font-medium">
-                  <span>Coupon Discount</span>
+                  <span>Discount</span>
                   <span className="font-mono font-bold">-₹{discountAmount.toLocaleString('en-IN')}</span>
                 </div>
               )}
@@ -641,7 +582,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4 text-neutral-950" /> 
-                  {paymentMethod === 'cod' ? 'Place Order & Track Live' : 'Pay Securely & Track Live'}
+                  Pay Securely & Track Order
                 </>
               )}
             </button>

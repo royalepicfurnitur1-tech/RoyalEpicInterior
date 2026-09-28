@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { PRODUCTS_DATA, KITCHEN_EQUIPMENT_CATALOG } from '../data/mockData';
 import { Product, KitchenEquipmentItem } from '../types';
 import { getProductSlug, getCategorySlug, deduplicateProducts } from '../utils/productSlug';
+import { fetchPublicReviews } from '../services/reviewService';
 import { 
   Search, SlidersHorizontal, Heart, ShoppingBag, Eye, Box, 
   Rotate3d, Star, Sparkles, Check, FileText, Filter,
@@ -38,6 +39,41 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'equipment-table'>('grid');
   const [equipmentCategoryFilter, setEquipmentCategoryFilter] = useState<string>('All');
   const [previewImage, setPreviewImage] = useState<{ name: string; image: string; specification: string; priceRange: string } | null>(null);
+
+  // Live Calculated Ratings Map for Products: productId -> { rating: number, reviewsCount: number }
+  const [productReviewsMap, setProductReviewsMap] = useState<Record<string, { rating: number; reviewsCount: number }>>({});
+
+  useEffect(() => {
+    const loadAllProductReviews = async () => {
+      try {
+        const res = await fetchPublicReviews();
+        if (res.reviews && res.reviews.length > 0) {
+          const map: Record<string, { totalRating: number; count: number }> = {};
+          res.reviews.forEach(r => {
+            if (r.product_id) {
+              if (!map[r.product_id]) map[r.product_id] = { totalRating: 0, count: 0 };
+              map[r.product_id].totalRating += (r.rating || 5);
+              map[r.product_id].count += 1;
+            }
+          });
+          const resultMap: Record<string, { rating: number; reviewsCount: number }> = {};
+          Object.entries(map).forEach(([pid, stats]) => {
+            resultMap[pid] = {
+              rating: Number((stats.totalRating / stats.count).toFixed(1)),
+              reviewsCount: stats.count
+            };
+          });
+          setProductReviewsMap(resultMap);
+        }
+      } catch (_) {}
+    };
+
+    loadAllProductReviews();
+
+    const handleUpdate = () => loadAllProductReviews();
+    window.addEventListener('royalepic-reviews-updated', handleUpdate);
+    return () => window.removeEventListener('royalepic-reviews-updated', handleUpdate);
+  }, []);
 
   useEffect(() => {
     if (initialCategory && initialCategory !== selectedCategory) {
@@ -429,9 +465,15 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           </span>
                           <div className="flex items-center gap-1 text-xs text-amber-400 font-bold">
                             <Star className="w-3.5 h-3.5 fill-current" />
-                            <span>{product.rating}</span>
+                            <span>
+                              {productReviewsMap[product.id]?.rating !== undefined 
+                                ? productReviewsMap[product.id].rating 
+                                : (product.rating || 4.9)}
+                            </span>
                             <span className="text-[10px] text-neutral-500 font-normal">
-                              ({product.reviewsCount})
+                              ({productReviewsMap[product.id]?.reviewsCount !== undefined 
+                                ? productReviewsMap[product.id].reviewsCount 
+                                : (product.reviewsCount || 12)})
                             </span>
                           </div>
                         </div>

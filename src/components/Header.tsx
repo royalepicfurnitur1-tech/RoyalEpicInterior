@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { ActiveTab } from '../types';
 import { 
-  Crown, Menu, X, FileText, User, ChevronRight, MessageSquare, ShieldCheck, LogOut, Code, Building,
-  Sparkles, Phone
+  Crown, Menu, X, User, ChevronRight, MessageSquare, Phone, Search, ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -33,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearch = () => {},
   onSearchClick,
 }) => {
-  const { user, profile, isAdmin, logout } = useAuth();
+  const { user, profile } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems: { id: ActiveTab; path: string; label: string; badge?: string }[] = [
@@ -42,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'products', path: '/products', label: 'Products' },
     { id: 'portfolio', path: '/portfolio', label: 'Portfolio' },
     { id: 'gallery', path: '/completed-projects', label: 'Gallery' },
+    { id: 'reviews', path: '/reviews', label: 'Reviews' },
     { id: 'blog', path: '/blog', label: 'Blog' },
     { id: 'contact', path: '/contact-us', label: 'Contact' },
     { id: 'track-order', path: '/track-order', label: 'Track Your Order' },
@@ -291,7 +291,59 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Header Action Buttons / Mobile Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3 relative">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 relative">
+          {/* Search Button */}
+          <button
+            onClick={() => onOpenSearch ? onOpenSearch() : onSearchClick?.()}
+            className="p-2 sm:p-2.5 rounded-xl bg-[#f8f5ee] hover:bg-gold/20 text-neutral-800 hover:text-black border border-gold/30 transition-all flex items-center justify-center cursor-pointer shadow-xs group"
+            aria-label="Search Catalog & Projects"
+            title="Search Products, Woods & Projects"
+          >
+            <Search className="w-4 h-4 text-neutral-700 group-hover:text-black transition-colors" />
+          </button>
+
+          {/* Cart Button */}
+          <button
+            onClick={onOpenCart}
+            className="relative p-2 sm:p-2.5 rounded-xl bg-[#f8f5ee] hover:bg-gold/20 text-neutral-800 hover:text-black border border-gold/30 transition-all flex items-center justify-center cursor-pointer shadow-xs group"
+            aria-label="Shopping Cart"
+            title="Shopping Cart"
+          >
+            <ShoppingBag className="w-4 h-4 text-neutral-700 group-hover:text-black transition-colors" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-neutral-950 border border-amber-600 font-mono text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
+          </button>
+
+          {/* User Auth / Profile CTA */}
+          {user ? (
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                onClick={() => handleNavClick('dashboard', '/dashboard')}
+                className="flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-[#f8f5ee] hover:bg-gold/20 border border-gold/30 text-neutral-900 transition-colors cursor-pointer"
+                title="Customer Account & Orders"
+              >
+                <div className="w-6 h-6 rounded-lg bg-neutral-900 text-amber-400 font-bold text-[10px] flex items-center justify-center uppercase">
+                  {profile?.name ? profile.name.charAt(0) : user.email?.charAt(0) || 'U'}
+                </div>
+                <span className="hidden sm:inline text-xs font-bold max-w-[90px] truncate">
+                  {profile?.name?.split(' ')[0] || user.email?.split('@')[0] || 'Account'}
+                </span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handleNavClick('dashboard', '/dashboard')}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <User className="w-3.5 h-3.5 text-amber-400" />
+              <span>Sign In</span>
+            </button>
+          )}
+
+          {/* Mobile Hamburger Toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2.5 rounded-xl bg-[#f8f5ee] border border-gold/40 text-neutral-900 cursor-pointer hover:bg-gold transition-colors"
@@ -305,6 +357,45 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-neutral-200 px-4 pt-4 pb-6 space-y-3">
+          {/* Quick Mobile Action Bar */}
+          <div className="grid grid-cols-3 gap-2 pb-2 border-b border-neutral-100">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenSearch ? onOpenSearch() : onSearchClick?.();
+              }}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-[#f8f5ee] border border-gold/20 text-neutral-800 text-[10px] font-bold"
+            >
+              <Search className="w-4 h-4 mb-1 text-neutral-700" />
+              <span>Search</span>
+            </button>
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenCart();
+              }}
+              className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-[#f8f5ee] border border-gold/20 text-neutral-800 text-[10px] font-bold"
+            >
+              <ShoppingBag className="w-4 h-4 mb-1 text-neutral-700" />
+              <span>Cart</span>
+              {cartCount > 0 && (
+                <span className="absolute top-1 right-2 bg-amber-500 text-neutral-950 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleNavClick('dashboard', '/dashboard');
+              }}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-[#f8f5ee] border border-gold/20 text-neutral-800 text-[10px] font-bold"
+            >
+              <User className="w-4 h-4 mb-1 text-neutral-700" />
+              <span>{user ? 'Account' : 'Sign In'}</span>
+            </button>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             {navItems.map((item) => (
               <a
@@ -383,15 +474,6 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-full py-3 rounded-xl bg-gradient-to-r from-gold via-amber-400 to-yellow-500 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:brightness-105 cursor-pointer"
             >
               <Phone className="w-4 h-4 text-black" /> Contact Us
-            </button>
-            <button
-              onClick={() => {
-                onOpenQuote();
-                setMobileMenuOpen(false);
-              }}
-              className="w-full py-3 rounded-xl bg-[#f8f5ee] hover:bg-gold/20 text-neutral-900 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-gold/40 transition-all cursor-pointer"
-            >
-              <FileText className="w-4 h-4 text-black" /> Custom Quotation
             </button>
             <a
               href="https://wa.me/919916633338?text=Hi%20Royal%20Epic,%20I%20want%20to%20inquire%20about%20interior%20design"

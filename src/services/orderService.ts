@@ -229,6 +229,41 @@ export async function fetchCustomerOrders(userIdOrEmail: string): Promise<Order[
   return orders;
 }
 
+export async function fetchOrderById(orderId: string): Promise<Order | null> {
+  if (!orderId) return null;
+  const cleanId = orderId.trim();
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .or(`id.eq.${cleanId},tracking_number.eq.${cleanId}`)
+        .single();
+      if (!error && data) {
+        return data as Order;
+      }
+    } catch (e) {
+      console.warn("fetchOrderById error:", e);
+    }
+  }
+
+  try {
+    const local = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (local) {
+      const allOrders: Order[] = JSON.parse(local);
+      const found = allOrders.find(
+        (o: Order) =>
+          o.id?.toLowerCase() === cleanId.toLowerCase() ||
+          o.tracking_number?.toLowerCase() === cleanId.toLowerCase()
+      );
+      if (found) return found;
+    }
+  } catch (e) {}
+
+  return null;
+}
+
 export async function fetchAllOrders(): Promise<Order[]> {
   const supabase = getSupabase();
   
