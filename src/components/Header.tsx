@@ -40,9 +40,6 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'services', path: '/our-services', label: 'Services' },
     { id: 'products', path: '/products', label: 'Products' },
     { id: 'portfolio', path: '/portfolio', label: 'Portfolio' },
-    { id: 'gallery', path: '/completed-projects', label: 'Gallery' },
-    { id: 'reviews', path: '/reviews', label: 'Reviews' },
-    { id: 'blog', path: '/blog', label: 'Blog' },
     { id: 'contact', path: '/contact-us', label: 'Contact' },
     { id: 'track-order', path: '/track-order', label: 'Track Your Order' },
   ];

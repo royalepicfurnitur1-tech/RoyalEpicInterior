@@ -442,7 +442,10 @@ export default function App() {
                   onSelectItem={(cat, title) => {}}
                   onRequestQuote={(title) => handleOpenQuote(title)} 
                 />
-                <ServicesSection onRequestQuote={(title) => handleOpenQuote(title)} />
+                <ServicesSection 
+                  onRequestQuote={(title) => handleOpenQuote(title)} 
+                  showDirectory={false}
+                />
                 <ProductCatalog
                   products={products}
                   initialCategory="All"
