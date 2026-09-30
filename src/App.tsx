@@ -23,7 +23,9 @@ import { AiConsultantModal } from './components/AiConsultantModal';
 import { InquiryPopup } from './components/InquiryPopup';
 import { FeedbackModal } from './components/FeedbackModal';
 import { Footer } from './components/Footer';
-import { ActiveTab } from './types';
+import { CartDrawer } from './components/CartDrawer';
+import { CheckoutModal } from './components/CheckoutModal';
+import { ActiveTab, CartItem, ProductVariation } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
 
 // Safe lazy loader that gracefully retries if a chunk load experiences a transient network or preload hiccup
@@ -91,6 +93,29 @@ export default function App() {
   const [showInquiryPopup, setShowInquiryPopup] = useState(false);
   const [quoteModalTitle, setQuoteModalTitle] = useState('');
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem('royalepic_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('royalepic_cart', JSON.stringify(cartItems));
+    } catch (e) {}
+  }, [cartItems]);
+
+  const cartCount = cartItems.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
+  const cartSubtotal = cartItems.reduce((acc, item) => {
+    const price = item.unitPrice || item.selectedVariation?.price || item.product?.discountPrice || item.product?.price || 0;
+    return acc + price * (Number(item.quantity) || 1);
+  }, 0);
 
   // Subdomain identification
   const isAdminSubdomain = 
@@ -305,8 +330,93 @@ export default function App() {
       navigateTo(`/products/${slug}`);
     }
   };
-  const handleAddToCart = (p: any) => {
-    handleOpenQuote(`Product Inquiry / Order: ${p?.name || 'Luxury Furniture'}`);
+  const handleAddToCart = (
+    product: any, 
+    quantity: number = 1, 
+    selectedVariation?: ProductVariation, 
+    selectedAttributes?: Record<string, string>
+  ) => {
+    if (!product) return;
+    const qty = Math.max(1, Number(quantity) || 1);
+    const variationId = selectedVariation?.id || null;
+    const attrKey = selectedAttributes ? JSON.stringify(selectedAttributes) : '';
+
+    setCartItems(prev => {
+      const existingIndex = prev.findIndex(item => {
+        const sameProduct = (item.product?.id || item.product?.sku) === (product.id || product.sku);
+        const sameVariation = (item.selectedVariation?.id || null) === variationId;
+        const sameAttrs = (item.selectedAttributes ? JSON.stringify(item.selectedAttributes) : '') === attrKey;
+        return sameProduct && sameVariation && sameAttrs;
+      });
+
+      if (existingIndex > -1) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + qty
+        };
+        return updated;
+      }
+
+      const newItem: CartItem = {
+        id: `cart_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        product: product,
+        quantity: qty,
+        selectedVariation: selectedVariation,
+        selectedAttributes: selectedAttributes,
+        unitPrice: selectedVariation?.price || product.discountPrice || product.price
+      };
+      return [...prev, newItem];
+    });
+
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateCartQuantity = (
+    productId: string, 
+    quantity: number, 
+    variationId?: string, 
+    itemId?: string
+  ) => {
+    if (quantity <= 0) {
+      handleRemoveCartItem(productId, variationId, itemId);
+      return;
+    }
+    setCartItems(prev => 
+      prev.map(item => {
+        const match = itemId 
+          ? item.id === itemId 
+          : (item.product?.id === productId && (item.selectedVariation?.id || undefined) === variationId);
+        return match ? { ...item, quantity } : item;
+      })
+    );
+  };
+
+  const handleRemoveCartItem = (
+    productId: string, 
+    variationId?: string, 
+    itemId?: string
+  ) => {
+    setCartItems(prev => 
+      prev.filter(item => {
+        if (itemId && item.id) return item.id !== itemId;
+        const sameProduct = item.product?.id === productId;
+        const sameVariation = (item.selectedVariation?.id || undefined) === variationId;
+        return !(sameProduct && sameVariation);
+      })
+    );
+  };
+
+  const handleProceedToCheckout = () => {
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleOrderSuccess = () => {
+    setCartItems([]);
+    try {
+      localStorage.removeItem('royalepic_cart');
+    } catch (e) {}
   };
   const handleToggleWishlist = (p: any) => {
     if (!p || !p.id) return;
@@ -394,8 +504,8 @@ export default function App() {
         onNavigate={navigateTo}
         onContactClick={handleScrollToContact}
         wishlistCount={wishlistIds.length}
-        cartCount={0}
-        onOpenCart={() => {}}
+        cartCount={cartCount}
+        onOpenCart={() => setIsCartOpen(true)}
         onOpenQuote={() => handleOpenQuote('')}
         onOpenSearch={() => setIsSearchOpen(true)}
         onSearchClick={() => setIsSearchOpen(true)}
@@ -426,8 +536,12 @@ export default function App() {
                 product={productMatch || null}
                 allProducts={products}
                 onNavigate={navigateTo}
-                onAddToCart={(p) => handleAddToCart(p)}
-                onBuyNow={(p) => {}}
+                onAddToCart={(p, qty, variation, attrs) => handleAddToCart(p, qty, variation, attrs)}
+                onBuyNow={(p, qty, variation) => {
+                  handleAddToCart(p, qty, variation);
+                  setIsCartOpen(false);
+                  setIsCheckoutOpen(true);
+                }}
                 onRequestQuote={(title) => handleOpenQuote(title)}
                 isWishlisted={productMatch ? wishlistIds.includes(productMatch.id) : false}
                 onToggleWishlist={(p) => handleToggleWishlist(p)}
@@ -450,7 +564,7 @@ export default function App() {
                   products={products}
                   initialCategory="All"
                   onSelectProduct={(p) => handleSelectProduct(p)}
-                  onAddToCart={(p) => handleAddToCart(p)}
+                  onAddToCart={(p) => handleAddToCart(p, 1)}
                   onToggleWishlist={(p) => handleToggleWishlist(p)}
                   wishlistIds={wishlistIds}
                   onRequestQuote={(title) => handleOpenQuote(title)}
@@ -470,7 +584,7 @@ export default function App() {
                 products={products}
                 initialCategory="All"
                 onSelectProduct={(p) => handleSelectProduct(p)}
-                onAddToCart={(p) => handleAddToCart(p)}
+                onAddToCart={(p) => handleAddToCart(p, 1)}
                 onToggleWishlist={(p) => handleToggleWishlist(p)}
                 wishlistIds={wishlistIds}
                 onRequestQuote={(title) => handleOpenQuote(title)}
@@ -574,6 +688,36 @@ export default function App() {
           onSubmitLead={handleInquiryLeadSubmit}
         />
       )}
+
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveCartItem}
+        onProceedCheckout={handleProceedToCheckout}
+        onNavigateToAuth={() => {
+          setIsCartOpen(false);
+          setActiveTab('customers');
+        }}
+      />
+
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        cartItems={cartItems}
+        subtotal={cartSubtotal}
+        discountAmount={0}
+        onOrderSuccess={handleOrderSuccess}
+        onNavigateToAuth={() => {
+          setIsCheckoutOpen(false);
+          setActiveTab('customers');
+        }}
+        onNavigateToTrackOrder={(_orderId) => {
+          setIsCheckoutOpen(false);
+          setActiveTab('customers');
+        }}
+      />
     </div>
   );
 }

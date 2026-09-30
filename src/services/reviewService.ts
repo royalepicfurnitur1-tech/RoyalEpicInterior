@@ -281,6 +281,7 @@ export async function moderateReview(params: {
   review_title?: string;
   review_message?: string;
   name?: string;
+  service_type?: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const res = await fetch('/api/reviews/moderate', {
@@ -376,3 +377,63 @@ export async function deleteReview(reviewId: string): Promise<{ success: boolean
 
   return { success: false, error: 'Failed to delete review.' };
 }
+
+/**
+ * Backward compatibility aliases for AdminReviewManagement
+ */
+export async function getAllReviews(statusFilter: string = 'all'): Promise<{
+  reviews: CustomerReview[];
+  counts: { pending: number; approved: number; rejected: number; all: number };
+}> {
+  const res = await fetchAdminReviews({ status: statusFilter });
+  return {
+    reviews: res.reviews,
+    counts: {
+      pending: res.counts.pending || 0,
+      approved: res.counts.approved || 0,
+      rejected: res.counts.rejected || 0,
+      all: res.counts.total || 0
+    }
+  };
+}
+
+export async function approveReview(id: string, adminNotes?: string) {
+  return moderateReview({ id, status: 'approved', admin_notes: adminNotes });
+}
+
+export async function rejectReview(id: string, adminNotes?: string) {
+  return moderateReview({ id, status: 'rejected', admin_notes: adminNotes });
+}
+
+export async function updateReview(id: string, updates: {
+  rating?: number;
+  review_title?: string;
+  title?: string;
+  review_message?: string;
+  message?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  name?: string;
+  admin_notes?: string;
+  service_type?: string;
+}) {
+  return moderateReview({
+    id,
+    ...updates,
+    review_title: updates.review_title || updates.title,
+    review_message: updates.review_message || updates.message
+  });
+}
+
+export function subscribeToReviews(callback: (review: any) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const handler = (e: any) => {
+    callback(e.detail);
+  };
+  window.addEventListener('royalepic-reviews-updated', handler);
+  window.addEventListener('royalepic-review-submitted', handler);
+  return () => {
+    window.removeEventListener('royalepic-reviews-updated', handler);
+    window.removeEventListener('royalepic-review-submitted', handler);
+  };
+}
+

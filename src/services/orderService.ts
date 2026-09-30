@@ -131,69 +131,35 @@ export function getOrderTimeline(order: Order): OrderTimelineStep[] {
   });
 }
 
-export async function createOrder(orderData: Partial<Order>): Promise<{ success: boolean; data?: Order; error?: string }> {
-  const supabase = getSupabase();
-  const orderId = orderData.id || `ORD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
-  
-  const now = new Date().toISOString();
-  const initialStatus = orderData.status || 'Order Placed';
-  
-  const record: Order = {
-    id: orderId,
-    user_id: orderData.user_id || 'guest',
-    customer_email: orderData.customer_email || orderData.delivery_address?.email,
-    customer_name: orderData.customer_name || orderData.delivery_address?.name,
-    items: orderData.items || [],
-    total_amount: Number(orderData.total_amount) || 0,
-    subtotal: orderData.subtotal,
-    discount_amount: orderData.discount_amount,
-    tax_amount: orderData.tax_amount,
-    status: initialStatus,
-    payment_status: (orderData.payment_status as any) || 'Paid',
-    payment_method: orderData.payment_method || 'Online Payment',
-    delivery_address: orderData.delivery_address || {
-      name: '',
-      phone: '',
-      address: '',
-      city: '',
-      state: '',
-      pincode: ''
-    },
-    expected_delivery_date: orderData.expected_delivery_date || new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-    courier_name: orderData.courier_name || 'Royal Epic Express Logistics',
-    tracking_number: orderData.tracking_number || `RE-TRK-${Math.floor(100000 + Math.random() * 900000)}`,
-    timeline_history: [
-      {
-        status: initialStatus,
-        timestamp: now,
-        remarks: 'Order received and logged into Royal Epic automated manufacturing portal.'
-      }
-    ],
-    admin_remarks: orderData.admin_remarks || {},
-    created_at: now,
-    updated_at: now
+/**
+ * @deprecated LEGACY CLIENT-SIDE ORDER HELPER
+ * WARNING: Do NOT use this client-side function for e-commerce orders.
+ * The active, secure production payment flow strictly uses:
+ *   - POST /api/create-order (server-side price calculation & Razorpay order creation)
+ *   - POST /api/verify-payment (cryptographic HMAC SHA256 signature verification)
+ *   - POST /api/razorpay/webhook (asynchronous idempotent event confirmation)
+ */
+export async function createOrder(_orderData: Partial<Order>): Promise<{ success: boolean; data?: Order; error?: string }> {
+  console.warn(
+    "⚠️ [DEPRECATED] client-side createOrder() is disabled. Orders must be created via POST /api/create-order and verified via POST /api/verify-payment."
+  );
+  return {
+    success: false,
+    error: "Client-side order creation is disabled. Use the secure server API (/api/create-order) with Razorpay verification."
   };
-
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('orders').insert([record]).select().single();
-      if (!error && data) {
-        saveOrderLocally(data);
-        return { success: true, data };
-      } else {
-        console.warn("Supabase orders insert notice:", error);
-      }
-    } catch (e) {
-      console.warn("Supabase orders insert exception:", e);
-    }
-  }
-  
-  // Fallback to local storage
-  saveOrderLocally(record);
-  return { success: true, data: record };
 }
 
 export async function fetchCustomerOrders(userIdOrEmail: string): Promise<Order[]> {
+  try {
+    const res = await fetch(`/api/orders?customer_email=${encodeURIComponent(userIdOrEmail)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.orders) && json.orders.length > 0) {
+        return json.orders.map(mapDbOrderToLegacyOrder);
+      }
+    }
+  } catch (_) {}
+
   const supabase = getSupabase();
   let orders: Order[] = [];
   
@@ -206,7 +172,7 @@ export async function fetchCustomerOrders(userIdOrEmail: string): Promise<Order[
         .order('created_at', { ascending: false });
         
       if (!error && data && data.length > 0) {
-        return data as Order[];
+        return (data as any[]).map(mapDbOrderToLegacyOrder);
       }
     } catch (e) {
       console.warn("Failed to fetch orders from supabase", e);
@@ -217,31 +183,86 @@ export async function fetchCustomerOrders(userIdOrEmail: string): Promise<Order[
   try {
     const local = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (local) {
-      const allOrders: Order[] = JSON.parse(local);
-      orders = allOrders.filter((o: Order) => 
-        o.user_id === userIdOrEmail || 
-        (o.customer_email && o.customer_email.toLowerCase() === userIdOrEmail.toLowerCase()) ||
-        (o.delivery_address?.email && o.delivery_address.email.toLowerCase() === userIdOrEmail.toLowerCase())
-      );
+      const allOrders: any[] = JSON.parse(local);
+      orders = allOrders
+        .filter((o: any) => 
+          o.user_id === userIdOrEmail || 
+          (o.customer_email && o.customer_email.toLowerCase() === userIdOrEmail.toLowerCase()) ||
+          (o.delivery_address?.email && o.delivery_address.email.toLowerCase() === userIdOrEmail.toLowerCase())
+        )
+        .map(mapDbOrderToLegacyOrder);
     }
   } catch (e) {}
 
   return orders;
 }
 
+export function mapDbOrderToLegacyOrder(row: any): Order {
+  const deliveryAddress = row.shipping_address || row.delivery_address || {};
+  return {
+    id: row.order_number || row.id,
+    user_id: row.user_id || 'guest',
+    customer_email: row.customer_email || deliveryAddress.email,
+    customer_name: row.customer_name || deliveryAddress.name,
+    items: Array.isArray(row.items) ? row.items.map((i: any) => ({
+      product: {
+        id: i.product_id || i.product?.id || 'prod',
+        name: i.product_name || i.product?.name || 'Royal Epic Furniture',
+        image: i.product_image || i.product?.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
+        price: Number(i.unit_price || i.product?.price || 0)
+      },
+      quantity: Number(i.quantity || 1)
+    })) : [],
+    total_amount: Number(row.total_amount || 0),
+    subtotal: Number(row.subtotal || row.total_amount || 0),
+    discount_amount: Number(row.discount || row.discount_amount || 0),
+    tax_amount: Number(row.tax || row.tax_amount || 0),
+    status: row.order_status || row.status || 'Order Placed',
+    payment_status: row.payment_status === 'PAID' ? 'Paid' : (row.payment_status === 'FAILED' ? 'Failed' : 'Pending'),
+    payment_method: row.payments?.[0]?.payment_method || row.payment_method || 'Razorpay Online',
+    delivery_address: {
+      name: deliveryAddress.name || row.customer_name || '',
+      phone: deliveryAddress.phone || row.customer_phone || '',
+      email: deliveryAddress.email || row.customer_email || '',
+      address: deliveryAddress.address || '',
+      city: deliveryAddress.city || 'Bengaluru',
+      state: deliveryAddress.state || 'Karnataka',
+      pincode: deliveryAddress.pincode || ''
+    },
+    expected_delivery_date: row.expected_delivery_date,
+    courier_name: row.courier_name,
+    tracking_number: row.tracking_number,
+    timeline_history: row.timeline_history,
+    admin_remarks: row.admin_remarks,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
 export async function fetchOrderById(orderId: string): Promise<Order | null> {
   if (!orderId) return null;
   const cleanId = orderId.trim();
+
+  try {
+    const res = await fetch(`/api/orders/${encodeURIComponent(cleanId)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.order) {
+        return mapDbOrderToLegacyOrder(json.order);
+      }
+    }
+  } catch (_) {}
+
   const supabase = getSupabase();
   if (supabase) {
     try {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .or(`id.eq.${cleanId},tracking_number.eq.${cleanId}`)
+        .or(`id.eq.${cleanId},order_number.eq.${cleanId},tracking_number.eq.${cleanId},razorpay_order_id.eq.${cleanId}`)
         .single();
       if (!error && data) {
-        return data as Order;
+        return mapDbOrderToLegacyOrder(data);
       }
     } catch (e) {
       console.warn("fetchOrderById error:", e);
@@ -251,13 +272,14 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
   try {
     const local = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (local) {
-      const allOrders: Order[] = JSON.parse(local);
+      const allOrders: any[] = JSON.parse(local);
       const found = allOrders.find(
-        (o: Order) =>
+        (o: any) =>
           o.id?.toLowerCase() === cleanId.toLowerCase() ||
+          o.order_number?.toLowerCase() === cleanId.toLowerCase() ||
           o.tracking_number?.toLowerCase() === cleanId.toLowerCase()
       );
-      if (found) return found;
+      if (found) return mapDbOrderToLegacyOrder(found);
     }
   } catch (e) {}
 
@@ -265,13 +287,23 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
 }
 
 export async function fetchAllOrders(): Promise<Order[]> {
+  try {
+    const res = await fetch('/api/orders');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.orders)) {
+        return json.orders.map(mapDbOrderToLegacyOrder);
+      }
+    }
+  } catch (_) {}
+
   const supabase = getSupabase();
   
   if (supabase) {
     try {
       const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        return data as Order[];
+        return (data as any[]).map(mapDbOrderToLegacyOrder);
       }
     } catch (e) {
       console.warn("Failed to fetch all orders from supabase", e);
@@ -281,7 +313,8 @@ export async function fetchAllOrders(): Promise<Order[]> {
   try {
     const local = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (local) {
-      return JSON.parse(local);
+      const all: any[] = JSON.parse(local);
+      return all.map(mapDbOrderToLegacyOrder);
     }
   } catch (e) {}
 

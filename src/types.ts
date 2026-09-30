@@ -202,6 +202,117 @@ export interface WebsiteFeedback {
   created_at?: string;
 }
 
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export interface CustomerReview {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  rating: number;
+  review_title?: string | null;
+  title?: string | null;
+  review_message: string;
+  message?: string | null;
+  project_type?: string | null;
+  service_type?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  status: ReviewStatus;
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at?: string;
+  helpful_count?: number;
+  is_verified_buyer?: boolean;
+  verified_purchase?: boolean;
+}
+
+export interface SubmitReviewPayload {
+  name: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  rating: number;
+  review_title?: string;
+  title?: string;
+  review_message?: string;
+  message?: string;
+  project_type?: string;
+  service_type?: string;
+  product_id?: string;
+  product_name?: string;
+}
+
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
+export type OrderStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+
+export interface DbOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  shipping_address: {
+    name: string;
+    phone: string;
+    email?: string;
+    address: string;
+    city: string;
+    state?: string;
+    pincode: string;
+  };
+  subtotal: number;
+  discount: number;
+  shipping_charge: number;
+  tax: number;
+  total_amount: number;
+  currency: string;
+  payment_status: PaymentStatus;
+  order_status: OrderStatus;
+  razorpay_order_id?: string | null;
+  razorpay_payment_id?: string | null;
+  user_id?: string | null;
+  expected_delivery_date?: string;
+  courier_name?: string;
+  tracking_number?: string;
+  timeline_history?: Array<{
+    status: string;
+    timestamp: string;
+    remarks?: string;
+  }>;
+  admin_remarks?: Record<string, string>;
+  items?: DbOrderItem[];
+  payments?: DbPayment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbOrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product_name: string;
+  product_image: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  created_at: string;
+}
+
+export interface DbPayment {
+  id: string;
+  order_id: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  payment_method?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ActiveTab = 
   | 'home' 
   | 'services' 

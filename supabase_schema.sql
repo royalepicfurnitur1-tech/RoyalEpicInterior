@@ -284,3 +284,137 @@ FOR SELECT
 TO authenticated, anon 
 USING (true);
 
+-- ==============================================================================
+-- 10. E-COMMERCE ORDERS, ORDER_ITEMS & PAYMENTS SYSTEM (RAZORPAY INTEGRATION)
+-- ==============================================================================
+
+-- If the old orders table existed without the new columns, we alter or recreate it
+CREATE TABLE IF NOT EXISTS public.orders (
+    id TEXT PRIMARY KEY,
+    order_number TEXT UNIQUE NOT NULL,
+    customer_name TEXT NOT NULL,
+    customer_email TEXT NOT NULL,
+    customer_phone TEXT NOT NULL,
+    shipping_address JSONB NOT NULL DEFAULT '{}'::jsonb,
+    subtotal NUMERIC NOT NULL DEFAULT 0,
+    discount NUMERIC NOT NULL DEFAULT 0,
+    shipping_charge NUMERIC NOT NULL DEFAULT 0,
+    tax NUMERIC NOT NULL DEFAULT 0,
+    total_amount NUMERIC NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'INR',
+    payment_status TEXT NOT NULL DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED')),
+    order_status TEXT NOT NULL DEFAULT 'PENDING_PAYMENT' CHECK (order_status IN ('PENDING_PAYMENT', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED')),
+    razorpay_order_id TEXT UNIQUE,
+    razorpay_payment_id TEXT,
+    user_id TEXT,
+    expected_delivery_date TEXT,
+    courier_name TEXT,
+    tracking_number TEXT,
+    timeline_history JSONB DEFAULT '[]'::jsonb,
+    admin_remarks JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Ensure all required columns exist if the table was previously created with minimal columns
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'order_number') THEN
+        ALTER TABLE public.orders ADD COLUMN order_number TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'customer_name') THEN
+        ALTER TABLE public.orders ADD COLUMN customer_name TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'customer_email') THEN
+        ALTER TABLE public.orders ADD COLUMN customer_email TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'customer_phone') THEN
+        ALTER TABLE public.orders ADD COLUMN customer_phone TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'shipping_address') THEN
+        ALTER TABLE public.orders ADD COLUMN shipping_address JSONB DEFAULT '{}'::jsonb;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'subtotal') THEN
+        ALTER TABLE public.orders ADD COLUMN subtotal NUMERIC DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'discount') THEN
+        ALTER TABLE public.orders ADD COLUMN discount NUMERIC DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'shipping_charge') THEN
+        ALTER TABLE public.orders ADD COLUMN shipping_charge NUMERIC DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'tax') THEN
+        ALTER TABLE public.orders ADD COLUMN tax NUMERIC DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'currency') THEN
+        ALTER TABLE public.orders ADD COLUMN currency TEXT DEFAULT 'INR';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'order_status') THEN
+        ALTER TABLE public.orders ADD COLUMN order_status TEXT DEFAULT 'PENDING_PAYMENT';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'razorpay_order_id') THEN
+        ALTER TABLE public.orders ADD COLUMN razorpay_order_id TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'razorpay_payment_id') THEN
+        ALTER TABLE public.orders ADD COLUMN razorpay_payment_id TEXT;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_orders_order_number ON public.orders(order_number);
+CREATE INDEX IF NOT EXISTS idx_orders_razorpay_order_id ON public.orders(razorpay_order_id);
+CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON public.orders(payment_status);
+CREATE INDEX IF NOT EXISTS idx_orders_order_status ON public.orders(order_status);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON public.orders(customer_email);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at DESC);
+
+-- 11. ORDER_ITEMS TABLE
+CREATE TABLE IF NOT EXISTS public.order_items (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+    product_id TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    product_image TEXT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit_price NUMERIC NOT NULL CHECK (unit_price >= 0),
+    total_price NUMERIC NOT NULL CHECK (total_price >= 0),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON public.order_items(product_id);
+
+-- 12. PAYMENTS TABLE
+CREATE TABLE IF NOT EXISTS public.payments (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+    razorpay_order_id TEXT NOT NULL,
+    razorpay_payment_id TEXT UNIQUE NOT NULL,
+    amount NUMERIC NOT NULL CHECK (amount >= 0),
+    currency TEXT NOT NULL DEFAULT 'INR',
+    status TEXT NOT NULL CHECK (status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED')),
+    payment_method TEXT DEFAULT 'Razorpay Online',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_order_id ON public.payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_razorpay_order_id ON public.payments(razorpay_order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_razorpay_payment_id ON public.payments(razorpay_payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(status);
+
+-- RLS Policies for Orders, Order Items, and Payments
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can select orders" ON public.orders FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "Public can insert orders" ON public.orders FOR INSERT TO authenticated, anon WITH CHECK (true);
+CREATE POLICY "Public can update orders" ON public.orders FOR UPDATE TO authenticated, anon USING (true);
+
+CREATE POLICY "Public can select order_items" ON public.order_items FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "Public can insert order_items" ON public.order_items FOR INSERT TO authenticated, anon WITH CHECK (true);
+
+CREATE POLICY "Public can select payments" ON public.payments FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "Public can insert payments" ON public.payments FOR INSERT TO authenticated, anon WITH CHECK (true);
+CREATE POLICY "Public can update payments" ON public.payments FOR UPDATE TO authenticated, anon USING (true);
+

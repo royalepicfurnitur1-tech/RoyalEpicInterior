@@ -14,12 +14,14 @@ interface CustomerDashboardProps {
   onRequestQuote: (item: string) => void;
   onNavigate?: (path: string) => void;
   initialTab?: 'orders' | 'quotes';
+  wishlistProducts?: any[];
 }
 
 export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onRequestQuote,
   onNavigate,
   initialTab,
+  wishlistProducts
 }) => {
   const { 
     user, 

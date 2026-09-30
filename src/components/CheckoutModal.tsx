@@ -5,7 +5,6 @@ import {
   MapPin, Phone, Mail, User, Lock, Sparkles, AlertCircle, LogIn 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { createOrder } from '../services/orderService';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -33,6 +32,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [orderNumber, setOrderNumber] = useState('');
+  const [confirmedAmount, setConfirmedAmount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -50,6 +51,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (isOpen) {
       setIsPaid(false);
       setOrderId('');
+      setOrderNumber('');
+      setConfirmedAmount(0);
       setIsProcessing(false);
       setErrorMessage(null);
 
@@ -67,6 +70,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const handleClose = () => {
     setIsPaid(false);
     setOrderId('');
+    setOrderNumber('');
+    setConfirmedAmount(0);
     setIsProcessing(false);
     setErrorMessage(null);
     onClose();
@@ -75,53 +80,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   if (!isOpen) return null;
 
   const finalTotal = Math.max(0, subtotal - discountAmount);
-
-  const submitOrder = async (
-    status: string, 
-    payment_status: 'Paid' | 'Pending' | 'Refunded' | 'Failed' | string,
-    extraData?: { payment_method?: string; payment_id?: string; razorpay_order_id?: string }
-  ) => {
-    if (!user) {
-      setErrorMessage("Authentication is required to place an order and track its manufacturing timeline.");
-      setIsProcessing(false);
-      return;
-    }
-
-    if (!cartItems || cartItems.length === 0) {
-      setErrorMessage("Your cart is empty. Please add items to proceed with checkout.");
-      setIsProcessing(false);
-      return;
-    }
-
-    try {
-      const orderData = {
-        user_id: user.id,
-        items: cartItems,
-        total_amount: finalTotal,
-        subtotal: subtotal,
-        discount_amount: discountAmount,
-        status: status,
-        payment_status: (payment_status as any) || 'Paid',
-        payment_method: extraData?.payment_method || 'Pay Online (Razorpay)',
-        delivery_address: {
-          ...formData,
-          email: formData.email || user.email || '',
-        }
-      };
-      const res = await createOrder(orderData);
-      if (res.success && res.data) {
-        setOrderId(res.data.id);
-        setIsPaid(true);
-        onOrderSuccess();
-      } else {
-        setErrorMessage(res.error || 'Failed to save order.');
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Error creating order.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handlePayNow = async () => {
     if (!user) {
@@ -143,43 +101,62 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setIsProcessing(true);
 
     try {
-      // Online Payment Gateway (Razorpay)
-      let rzpOrderId = '';
-      let keyId = 'rzp_test_TLdbeJzTprNsdX';
+      // 1. Call server to validate cart and create Razorpay order with server-calculated price
+      const orderPayload = {
+        items: cartItems.map(item => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          productImage: item.selectedVariation?.image || item.product.image,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice || item.selectedVariation?.price || item.product.price
+        })),
+        customer: {
+          userId: user.id,
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim() || user.email || '',
+          address: formData.address.trim(),
+          city: formData.city.trim(),
+          state: formData.state.trim() || 'Karnataka',
+          pincode: formData.pincode.trim()
+        },
+        discount: discountAmount,
+        shipping: 0,
+        currency: 'INR'
+      };
 
-      try {
-        const createOrderRes = await fetch('/api/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: finalTotal,
-            currency: 'INR',
-            receipt: `rcpt_${Date.now()}`
-          })
-        });
+      const createOrderRes = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
 
-        if (createOrderRes.ok) {
-          const rzpData = await createOrderRes.json();
-          if (rzpData && rzpData.order_id) {
-            rzpOrderId = rzpData.order_id;
-            if (rzpData.key_id) keyId = rzpData.key_id;
-          }
-        }
-      } catch (apiErr) {
-        console.warn("Razorpay API order creation note:", apiErr);
+      if (!createOrderRes.ok) {
+        const errJson = await createOrderRes.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Failed to create order on server.');
       }
+
+      const rzpData = await createOrderRes.json();
+      if (!rzpData || !rzpData.order_id) {
+        throw new Error('Server did not return a valid Razorpay order ID.');
+      }
+
+      const rzpOrderId = rzpData.order_id;
+      const keyId = rzpData.key_id || 'rzp_test_TLdbeJzTprNsdX';
+      const serverOrderNumber = rzpData.order_number || rzpData.app_order_id;
+      const verifiedAmount = rzpData.amount_in_rupees || finalTotal;
 
       if (typeof window !== 'undefined' && (window as any).Razorpay) {
         const options = {
           key: keyId,
-          amount: Math.round(finalTotal * 100),
-          currency: 'INR',
+          amount: rzpData.amount,
+          currency: rzpData.currency || 'INR',
           name: 'Royal Epic Interior & Furniture',
-          description: `Order Payment (${cartItems.length} item${cartItems.length > 1 ? 's' : ''})`,
-          order_id: rzpOrderId || undefined,
+          description: `Order ${serverOrderNumber} (${cartItems.length} item${cartItems.length > 1 ? 's' : ''})`,
+          order_id: rzpOrderId,
           prefill: {
             name: formData.name,
-            email: formData.email,
+            email: formData.email || user.email || '',
             contact: formData.phone
           },
           theme: {
@@ -187,34 +164,58 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           },
           modal: {
             ondismiss: () => {
+              // Customer closed Razorpay Checkout: order remains pending
               setIsProcessing(false);
+              setErrorMessage('Payment window was closed. Your order remains pending and you can retry when ready.');
             }
           },
           handler: async (response: any) => {
             try {
-              if (response.razorpay_signature && response.razorpay_order_id) {
-                const verifyRes = await fetch('/api/verify-payment', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    razorpay_order_id: response.razorpay_order_id,
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_signature: response.razorpay_signature
-                  })
-                });
-                const verifyData = await verifyRes.json();
-                if (!verifyData.success || !verifyData.verified) {
-                  setIsProcessing(false);
-                  setErrorMessage('Payment verification signature check failed.');
-                  return;
-                }
+              if (!response.razorpay_signature || !response.razorpay_order_id || !response.razorpay_payment_id) {
+                setIsProcessing(false);
+                setErrorMessage('Payment details missing from checkout response.');
+                return;
               }
 
-              await submitOrder('Order Placed', 'Paid', {
-                payment_method: 'Pay Online (Razorpay)',
-                payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id
+              // Server-side signature verification
+              const verifyRes = await fetch('/api/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  payment_method: 'Razorpay Checkout'
+                })
               });
+
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success || !verifyData.verified) {
+                setIsProcessing(false);
+                setErrorMessage(verifyData.error || 'Payment verification signature check failed.');
+                return;
+              }
+
+              // Success verified
+              setOrderId(serverOrderNumber || response.razorpay_order_id);
+              setOrderNumber(serverOrderNumber);
+              setConfirmedAmount(verifiedAmount);
+              setIsPaid(true);
+              setIsProcessing(false);
+
+              // Clear user cart upon successful verified order
+              try {
+                fetch('/api/cart/clear', {
+                  method: 'POST',
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'x-user-id': user.id
+                  },
+                  body: JSON.stringify({ userId: user.id })
+                }).catch(() => {});
+              } catch (_) {}
+
+              onOrderSuccess();
             } catch (e: any) {
               setIsProcessing(false);
               setErrorMessage(e.message || 'Payment processing error.');
@@ -223,16 +224,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         };
 
         const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', (response: any) => {
+        rzp.on('payment.failed', (failResponse: any) => {
           setIsProcessing(false);
-          setErrorMessage(response.error?.description || 'Online payment was cancelled or declined.');
+          setErrorMessage(failResponse.error?.description || 'Online payment failed or declined by bank. Please retry with another payment method.');
         });
         rzp.open();
       } else {
-        // Fallback if Razorpay SDK is blocked by browser or offline
-        setTimeout(async () => {
-          await submitOrder('Order Placed', 'Paid', { payment_method: 'Pay Online' });
-        }, 800);
+        setIsProcessing(false);
+        setErrorMessage('Razorpay Checkout SDK is loading or blocked by your browser ad-blocker. Please allow popups and reload.');
       }
     } catch (err: any) {
       setIsProcessing(false);
@@ -248,25 +247,31 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="w-16 h-16 bg-emerald-900/30 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/30 shadow-lg">
             <CheckCircle2 className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-white mb-2">Order Confirmed!</h2>
+          <h2 className="text-2xl font-serif font-bold text-white mb-2">✓ Order Placed Successfully</h2>
           <p className="text-neutral-300 mb-6 text-xs leading-relaxed">
-            Thank you for ordering with Royal Epic. Your luxury furniture order is now linked to your customer account and entered into our production schedule.
+            Thank you for shopping with Royal Epic Interior & Furniture. Your payment has been securely verified and your order is confirmed into production.
           </p>
           
           <div className="bg-black/60 rounded-2xl p-5 mb-6 border border-white/10 text-left space-y-3">
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
-              <span className="text-xs text-neutral-400">Order ID</span>
-              <span className="text-xs font-mono font-bold text-gold">{orderId}</span>
+              <span className="text-xs text-neutral-400">Order Number</span>
+              <span className="text-xs font-mono font-bold text-gold">{orderNumber || orderId}</span>
             </div>
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <span className="text-xs text-neutral-400">Payment Status</span>
               <span className="text-xs font-bold text-emerald-400 font-mono">
-                Paid Online (Confirmed)
+                PAID (Verified Online)
+              </span>
+            </div>
+            <div className="flex justify-between items-center border-b border-white/10 pb-2">
+              <span className="text-xs text-neutral-400">Order Status</span>
+              <span className="text-xs font-bold text-gold font-mono">
+                CONFIRMED
               </span>
             </div>
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <span className="text-xs text-neutral-400">Amount</span>
-              <span className="text-xs font-mono font-bold text-white">₹{finalTotal.toLocaleString('en-IN')}</span>
+              <span className="text-xs font-mono font-bold text-white">₹{(confirmedAmount || finalTotal).toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-neutral-400">Customer Account</span>
@@ -277,7 +282,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="space-y-3">
             <button
               onClick={() => {
-                const curOrderId = orderId;
+                const curOrderId = orderNumber || orderId;
                 handleClose();
                 if (onNavigateToTrackOrder) {
                   onNavigateToTrackOrder(curOrderId);

@@ -10,7 +10,7 @@ import {
   Home, Hammer, MessageSquare, Star
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { AdminOrdersManagement } from "./AdminOrdersManagement";
+import { AdminOrdersManager } from "./AdminOrdersManager";
 import { Product, PortfolioProject, WebsiteFeedback } from '../types';
 import { DashboardReports } from './DashboardReports';
 import { CrmKanbanBoard } from './CrmKanbanBoard';
@@ -815,6 +815,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Main Content Area */}
         <div className="bg-neutral-900/90 border border-white/10 rounded-3xl p-6 sm:p-8 min-h-[500px]">
 
+          {/* 0. ORDERS MANAGEMENT */}
+          {activeTab === 'orders' && (
+            <AdminOrdersManager />
+          )}
+
+          {/* 0.1 PRODUCT MANAGEMENT WITH VARIATIONS & SKUS */}
+          {activeTab === 'product-management' && (
+            <ProductManagementModule />
+          )}
+
           {/* 1. DASHBOARD OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-8">
@@ -1296,7 +1306,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* 4. CRM LEAD PIPELINE KANBAN BOARD */}
           {activeTab === 'orders' && (
-            <AdminOrdersManagement />
+            <AdminOrdersManager />
           )}
 
           {activeTab === 'product-management' && (

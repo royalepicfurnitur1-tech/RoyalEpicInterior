@@ -16,6 +16,7 @@ interface ProductDetailPageProps {
   allProducts: Product[];
   onNavigate: (path: string) => void;
   onAddToCart: (product: Product, quantity: number, variation?: ProductVariation, selectedAttributes?: Record<string, string>) => void;
+  onBuyNow?: (product: any, quantity?: number, variation?: ProductVariation) => void;
   onRequestQuote: (productName: string) => void;
   isWishlisted: boolean;
   onToggleWishlist: (product: Product) => void;
@@ -26,6 +27,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   allProducts,
   onNavigate,
   onAddToCart,
+  onBuyNow,
   onRequestQuote,
   isWishlisted,
   onToggleWishlist

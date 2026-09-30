@@ -46,11 +46,73 @@ const DB_DIR = path.join(process.cwd(), "data");
 const CARTS_FILE = path.join(DB_DIR, "carts.json");
 const USERS_FILE = path.join(DB_DIR, "users.json");
 const FEEDBACK_FILE = path.join(DB_DIR, "feedback.json");
+const ORDERS_FILE = path.join(DB_DIR, "orders.json");
+const ORDER_ITEMS_FILE = path.join(DB_DIR, "order_items.json");
+const PAYMENTS_FILE = path.join(DB_DIR, "payments.json");
 
 if (!fs.existsSync(DB_DIR)) {
   try {
     fs.mkdirSync(DB_DIR, { recursive: true });
   } catch (_) {}
+}
+
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
+export type OrderStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+
+interface ServerOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  shipping_address: any;
+  subtotal: number;
+  discount: number;
+  shipping_charge: number;
+  tax: number;
+  total_amount: number;
+  currency: string;
+  payment_status: PaymentStatus;
+  order_status: OrderStatus;
+  razorpay_order_id?: string | null;
+  razorpay_payment_id?: string | null;
+  user_id?: string | null;
+  expected_delivery_date?: string;
+  courier_name?: string;
+  tracking_number?: string;
+  timeline_history?: Array<{
+    status: string;
+    timestamp: string;
+    remarks?: string;
+  }>;
+  admin_remarks?: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ServerOrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product_name: string;
+  product_image: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  created_at: string;
+}
+
+interface ServerPayment {
+  id: string;
+  order_id: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  payment_method?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ServerCart {
@@ -90,6 +152,9 @@ let dbCarts: Record<string, ServerCart> = {}; // keyed by cart id
 let dbCartItems: Record<string, ServerCartItem> = {}; // keyed by item id
 let dbUsers: Record<string, ServerUser> = {}; // keyed by normalized email
 let dbFeedback: any[] = [];
+let dbOrders: Record<string, ServerOrder> = {}; // keyed by order id
+let dbOrderItems: Record<string, ServerOrderItem> = {}; // keyed by order item id
+let dbPayments: Record<string, ServerPayment> = {}; // keyed by payment id or rzp_payment_id
 
 // Load persisted data on startup
 try {
@@ -102,6 +167,36 @@ try {
   }
 } catch (e) {
   console.warn("Could not read carts DB file:", e);
+}
+
+try {
+  if (fs.existsSync(ORDERS_FILE)) {
+    const raw = fs.readFileSync(ORDERS_FILE, "utf-8");
+    dbOrders = JSON.parse(raw) || {};
+    console.log(`📦 Loaded ${Object.keys(dbOrders).length} orders from database.`);
+  }
+} catch (e) {
+  console.warn("Could not read orders DB file:", e);
+}
+
+try {
+  if (fs.existsSync(ORDER_ITEMS_FILE)) {
+    const raw = fs.readFileSync(ORDER_ITEMS_FILE, "utf-8");
+    dbOrderItems = JSON.parse(raw) || {};
+    console.log(`📋 Loaded ${Object.keys(dbOrderItems).length} order items from database.`);
+  }
+} catch (e) {
+  console.warn("Could not read order items DB file:", e);
+}
+
+try {
+  if (fs.existsSync(PAYMENTS_FILE)) {
+    const raw = fs.readFileSync(PAYMENTS_FILE, "utf-8");
+    dbPayments = JSON.parse(raw) || {};
+    console.log(`💳 Loaded ${Object.keys(dbPayments).length} payments from database.`);
+  }
+} catch (e) {
+  console.warn("Could not read payments DB file:", e);
 }
 
 try {
@@ -145,6 +240,98 @@ const saveUsersDb = () => {
     fs.writeFileSync(USERS_FILE, JSON.stringify(dbUsers, null, 2));
   } catch (e) {
     console.warn("Failed to persist users to disk:", e);
+  }
+};
+
+const saveOrdersDb = () => {
+  try {
+    fs.writeFileSync(ORDERS_FILE, JSON.stringify(dbOrders, null, 2));
+    fs.writeFileSync(ORDER_ITEMS_FILE, JSON.stringify(dbOrderItems, null, 2));
+    fs.writeFileSync(PAYMENTS_FILE, JSON.stringify(dbPayments, null, 2));
+  } catch (e) {
+    console.warn("Failed to persist orders/payments to disk:", e);
+  }
+};
+
+// Supabase sync helpers
+const syncOrderToSupabase = async (order: ServerOrder) => {
+  try {
+    const { url, key } = getSupabaseConfig();
+    const payload = {
+      id: order.id,
+      order_number: order.order_number,
+      customer_name: order.customer_name,
+      customer_email: order.customer_email,
+      customer_phone: order.customer_phone,
+      shipping_address: order.shipping_address,
+      subtotal: order.subtotal,
+      discount: order.discount,
+      shipping_charge: order.shipping_charge,
+      tax: order.tax,
+      total_amount: order.total_amount,
+      currency: order.currency,
+      payment_status: order.payment_status,
+      order_status: order.order_status,
+      razorpay_order_id: order.razorpay_order_id || null,
+      razorpay_payment_id: order.razorpay_payment_id || null,
+      user_id: order.user_id || null,
+      expected_delivery_date: order.expected_delivery_date || null,
+      courier_name: order.courier_name || null,
+      tracking_number: order.tracking_number || null,
+      timeline_history: order.timeline_history || [],
+      admin_remarks: order.admin_remarks || {},
+      created_at: order.created_at,
+      updated_at: order.updated_at
+    };
+
+    await fetch(`${url}/rest/v1/orders`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    console.warn("Supabase syncOrderToSupabase notice:", e);
+  }
+};
+
+const syncOrderItemToSupabase = async (item: ServerOrderItem) => {
+  try {
+    const { url, key } = getSupabaseConfig();
+    await fetch(`${url}/rest/v1/order_items`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      body: JSON.stringify(item)
+    });
+  } catch (e) {
+    console.warn("Supabase syncOrderItemToSupabase notice:", e);
+  }
+};
+
+const syncPaymentToSupabase = async (payment: ServerPayment) => {
+  try {
+    const { url, key } = getSupabaseConfig();
+    await fetch(`${url}/rest/v1/payments`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      body: JSON.stringify(payment)
+    });
+  } catch (e) {
+    console.warn("Supabase syncPaymentToSupabase notice:", e);
   }
 };
 
@@ -234,7 +421,13 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: "25mb" }));
+  // Capture raw body for secure webhook signature validation
+  app.use(express.json({ 
+    limit: "25mb",
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    }
+  }));
 
   // =========================================================================
   // 1. PRIMARY SEO DISCOVERY ROUTES (MUST BE FIRST BEFORE ANY OTHER ROUTES/SPA)
@@ -1012,39 +1205,199 @@ async function startServer() {
     }
   });
 
-  // STEP 1: Razorpay Create Order Endpoint
+  // Helper to fetch live product price and snapshot from Supabase products table or local fallback
+  const getProductSnapshotServer = async (productId: string) => {
+    try {
+      const { url, key } = getSupabaseConfig();
+      const res = await fetch(`${url}/rest/v1/products?id=eq.${encodeURIComponent(productId)}&select=id,name,price,image`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` }
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          return {
+            id: rows[0].id,
+            name: rows[0].name,
+            price: Number(rows[0].price),
+            image: rows[0].image
+          };
+        }
+      }
+    } catch (_) {}
+
+    // Fallback to local catalog
+    const local = PRODUCTS_DATA.find(p => p.id === productId);
+    if (local) {
+      return {
+        id: local.id,
+        name: local.name,
+        price: Number(local.price),
+        image: local.image
+      };
+    }
+    return null;
+  };
+
+  // STEP 1: Razorpay Create Order Endpoint with server-side amount calculation
   app.post("/api/create-order", async (req, res) => {
     try {
-      const { amount, currency = "INR", receipt, isRupees } = req.body;
+      const { 
+        items, 
+        customer, 
+        currency = "INR", 
+        amount: clientAmount,
+        discount: clientDiscount = 0,
+        shipping: clientShipping = 0
+      } = req.body;
 
-      if (!amount) {
-        return res.status(400).json({ error: "Amount is required" });
+      let finalTotal = 0;
+      let calculatedSubtotal = 0;
+      let calculatedDiscount = Math.max(0, Number(clientDiscount) || 0);
+      let calculatedShipping = Math.max(0, Number(clientShipping) || 0);
+      let calculatedTax = 0;
+      let snapshotItems: Array<{
+        product_id: string;
+        product_name: string;
+        product_image: string;
+        quantity: number;
+        unit_price: number;
+        total_price: number;
+      }> = [];
+
+      // Validate items and calculate server-side
+      if (Array.isArray(items) && items.length > 0) {
+        for (const item of items) {
+          const prodId = item.productId || item.product?.id || item.id;
+          const qty = Math.max(1, parseInt(item.quantity, 10) || 1);
+
+          if (!prodId) {
+            return res.status(400).json({ success: false, error: "Invalid product in cart" });
+          }
+
+          const productSnapshot = await getProductSnapshotServer(prodId);
+          if (!productSnapshot) {
+            return res.status(400).json({ success: false, error: `Product ${prodId} not found in catalog` });
+          }
+
+          const unitPrice = productSnapshot.price;
+          const lineTotal = unitPrice * qty;
+          calculatedSubtotal += lineTotal;
+
+          snapshotItems.push({
+            product_id: productSnapshot.id,
+            product_name: item.productName || item.product?.name || productSnapshot.name,
+            product_image: item.productImage || item.product?.image || productSnapshot.image,
+            quantity: qty,
+            unit_price: unitPrice,
+            total_price: lineTotal
+          });
+        }
+
+        finalTotal = Math.max(0, calculatedSubtotal - calculatedDiscount + calculatedShipping);
+      } else if (clientAmount && Number(clientAmount) > 0) {
+        // Fallback for custom amounts or direct payments (e.g. advance bookings)
+        finalTotal = Number(clientAmount);
+        calculatedSubtotal = finalTotal;
+      } else {
+        return res.status(400).json({ success: false, error: "Cart items or valid amount is required." });
       }
 
-      // Calculate amount in paise (1 INR = 100 paise)
-      let amountInPaise = Math.round(Number(amount));
-      if (isRupees || amountInPaise < 100) {
-        amountInPaise = Math.round(Number(amount) * 100);
-      }
-
+      // Convert to paise (1 INR = 100 paise)
+      const amountInPaise = Math.round(finalTotal * 100);
       if (amountInPaise < 100) {
-        return res.status(400).json({ error: "Minimum amount must be at least 100 paise (₹1)" });
+        return res.status(400).json({ success: false, error: "Minimum order amount must be at least ₹1." });
       }
 
+      const receipt = `rcpt_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
       const options = {
         amount: amountInPaise,
         currency: currency || "INR",
-        receipt: receipt || `rcpt_${Math.floor(Date.now() / 1000)}_${Math.floor(Math.random() * 1000)}`,
+        receipt: receipt,
       };
 
       const razorpay = getRazorpayClient();
-      const order = await razorpay.orders.create(options);
+      const rzpOrder = await razorpay.orders.create(options);
+
+      // Generate human-friendly order number: e.g. ORD-2026-98124
+      const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+      const orderId = `ord_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+      const now = new Date().toISOString();
+
+      const newOrderRecord: ServerOrder = {
+        id: orderId,
+        order_number: orderNumber,
+        customer_name: customer?.name || "Customer",
+        customer_email: customer?.email || "customer@example.com",
+        customer_phone: customer?.phone || "",
+        shipping_address: customer?.address ? {
+          name: customer.name || "",
+          phone: customer.phone || "",
+          email: customer.email || "",
+          address: customer.address || "",
+          city: customer.city || "Bengaluru",
+          state: customer.state || "Karnataka",
+          pincode: customer.pincode || ""
+        } : {},
+        subtotal: calculatedSubtotal,
+        discount: calculatedDiscount,
+        shipping_charge: calculatedShipping,
+        tax: calculatedTax,
+        total_amount: finalTotal,
+        currency: currency || "INR",
+        payment_status: "PENDING",
+        order_status: "PENDING_PAYMENT",
+        razorpay_order_id: rzpOrder.id,
+        razorpay_payment_id: null,
+        user_id: customer?.userId || null,
+        expected_delivery_date: new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        courier_name: "Royal Epic Express Logistics",
+        tracking_number: `RE-TRK-${Math.floor(100000 + Math.random() * 900000)}`,
+        timeline_history: [
+          {
+            status: "PENDING_PAYMENT",
+            timestamp: now,
+            remarks: "Checkout initiated. Razorpay order generated."
+          }
+        ],
+        admin_remarks: {},
+        created_at: now,
+        updated_at: now
+      };
+
+      // Persist order in server database
+      dbOrders[orderId] = newOrderRecord;
+
+      // Persist order items snapshots
+      for (const sItem of snapshotItems) {
+        const orderItemId = `item_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+        const orderItemRecord: ServerOrderItem = {
+          id: orderItemId,
+          order_id: orderId,
+          product_id: sItem.product_id,
+          product_name: sItem.product_name,
+          product_image: sItem.product_image,
+          quantity: sItem.quantity,
+          unit_price: sItem.unit_price,
+          total_price: sItem.total_price,
+          created_at: now
+        };
+        dbOrderItems[orderItemId] = orderItemRecord;
+        syncOrderItemToSupabase(orderItemRecord);
+      }
+
+      saveOrdersDb();
+      syncOrderToSupabase(newOrderRecord);
+
+      console.log(`📦 Order created: ${orderNumber} (${orderId}) for Razorpay order: ${rzpOrder.id}, Amount: ₹${finalTotal}`);
 
       res.json({
         success: true,
-        order_id: order.id,
-        amount: order.amount,
-        currency: order.currency,
+        order_id: rzpOrder.id,
+        app_order_id: orderId,
+        order_number: orderNumber,
+        amount: rzpOrder.amount,
+        amount_in_rupees: finalTotal,
+        currency: rzpOrder.currency,
         key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_TLdbeJzTprNsdX"
       });
     } catch (error: any) {
@@ -1056,10 +1409,77 @@ async function startServer() {
     }
   });
 
-  // STEP 3: Razorpay Payment Signature Verification Endpoint
+  // Helper for idempotent payment confirmation
+  const confirmPaymentAndOrder = (
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+    paymentMethod: string = "Razorpay Online",
+    webhookAmount?: number
+  ) => {
+    // 1. Locate the order by razorpay_order_id or id
+    let order = Object.values(dbOrders).find(o => o.razorpay_order_id === razorpayOrderId || o.id === razorpayOrderId);
+
+    const now = new Date().toISOString();
+
+    if (order) {
+      // Idempotency check: if already marked PAID, return existing order
+      if (order.payment_status === "PAID" && order.razorpay_payment_id === razorpayPaymentId) {
+        return { order, alreadyPaid: true };
+      }
+
+      order.payment_status = "PAID";
+      order.order_status = "CONFIRMED";
+      order.razorpay_payment_id = razorpayPaymentId;
+      order.updated_at = now;
+
+      const timeline = order.timeline_history || [];
+      timeline.push({
+        status: "CONFIRMED",
+        timestamp: now,
+        remarks: `Payment verified successfully via Razorpay (Payment ID: ${razorpayPaymentId})`
+      });
+      order.timeline_history = timeline;
+
+      syncOrderToSupabase(order);
+    }
+
+    // 2. Create or update payment record idempotently
+    const existingPayment = Object.values(dbPayments).find(p => p.razorpay_payment_id === razorpayPaymentId);
+    let paymentRecord: ServerPayment;
+
+    if (existingPayment) {
+      existingPayment.status = "PAID";
+      existingPayment.updated_at = now;
+      paymentRecord = existingPayment;
+    } else {
+      const paymentId = `pay_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+      paymentRecord = {
+        id: paymentId,
+        order_id: order ? order.id : razorpayOrderId,
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
+        amount: webhookAmount !== undefined ? webhookAmount : (order ? order.total_amount : 0),
+        currency: order ? order.currency : "INR",
+        status: "PAID",
+        payment_method: paymentMethod,
+        created_at: now,
+        updated_at: now
+      };
+      dbPayments[paymentId] = paymentRecord;
+    }
+
+    saveOrdersDb();
+    syncPaymentToSupabase(paymentRecord);
+
+    console.log(`✅ Payment verified & confirmed: Order: ${order?.order_number || razorpayOrderId}, Payment: ${razorpayPaymentId}`);
+
+    return { order, payment: paymentRecord, alreadyPaid: false };
+  };
+
+  // STEP 2: Razorpay Payment Signature Verification Endpoint
   app.post("/api/verify-payment", (req, res) => {
     try {
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, payment_method } = req.body;
 
       if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         return res.status(400).json({
@@ -1078,16 +1498,33 @@ async function startServer() {
       const isAuthentic = expectedSignature === razorpay_signature;
 
       if (isAuthentic) {
-        console.log(`Payment Verified Successfully! Order ID: ${razorpay_order_id}, Payment ID: ${razorpay_payment_id}`);
+        const { order, alreadyPaid } = confirmPaymentAndOrder(
+          razorpay_order_id,
+          razorpay_payment_id,
+          payment_method || "Razorpay Checkout"
+        );
+
         res.json({
           success: true,
           verified: true,
+          alreadyPaid,
           message: "Payment signature verified successfully",
           order_id: razorpay_order_id,
-          payment_id: razorpay_payment_id
+          payment_id: razorpay_payment_id,
+          order: order || null
         });
       } else {
         console.warn(`Payment Signature Mismatch! Generated: ${expectedSignature}, Received: ${razorpay_signature}`);
+        
+        // Mark payment as failed if order exists
+        const order = Object.values(dbOrders).find(o => o.razorpay_order_id === razorpay_order_id);
+        if (order && order.payment_status !== "PAID") {
+          order.payment_status = "FAILED";
+          order.updated_at = new Date().toISOString();
+          saveOrdersDb();
+          syncOrderToSupabase(order);
+        }
+
         res.status(400).json({
           success: false,
           verified: false,
@@ -1100,6 +1537,237 @@ async function startServer() {
         success: false,
         error: error.message || "Error verifying payment signature"
       });
+    }
+  });
+
+  // STEP 3: Razorpay Webhook Endpoint (/api/razorpay/webhook)
+  app.post("/api/razorpay/webhook", (req: any, res) => {
+    try {
+      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+      if (!webhookSecret) {
+        console.warn("⚠️ RAZORPAY_WEBHOOK_SECRET is not configured on the server. Webhook verification failed safely.");
+        return res.status(500).json({ error: "Webhook secret is not configured on the server" });
+      }
+
+      const signature = req.headers["x-razorpay-signature"];
+
+      if (!signature) {
+        return res.status(400).json({ error: "Missing x-razorpay-signature header" });
+      }
+
+      // Compute digest using raw body buffer or JSON string
+      const rawBody = req.rawBody ? req.rawBody : JSON.stringify(req.body);
+      const expectedSignature = crypto
+        .createHmac("sha256", webhookSecret)
+        .update(rawBody)
+        .digest("hex");
+
+      if (expectedSignature !== signature) {
+        console.warn("⚠️ Razorpay Webhook Signature Mismatch!");
+        return res.status(400).json({ error: "Invalid webhook signature" });
+      }
+
+      const event = req.body.event;
+      const payload = req.body.payload;
+
+      console.log(`🔔 Razorpay Webhook received event: ${event}`);
+
+      if (event === "payment.captured" || event === "order.paid") {
+        const paymentEntity = payload.payment?.entity;
+        const orderEntity = payload.order?.entity;
+
+        const razorpayOrderId = paymentEntity?.order_id || orderEntity?.id;
+        const razorpayPaymentId = paymentEntity?.id;
+        const amountInRupees = paymentEntity?.amount ? paymentEntity.amount / 100 : (orderEntity?.amount ? orderEntity.amount / 100 : 0);
+        const method = paymentEntity?.method || "Razorpay Online";
+
+        if (razorpayOrderId && razorpayPaymentId) {
+          confirmPaymentAndOrder(razorpayOrderId, razorpayPaymentId, method, amountInRupees);
+        }
+      } else if (event === "payment.failed") {
+        const paymentEntity = payload.payment?.entity;
+        const razorpayOrderId = paymentEntity?.order_id;
+        const razorpayPaymentId = paymentEntity?.id;
+
+        if (razorpayOrderId) {
+          const order = Object.values(dbOrders).find(o => o.razorpay_order_id === razorpayOrderId);
+          if (order && order.payment_status !== "PAID") {
+            order.payment_status = "FAILED";
+            order.updated_at = new Date().toISOString();
+            syncOrderToSupabase(order);
+          }
+
+          if (razorpayPaymentId) {
+            const paymentId = `pay_failed_${Date.now()}`;
+            dbPayments[paymentId] = {
+              id: paymentId,
+              order_id: order ? order.id : razorpayOrderId,
+              razorpay_order_id: razorpayOrderId,
+              razorpay_payment_id: razorpayPaymentId,
+              amount: paymentEntity?.amount ? paymentEntity.amount / 100 : 0,
+              currency: "INR",
+              status: "FAILED",
+              payment_method: paymentEntity?.method || "Razorpay Online",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            saveOrdersDb();
+          }
+        }
+      }
+
+      res.status(200).json({ status: "ok" });
+    } catch (error: any) {
+      console.error("Razorpay Webhook Error:", error);
+      res.status(500).json({ error: error.message || "Webhook processing error" });
+    }
+  });
+
+  // ORDERS MANAGEMENT ENDPOINTS (Admin & Customer Portals)
+  app.get("/api/orders", async (req, res) => {
+    try {
+      const { user_id, customer_email } = req.query;
+      let ordersList = Object.values(dbOrders);
+
+      // Attempt live fetch from Supabase to merge
+      try {
+        const { url, key } = getSupabaseConfig();
+        const sbRes = await fetch(`${url}/rest/v1/orders?select=*&order=created_at.desc`, {
+          headers: { apikey: key, Authorization: `Bearer ${key}` }
+        });
+        if (sbRes.ok) {
+          const rows = await sbRes.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            const map = new Map();
+            for (const r of rows) map.set(r.id, r);
+            for (const o of ordersList) {
+              if (!map.has(o.id)) map.set(o.id, o);
+            }
+            ordersList = Array.from(map.values());
+          }
+        }
+      } catch (_) {}
+
+      // Filter if requested by user or email
+      if (user_id) {
+        ordersList = ordersList.filter(o => o.user_id === user_id);
+      } else if (customer_email) {
+        ordersList = ordersList.filter(o => (o.customer_email || '').toLowerCase() === String(customer_email).toLowerCase());
+      }
+
+      ordersList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      // Attach items and payments
+      const populated = ordersList.map(o => ({
+        ...o,
+        items: Object.values(dbOrderItems).filter(item => item.order_id === o.id),
+        payments: Object.values(dbPayments).filter(p => p.order_id === o.id || p.razorpay_order_id === o.razorpay_order_id)
+      }));
+
+      res.json({
+        success: true,
+        count: populated.length,
+        orders: populated
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message || "Failed to fetch orders" });
+    }
+  });
+
+  // GET Single Order by ID or Order Number
+  app.get("/api/orders/:id", async (req, res) => {
+    try {
+      const idOrNumber = req.params.id;
+      let order = Object.values(dbOrders).find(o => 
+        o.id === idOrNumber || 
+        o.order_number === idOrNumber ||
+        o.razorpay_order_id === idOrNumber ||
+        o.tracking_number === idOrNumber
+      );
+
+      if (!order) {
+        try {
+          const { url, key } = getSupabaseConfig();
+          const sbRes = await fetch(`${url}/rest/v1/orders?or=(id.eq.${encodeURIComponent(idOrNumber)},order_number.eq.${encodeURIComponent(idOrNumber)},razorpay_order_id.eq.${encodeURIComponent(idOrNumber)})&select=*`, {
+            headers: { apikey: key, Authorization: `Bearer ${key}` }
+          });
+          if (sbRes.ok) {
+            const rows = await sbRes.json();
+            if (Array.isArray(rows) && rows.length > 0) {
+              order = rows[0];
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!order) {
+        return res.status(404).json({ success: false, error: "Order not found" });
+      }
+
+      const items = Object.values(dbOrderItems).filter(item => item.order_id === order!.id);
+      const payments = Object.values(dbPayments).filter(p => p.order_id === order!.id || p.razorpay_order_id === order!.razorpay_order_id);
+
+      res.json({
+        success: true,
+        order: {
+          ...order,
+          items,
+          payments
+        }
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message || "Failed to fetch order" });
+    }
+  });
+
+  // PATCH Update ORDER status (Admin ONLY updates order_status, NOT payment_status)
+  app.patch("/api/orders/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { order_status, stage_remark, expected_delivery_date, courier_name, tracking_number } = req.body;
+
+      let order = Object.values(dbOrders).find(o => o.id === id || o.order_number === id);
+      if (!order) {
+        return res.status(404).json({ success: false, error: "Order not found" });
+      }
+
+      const validOrderStatuses = ['PENDING_PAYMENT', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+      if (order_status && !validOrderStatuses.includes(order_status)) {
+        return res.status(400).json({ success: false, error: "Invalid order status value" });
+      }
+
+      const now = new Date().toISOString();
+      if (order_status) {
+        order.order_status = order_status;
+      }
+      if (expected_delivery_date) order.expected_delivery_date = expected_delivery_date;
+      if (courier_name) order.courier_name = courier_name;
+      if (tracking_number) order.tracking_number = tracking_number;
+      order.updated_at = now;
+
+      if (stage_remark || order_status) {
+        const timeline = order.timeline_history || [];
+        timeline.push({
+          status: order.order_status,
+          timestamp: now,
+          remarks: stage_remark || `Order status updated to ${order.order_status}`
+        });
+        order.timeline_history = timeline;
+      }
+
+      saveOrdersDb();
+      syncOrderToSupabase(order);
+
+      console.log(`📝 Order status updated: ${order.order_number} -> ${order.order_status}`);
+
+      res.json({
+        success: true,
+        message: "Order status updated successfully",
+        order
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message || "Failed to update order status" });
     }
   });
 
