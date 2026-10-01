@@ -297,6 +297,8 @@ export interface DbOrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  selected_variation?: any;
+  selected_attributes?: any;
   created_at: string;
 }
 

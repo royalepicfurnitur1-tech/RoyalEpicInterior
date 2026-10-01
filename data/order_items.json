@@ -1,0 +1,23 @@
+{
+  "item_test_001": {
+    "id": "item_test_001",
+    "order_id": "ord_test_984210",
+    "product_id": "prod-1",
+    "product_name": "Royal Heritage Solid Teak Main Entrance Door",
+    "product_image": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
+    "quantity": 1,
+    "unit_price": 85000,
+    "total_price": 85000,
+    "selected_variation": {
+      "wood": "Burma Teak",
+      "finish": "Walnut Matte Hand-Rubbed",
+      "dimensions": "8ft x 4ft x 45mm",
+      "sku": "RHD-TEAK-8X4"
+    },
+    "selected_attributes": {
+      "carvingStyle": "Traditional Floral Chettinad",
+      "brassFittings": "Antique Brass Handles & Studs"
+    },
+    "created_at": "2026-10-01T10:37:31.506Z"
+  }
+}

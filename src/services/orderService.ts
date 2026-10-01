@@ -151,11 +151,22 @@ export async function createOrder(_orderData: Partial<Order>): Promise<{ success
 
 export async function fetchCustomerOrders(userIdOrEmail: string): Promise<Order[]> {
   try {
-    const res = await fetch(`/api/orders?customer_email=${encodeURIComponent(userIdOrEmail)}`);
+    const isEmail = userIdOrEmail.includes('@');
+    const param = isEmail ? `customer_email=${encodeURIComponent(userIdOrEmail)}` : `user_id=${encodeURIComponent(userIdOrEmail)}`;
+    const res = await fetch(`/api/orders?${param}`);
     if (res.ok) {
       const json = await res.json();
       if (json.success && Array.isArray(json.orders) && json.orders.length > 0) {
         return json.orders.map(mapDbOrderToLegacyOrder);
+      }
+    }
+    // Also try the other parameter if first returned no results
+    const fallbackParam = isEmail ? `user_id=${encodeURIComponent(userIdOrEmail)}` : `customer_email=${encodeURIComponent(userIdOrEmail)}`;
+    const res2 = await fetch(`/api/orders?${fallbackParam}`);
+    if (res2.ok) {
+      const json2 = await res2.json();
+      if (json2.success && Array.isArray(json2.orders) && json2.orders.length > 0) {
+        return json2.orders.map(mapDbOrderToLegacyOrder);
       }
     }
   } catch (_) {}
@@ -211,6 +222,8 @@ export function mapDbOrderToLegacyOrder(row: any): Order {
         image: i.product_image || i.product?.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
         price: Number(i.unit_price || i.product?.price || 0)
       },
+      selectedVariation: i.selected_variation || i.selectedVariation,
+      selectedAttributes: i.selected_attributes || i.selectedAttributes,
       quantity: Number(i.quantity || 1)
     })) : [],
     total_amount: Number(row.total_amount || 0),

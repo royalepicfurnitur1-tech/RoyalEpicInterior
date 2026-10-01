@@ -1,0 +1,14 @@
+{
+  "pay_rec_001": {
+    "id": "pay_rec_001",
+    "order_id": "ord_test_984210",
+    "razorpay_order_id": "order_QwertYuiop12345",
+    "razorpay_payment_id": "pay_AsdfGhjkL67890",
+    "amount": 94400,
+    "currency": "INR",
+    "status": "PAID",
+    "payment_method": "Razorpay Netbanking (HDFC Bank)",
+    "created_at": "2026-10-01T10:37:31.506Z",
+    "updated_at": "2026-10-01T10:37:31.506Z"
+  }
+}

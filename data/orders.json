@@ -1,0 +1,50 @@
+{
+  "ord_test_984210": {
+    "id": "ord_test_984210",
+    "order_number": "RE-20261001-9842",
+    "customer_name": "Vikramaditya Sharma",
+    "customer_email": "vikram.sharma@example.com",
+    "customer_phone": "+91 98450 12345",
+    "user_id": "usr_royal_test_001",
+    "shipping_address": {
+      "name": "Vikramaditya Sharma",
+      "phone": "+91 98450 12345",
+      "address": "42, Lavelle Road, Richmond Town",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560001"
+    },
+    "subtotal": 85000,
+    "discount": 5000,
+    "shipping_charge": 0,
+    "tax": 14400,
+    "total_amount": 94400,
+    "currency": "INR",
+    "payment_status": "PAID",
+    "order_status": "SHIPPED",
+    "razorpay_order_id": "order_QwertYuiop12345",
+    "razorpay_payment_id": "pay_AsdfGhjkL67890",
+    "courier_name": "Blue Dart Express",
+    "tracking_number": "BD-982348210-IN",
+    "expected_delivery_date": "2026-10-08",
+    "timeline_history": [
+      {
+        "status": "PENDING_PAYMENT",
+        "timestamp": "2026-10-01T08:00:00.000Z",
+        "remarks": "Checkout initiated by customer"
+      },
+      {
+        "status": "CONFIRMED",
+        "timestamp": "2026-10-01T08:05:00.000Z",
+        "remarks": "Razorpay payment captured and verified via HMAC signature"
+      },
+      {
+        "status": "SHIPPED",
+        "timestamp": "2026-10-01T10:37:39.751Z",
+        "remarks": "Dispatched from Bengaluru Thanisandra production workshop via Blue Dart Air Cargo."
+      }
+    ],
+    "created_at": "2026-10-01T10:37:31.506Z",
+    "updated_at": "2026-10-01T10:37:39.751Z"
+  }
+}

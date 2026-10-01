@@ -377,8 +377,21 @@ CREATE TABLE IF NOT EXISTS public.order_items (
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price NUMERIC NOT NULL CHECK (unit_price >= 0),
     total_price NUMERIC NOT NULL CHECK (total_price >= 0),
+    selected_variation JSONB DEFAULT '{}'::jsonb,
+    selected_attributes JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure all required columns exist in order_items
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_items' AND column_name = 'selected_variation') THEN
+        ALTER TABLE public.order_items ADD COLUMN selected_variation JSONB DEFAULT '{}'::jsonb;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_items' AND column_name = 'selected_attributes') THEN
+        ALTER TABLE public.order_items ADD COLUMN selected_attributes JSONB DEFAULT '{}'::jsonb;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON public.order_items(product_id);

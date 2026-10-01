@@ -7,7 +7,13 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { generateSitemapXml, generateRobotsTxt } from "./src/utils/sitemap";
 import { PRODUCTS_DATA } from "./src/data/mockData";
-import { sendLeadNotificationEmail, getSmtpConfigStatus } from "./src/server/emailNotificationService";
+import { 
+  sendLeadNotificationEmail, 
+  getSmtpConfigStatus, 
+  sendOrderNotificationEmail, 
+  OrderEmailPayload, 
+  OrderEmailItem 
+} from "./src/server/emailNotificationService";
 
 dotenv.config();
 
@@ -86,6 +92,8 @@ interface ServerOrder {
     remarks?: string;
   }>;
   admin_remarks?: Record<string, string>;
+  order_email_sent?: boolean;
+  order_email_sent_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -99,6 +107,8 @@ interface ServerOrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  selected_variation?: any;
+  selected_attributes?: Record<string, string>;
   created_at: string;
 }
 
@@ -1262,6 +1272,8 @@ async function startServer() {
         quantity: number;
         unit_price: number;
         total_price: number;
+        selected_variation?: any;
+        selected_attributes?: Record<string, string>;
       }> = [];
 
       // Validate items and calculate server-side
@@ -1289,7 +1301,9 @@ async function startServer() {
             product_image: item.productImage || item.product?.image || productSnapshot.image,
             quantity: qty,
             unit_price: unitPrice,
-            total_price: lineTotal
+            total_price: lineTotal,
+            selected_variation: item.selectedVariation || item.selected_variation || null,
+            selected_attributes: item.selectedAttributes || item.selected_attributes || null
           });
         }
 
@@ -1379,6 +1393,8 @@ async function startServer() {
           quantity: sItem.quantity,
           unit_price: sItem.unit_price,
           total_price: sItem.total_price,
+          selected_variation: sItem.selected_variation,
+          selected_attributes: sItem.selected_attributes,
           created_at: now
         };
         dbOrderItems[orderItemId] = orderItemRecord;
@@ -1409,8 +1425,8 @@ async function startServer() {
     }
   });
 
-  // Helper for idempotent payment confirmation
-  const confirmPaymentAndOrder = (
+  // Helper for idempotent payment confirmation and order notification email dispatch
+  const confirmPaymentAndOrder = async (
     razorpayOrderId: string,
     razorpayPaymentId: string,
     paymentMethod: string = "Razorpay Online",
@@ -1440,7 +1456,7 @@ async function startServer() {
       });
       order.timeline_history = timeline;
 
-      syncOrderToSupabase(order);
+      await syncOrderToSupabase(order);
     }
 
     // 2. Create or update payment record idempotently
@@ -1469,15 +1485,97 @@ async function startServer() {
     }
 
     saveOrdersDb();
-    syncPaymentToSupabase(paymentRecord);
+    await syncPaymentToSupabase(paymentRecord);
 
     console.log(`✅ Payment verified & confirmed: Order: ${order?.order_number || razorpayOrderId}, Payment: ${razorpayPaymentId}`);
+
+    // 3. Dispatch Automatic Order Email Notification (ONLY after genuine verification, order persistence, and not already sent)
+    if (order && order.payment_status === "PAID" && !order.order_email_sent) {
+      try {
+        // Collect items from memory or query Supabase order_items
+        let items: ServerOrderItem[] = Object.values(dbOrderItems).filter(item => item.order_id === order.id);
+        if (items.length === 0) {
+          try {
+            const { url, key } = getSupabaseConfig();
+            const sbItemsRes = await fetch(`${url}/rest/v1/order_items?order_id=eq.${encodeURIComponent(order.id)}&select=*`, {
+              headers: { apikey: key, Authorization: `Bearer ${key}` }
+            });
+            if (sbItemsRes.ok) {
+              const fetchedItems = await sbItemsRes.json();
+              if (Array.isArray(fetchedItems) && fetchedItems.length > 0) {
+                items = fetchedItems;
+              }
+            }
+          } catch (itemErr) {
+            console.warn("Could not query Supabase order_items for email:", itemErr);
+          }
+        }
+
+        const emailItems: OrderEmailItem[] = items.length > 0
+          ? items.map(it => ({
+              product_id: it.product_id,
+              product_name: it.product_name,
+              product_image: it.product_image,
+              quantity: it.quantity,
+              unit_price: it.unit_price,
+              total_price: it.total_price,
+              selected_variation: (it as any).selected_variation,
+              selected_attributes: (it as any).selected_attributes
+            }))
+          : [
+              {
+                product_name: "Interior Architecture & Turnkey Custom Furnishing",
+                quantity: 1,
+                unit_price: order.total_amount,
+                total_price: order.total_amount
+              }
+            ];
+
+        const orderEmailPayload: OrderEmailPayload = {
+          order_id: order.id,
+          order_number: order.order_number,
+          order_date: order.created_at,
+          customer_name: order.customer_name,
+          customer_email: order.customer_email,
+          customer_phone: order.customer_phone,
+          shipping_address: order.shipping_address,
+          items: emailItems,
+          subtotal: order.subtotal || order.total_amount,
+          shipping_charge: order.shipping_charge || 0,
+          discount: order.discount || 0,
+          tax: order.tax || 0,
+          final_total: order.total_amount,
+          currency: order.currency || "INR",
+          razorpay_order_id: razorpayOrderId,
+          razorpay_payment_id: razorpayPaymentId,
+          payment_status: "PAID"
+        };
+
+        const emailResult = await sendOrderNotificationEmail(orderEmailPayload);
+        if (emailResult.success) {
+          order.order_email_sent = true;
+          order.order_email_sent_at = new Date().toISOString();
+          const timeline = order.timeline_history || [];
+          timeline.push({
+            status: "EMAIL_NOTIFICATION_SENT",
+            timestamp: new Date().toISOString(),
+            remarks: `Order notification email dispatched to enquiry@royalepicinterior.com (MessageID: ${emailResult.messageId || 'sent'})`
+          });
+          order.timeline_history = timeline;
+          saveOrdersDb();
+          await syncOrderToSupabase(order);
+        }
+      } catch (emailErr: any) {
+        // Never let email failure break payment response
+        console.error("⚠️ Order email notification dispatch exception:", emailErr?.message || emailErr);
+      }
+    }
 
     return { order, payment: paymentRecord, alreadyPaid: false };
   };
 
   // STEP 2: Razorpay Payment Signature Verification Endpoint
-  app.post("/api/verify-payment", (req, res) => {
+  app.post("/api/verify-payment", async (req, res) => {
     try {
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature, payment_method } = req.body;
 
@@ -1498,7 +1596,7 @@ async function startServer() {
       const isAuthentic = expectedSignature === razorpay_signature;
 
       if (isAuthentic) {
-        const { order, alreadyPaid } = confirmPaymentAndOrder(
+        const { order, alreadyPaid } = await confirmPaymentAndOrder(
           razorpay_order_id,
           razorpay_payment_id,
           payment_method || "Razorpay Checkout"
@@ -1541,7 +1639,7 @@ async function startServer() {
   });
 
   // STEP 3: Razorpay Webhook Endpoint (/api/razorpay/webhook)
-  app.post("/api/razorpay/webhook", (req: any, res) => {
+  app.post("/api/razorpay/webhook", async (req: any, res) => {
     try {
       const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -1583,7 +1681,7 @@ async function startServer() {
         const method = paymentEntity?.method || "Razorpay Online";
 
         if (razorpayOrderId && razorpayPaymentId) {
-          confirmPaymentAndOrder(razorpayOrderId, razorpayPaymentId, method, amountInRupees);
+          await confirmPaymentAndOrder(razorpayOrderId, razorpayPaymentId, method, amountInRupees);
         }
       } else if (event === "payment.failed") {
         const paymentEntity = payload.payment?.entity;
@@ -1705,7 +1803,21 @@ async function startServer() {
         return res.status(404).json({ success: false, error: "Order not found" });
       }
 
-      const items = Object.values(dbOrderItems).filter(item => item.order_id === order!.id);
+      let items = Object.values(dbOrderItems).filter(item => item.order_id === order!.id);
+      if (items.length === 0) {
+        try {
+          const { url, key } = getSupabaseConfig();
+          const sbItems = await fetch(`${url}/rest/v1/order_items?order_id=eq.${encodeURIComponent(order!.id)}&select=*`, {
+            headers: { apikey: key, Authorization: `Bearer ${key}` }
+          });
+          if (sbItems.ok) {
+            const rows = await sbItems.json();
+            if (Array.isArray(rows) && rows.length > 0) {
+              items = rows;
+            }
+          }
+        } catch (_) {}
+      }
       const payments = Object.values(dbPayments).filter(p => p.order_id === order!.id || p.razorpay_order_id === order!.razorpay_order_id);
 
       res.json({
@@ -1729,6 +1841,22 @@ async function startServer() {
 
       let order = Object.values(dbOrders).find(o => o.id === id || o.order_number === id);
       if (!order) {
+        try {
+          const { url, key } = getSupabaseConfig();
+          const sbRes = await fetch(`${url}/rest/v1/orders?or=(id.eq.${encodeURIComponent(id)},order_number.eq.${encodeURIComponent(id)})&select=*`, {
+            headers: { apikey: key, Authorization: `Bearer ${key}` }
+          });
+          if (sbRes.ok) {
+            const rows = await sbRes.json();
+            if (Array.isArray(rows) && rows.length > 0) {
+              order = rows[0];
+              dbOrders[order!.id] = order!;
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!order) {
         return res.status(404).json({ success: false, error: "Order not found" });
       }
 
@@ -1741,9 +1869,9 @@ async function startServer() {
       if (order_status) {
         order.order_status = order_status;
       }
-      if (expected_delivery_date) order.expected_delivery_date = expected_delivery_date;
-      if (courier_name) order.courier_name = courier_name;
-      if (tracking_number) order.tracking_number = tracking_number;
+      if (expected_delivery_date !== undefined) order.expected_delivery_date = expected_delivery_date;
+      if (courier_name !== undefined) order.courier_name = courier_name;
+      if (tracking_number !== undefined) order.tracking_number = tracking_number;
       order.updated_at = now;
 
       if (stage_remark || order_status) {
@@ -1757,7 +1885,7 @@ async function startServer() {
       }
 
       saveOrdersDb();
-      syncOrderToSupabase(order);
+      await syncOrderToSupabase(order);
 
       console.log(`📝 Order status updated: ${order.order_number} -> ${order.order_status}`);
 
