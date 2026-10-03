@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { generateSitemapXml, generateRobotsTxt } from "./src/utils/sitemap";
+import { generateMerchantFeedXml } from "./src/server/merchantFeedService";
 import { PRODUCTS_DATA } from "./src/data/mockData";
 import { 
   sendLeadNotificationEmail, 
@@ -456,6 +457,30 @@ async function startServer() {
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.status(200).send(sitemapXml);
+  });
+
+  // Google Merchant Center Product Feed (/merchant-feed.xml)
+  app.get(["/merchant-feed.xml", "/merchant-feed"], async (req, res) => {
+    try {
+      const { xml } = await generateMerchantFeedXml();
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.status(200).send(xml);
+    } catch (err: any) {
+      console.error("[MerchantFeed] Error generating feed:", err);
+      res.status(500).type("text/plain").send("Error generating merchant feed");
+    }
+  });
+
+  // Google Merchant Center Feed Validation & Audit Report (/api/merchant-feed/validate)
+  app.get("/api/merchant-feed/validate", async (req, res) => {
+    try {
+      const { report } = await generateMerchantFeedXml();
+      res.status(200).json({ success: true, report });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message || "Failed to generate report" });
+    }
   });
 
   // Cloud Run & Uptime Health Check Endpoints (Supports HEAD and GET)
