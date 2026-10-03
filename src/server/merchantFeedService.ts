@@ -51,7 +51,7 @@ export const GOOGLE_PRODUCT_CATEGORIES: Record<string, { googleCategory: string;
     productType: 'Home & Living > Furniture > Living Room Furniture > TV Consoles'
   },
   'Sliding Wardrobes': {
-    googleCategory: 'Furniture > Armoires & Wardrobes',
+    googleCategory: 'Furniture > Cabinets & Storage > Armoires & Wardrobes',
     productType: 'Home & Living > Furniture > Bedroom Furniture > Sliding Wardrobes'
   },
   'wall  beds': {
@@ -63,7 +63,7 @@ export const GOOGLE_PRODUCT_CATEGORIES: Record<string, { googleCategory: string;
     productType: 'Home & Living > Furniture > Bedroom Furniture > Space-Saving Wall Beds'
   },
   'Living Room Luxury': {
-    googleCategory: 'Furniture > Living Room Furniture',
+    googleCategory: 'Furniture > Furniture Sets > Living Room Furniture Sets',
     productType: 'Home & Living > Furniture > Living Room Furniture'
   },
   'Commercial Furniture': {
@@ -71,7 +71,7 @@ export const GOOGLE_PRODUCT_CATEGORIES: Record<string, { googleCategory: string;
     productType: 'Office & Commercial > Office Furniture'
   },
   'Kitchen Equipment': {
-    googleCategory: 'Business & Industrial > Food Service > Commercial Kitchen Equipment',
+    googleCategory: 'Furniture > Carts & Islands > Kitchen Islands',
     productType: 'Kitchen & Commercial > Kitchen Equipment'
   },
   'Modular Kitchens': {
@@ -79,43 +79,43 @@ export const GOOGLE_PRODUCT_CATEGORIES: Record<string, { googleCategory: string;
     productType: 'Home & Living > Modular Kitchens'
   },
   'Doors': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Doors',
+    googleCategory: 'Hardware > Building Materials > Doors',
     productType: 'Building Materials > Doors > Entrance & Interior Doors'
   },
   'Main Entrance Doors': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Doors',
+    googleCategory: 'Hardware > Building Materials > Doors > Home Doors',
     productType: 'Building Materials > Doors > Main Entrance Doors'
   },
   'WPC Waterproof Doors': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Doors',
+    googleCategory: 'Hardware > Building Materials > Doors > Home Doors',
     productType: 'Building Materials > Doors > WPC Waterproof Doors'
   },
   'WPC Bathroom Doors': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Doors',
+    googleCategory: 'Hardware > Building Materials > Doors > Home Doors',
     productType: 'Building Materials > Doors > WPC Bathroom Doors'
   },
   'UPVC Windows & Doors': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Doors',
+    googleCategory: 'Hardware > Building Materials > Doors',
     productType: 'Building Materials > Doors > UPVC Sliding Doors'
   },
   'Aluminium Doors': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Doors',
+    googleCategory: 'Hardware > Building Materials > Doors',
     productType: 'Building Materials > Doors > Aluminium Doors'
   },
   'Door frames': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Door Frames',
+    googleCategory: 'Hardware > Building Materials > Door Hardware > Door Frames',
     productType: 'Building Materials > Doors > Solid Wood Door Frames'
   },
   'Materials': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials',
+    googleCategory: 'Hardware > Building Materials > Wall Paneling',
     productType: 'Building Materials > Architectural Materials & Panels'
   },
   'Sound Proof and Acoustic materials': {
-    googleCategory: 'Hardware > Building Consumables > Building Materials > Wall Panels',
+    googleCategory: 'Hardware > Building Materials > Sound Dampening Panels & Foam',
     productType: 'Building Materials > Acoustic Materials & Soundproof Panels'
   },
   'Wall Decor': {
-    googleCategory: 'Home & Garden > Decor > Wall Decor',
+    googleCategory: 'Home & Garden > Decor',
     productType: 'Home & Living > Decor > Wall Decor'
   }
 };
