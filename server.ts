@@ -460,6 +460,9 @@ async function startServer() {
   });
 
   // Google Merchant Center Product Feed (/merchant-feed.xml)
+  // Strictly powered by Supabase as the ONLY production source of truth.
+  // In the event of a temporary database disruption, returns HTTP 503 Service Unavailable
+  // with a Retry-After header so Googlebot retries without dropping active products.
   app.get(["/merchant-feed.xml", "/merchant-feed"], async (req, res) => {
     try {
       const { xml } = await generateMerchantFeedXml();
@@ -468,8 +471,10 @@ async function startServer() {
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.status(200).send(xml);
     } catch (err: any) {
-      console.error("[MerchantFeed] Error generating feed:", err);
-      res.status(500).type("text/plain").send("Error generating merchant feed");
+      console.error("[MerchantFeed] Temporary failure retrieving products from Supabase:", err?.message || "Internal database error");
+      res.setHeader("Retry-After", "300");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.status(503).send("Service Temporarily Unavailable - Primary product database is unreachable. Please retry shortly.");
     }
   });
 
@@ -479,7 +484,8 @@ async function startServer() {
       const { report } = await generateMerchantFeedXml();
       res.status(200).json({ success: true, report });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message || "Failed to generate report" });
+      console.error("[MerchantFeed] Validation error:", err?.message || "Internal database error");
+      res.status(503).json({ success: false, error: "Database service temporarily unavailable" });
     }
   });
 

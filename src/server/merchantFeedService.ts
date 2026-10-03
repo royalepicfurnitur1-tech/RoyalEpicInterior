@@ -1,4 +1,3 @@
-import { PRODUCTS_DATA } from '../data/mockData';
 import { slugify, getProductSlug } from '../utils/productSlug';
 
 export const SITE_URL = 'https://royalepicinterior.com';
@@ -25,7 +24,7 @@ export interface MerchantFeedValidationReport {
   invalidData: number;
   excludedProducts: ValidationReportItem[];
   generatedAt: string;
-  source: 'supabase' | 'fallback_catalog';
+  source: 'supabase';
 }
 
 export interface FeedGenerationResult {
@@ -148,41 +147,48 @@ export function sanitizeText(text: string | null | undefined): string {
 }
 
 /**
- * Fetch raw products from Supabase `products` table (Production Source of Truth).
- * Falls back to PRODUCTS_DATA if Supabase is temporarily unreachable.
+ * Fetch raw products strictly from Supabase `products` table (the ONLY Production Source of Truth).
+ * If Supabase is unavailable or fails, an error is thrown to signal a temporary service disruption (HTTP 503),
+ * preventing stale or partial feeds from publishing to Google Merchant Center.
  */
-async function fetchRawProducts(): Promise<{ rawList: any[]; source: 'supabase' | 'fallback_catalog' }> {
-  try {
-    const url = 
-      process.env.VITE_SUPABASE_URL || 
-      process.env.SUPABASE_URL || 
-      'https://lwrfoztfsyffgtybesia.supabase.co';
-    const key = 
-      process.env.VITE_SUPABASE_ANON_KEY || 
-      process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
-      process.env.SUPABASE_ANON_KEY || 
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
+async function fetchRawProducts(): Promise<{ rawList: any[]; source: 'supabase' }> {
+  const url = 
+    process.env.VITE_SUPABASE_URL || 
+    process.env.SUPABASE_URL || 
+    'https://lwrfoztfsyffgtybesia.supabase.co';
+  const key = 
+    process.env.VITE_SUPABASE_ANON_KEY || 
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+    process.env.SUPABASE_ANON_KEY || 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
 
-    const cleanUrl = url.replace(/\/+$/, '');
-    const res = await fetch(`${cleanUrl}/rest/v1/products?category=neq.__SYSTEM__&select=*&order=created_at.desc`, {
+  const cleanUrl = url.replace(/\/+$/, '');
+  let res: Response;
+  try {
+    res = await fetch(`${cleanUrl}/rest/v1/products?category=neq.__SYSTEM__&select=*&order=created_at.desc`, {
       headers: {
         'apikey': key,
         'Authorization': `Bearer ${key}`
-      }
+      },
+      signal: AbortSignal.timeout(8000)
     });
-
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return { rawList: data, source: 'supabase' };
-      }
-    }
-  } catch (err) {
-    console.warn('[MerchantFeed] Notice: Unable to query Supabase directly, falling back to production catalog:', err);
+  } catch (err: any) {
+    console.error('[MerchantFeed] Database network/timeout error while querying Supabase products:', err?.message || 'unknown error');
+    throw new Error('Database service temporarily unreachable');
   }
 
-  // Graceful fallback to default production catalog
-  return { rawList: PRODUCTS_DATA, source: 'fallback_catalog' };
+  if (!res.ok) {
+    console.error(`[MerchantFeed] Supabase products query failed with HTTP status ${res.status}`);
+    throw new Error(`Database service responded with status ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) {
+    console.error('[MerchantFeed] Empty product dataset returned from Supabase products table');
+    throw new Error('No product records retrieved from primary database');
+  }
+
+  return { rawList: data, source: 'supabase' };
 }
 
 /**
