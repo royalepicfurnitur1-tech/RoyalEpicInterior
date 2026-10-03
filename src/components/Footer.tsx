@@ -244,13 +244,22 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
                   Website Feedback
                 </button>
               </li>
-              {['Privacy Policy', 'Terms & Conditions', 'Refund & Return Policy', 'Shipping Policy', 'Careers at Royal Epic', 'Contact Us'].map((item, idx) => (
+              {[
+                { label: 'Privacy Policy', path: '/privacy-policy' },
+                { label: 'Terms & Conditions', path: '/terms-and-conditions' },
+                { label: 'Refund & Return Policy', path: '/refund-policy' },
+                { label: 'Shipping Policy', path: '/shipping-policy' },
+                { label: 'Contact Us', path: '/contact-us' }
+              ].map((item, idx) => (
                 <li key={idx}>
-                  <button
-                    onClick={() => {
-                      if (item === 'Contact Us') {
+                  <a
+                    href={item.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (item.path === '/contact-us') {
                         if (typeof setActiveTab === 'function') setActiveTab('home');
                         window.history.pushState({}, '', '/');
+                        window.dispatchEvent(new PopStateEvent('popstate'));
                         setTimeout(() => {
                           const contactEl = document.getElementById('contact');
                           if (contactEl) {
@@ -260,13 +269,16 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
                           }
                         }, 150);
                       } else {
-                        setPolicyModal(item);
+                        if (typeof setActiveTab === 'function') setActiveTab('home');
+                        window.history.pushState({}, '', item.path);
+                        window.dispatchEvent(new PopStateEvent('popstate'));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                       }
                     }}
-                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left text-[11px]"
+                    className="hover:text-white hover:underline transition-colors cursor-pointer text-left text-[11px] block"
                   >
-                    {item}
-                  </button>
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>

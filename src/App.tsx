@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PRODUCTS_DATA } from './data/mockData';
-import { getProducts } from './services/productService';
+import { getProducts, mapRowToProduct } from './services/productService';
 import { findProductBySlug, getProductSlug, findCategoryBySlug } from './utils/productSlug';
 import { SEO_PAGES } from './data/seoPages';
 import { SeoPageRenderer } from './components/SeoPageRenderer';
@@ -17,6 +17,7 @@ import { ContactSection } from './components/ContactSection';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { DeveloperDashboard } from './components/DeveloperDashboard';
 import { ProductDetailPage } from './components/ProductDetailPage';
+import { PolicyPage } from './components/PolicyPage';
 import { QuoteModal } from './components/QuoteModal';
 import { SearchModal } from './components/SearchModal';
 import { AiConsultantModal } from './components/AiConsultantModal';
@@ -86,7 +87,17 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [hostname, setHostname] = useState<string>(getResolvedHostname);
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
-  const [products, setProducts] = useState(PRODUCTS_DATA);
+  const [products, setProducts] = useState(() => {
+    if (typeof window !== 'undefined' && (window as any).__INITIAL_PRODUCT__) {
+      try {
+        return [mapRowToProduct((window as any).__INITIAL_PRODUCT__)];
+      } catch (_) {}
+    }
+    return PRODUCTS_DATA;
+  });
+  const [isProductsLoaded, setIsProductsLoaded] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && Boolean((window as any).__INITIAL_PRODUCT__);
+  });
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAiConsultantOpen, setIsAiConsultantOpen] = useState(false);
@@ -303,6 +314,8 @@ export default function App() {
       }
     } catch (err) {
       console.warn('Failed to fetch live products:', err);
+    } finally {
+      setIsProductsLoaded(true);
     }
   };
 
@@ -521,6 +534,14 @@ export default function App() {
             onNavigate={navigateTo}
             onRequestQuote={(title) => handleOpenQuote(title)}
           />
+        ) : currentPath === '/privacy-policy' ? (
+          <PolicyPage policyType="privacy" onNavigate={navigateTo} />
+        ) : currentPath === '/terms-and-conditions' || currentPath === '/terms' ? (
+          <PolicyPage policyType="terms" onNavigate={navigateTo} />
+        ) : currentPath === '/shipping-policy' ? (
+          <PolicyPage policyType="shipping" onNavigate={navigateTo} />
+        ) : currentPath === '/refund-policy' || currentPath === '/return-policy' ? (
+          <PolicyPage policyType="refund" onNavigate={navigateTo} />
         ) : currentPath !== '/' && currentPath !== '/contact-us' && SEO_PAGES[currentPath] ? (
           <SeoPageRenderer
             pageData={SEO_PAGES[currentPath]}
@@ -531,6 +552,14 @@ export default function App() {
           (() => {
             const slug = currentPath.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
             const productMatch = findProductBySlug(products, slug);
+            if (!productMatch && !isProductsLoaded) {
+              return (
+                <div className="min-h-screen bg-white text-neutral-900 pt-32 pb-20 flex flex-col items-center justify-center">
+                  <div className="w-10 h-10 border-4 border-gold/30 border-t-gold rounded-full animate-spin mb-4" />
+                  <span className="text-xs font-mono uppercase tracking-widest text-neutral-500">Loading Product Catalog...</span>
+                </div>
+              );
+            }
             return (
               <ProductDetailPage
                 product={productMatch || null}

@@ -7,6 +7,12 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { generateSitemapXml, generateRobotsTxt } from "./src/utils/sitemap";
 import { generateMerchantFeedXml } from "./src/server/merchantFeedService";
+import { 
+  getLiveCatalogProducts, 
+  findProductInCatalog, 
+  injectProductIntoHtml, 
+  injectPolicyIntoHtml 
+} from "./src/server/productHtmlRenderer";
 import { PRODUCTS_DATA } from "./src/data/mockData";
 import { 
   sendLeadNotificationEmail, 
@@ -451,12 +457,82 @@ async function startServer() {
     res.status(200).send(robotsTxt);
   });
 
-  app.get("/sitemap.xml", (req, res) => {
-    const sitemapXml = generateSitemapXml();
-    res.setHeader("Content-Type", "application/xml; charset=utf-8");
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.status(200).send(sitemapXml);
+  // Helper to load index.html template for SSR meta/pre-render injection
+  const getIndexHtmlTemplate = (): string => {
+    const distHtml = path.join(process.cwd(), "dist", "index.html");
+    if (fs.existsSync(distHtml)) {
+      return fs.readFileSync(distHtml, "utf-8");
+    }
+    const devHtml = path.join(process.cwd(), "index.html");
+    if (fs.existsSync(devHtml)) {
+      return fs.readFileSync(devHtml, "utf-8");
+    }
+    return "<!DOCTYPE html><html><head><title>Royal Epic Interior</title></head><body><div id=\"root\"></div></body></html>";
+  };
+
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const liveProducts = await getLiveCatalogProducts();
+      const sitemapXml = generateSitemapXml(liveProducts);
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.status(200).send(sitemapXml);
+    } catch (err) {
+      const sitemapXml = generateSitemapXml();
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.status(200).send(sitemapXml);
+    }
+  });
+
+  // Dedicated Crawlable Policy Pages (Google Merchant Center Eligibility Requirements)
+  app.get(["/privacy-policy", "/terms-and-conditions", "/terms", "/shipping-policy", "/refund-policy", "/return-policy"], (req, res, next) => {
+    try {
+      const p = req.path.toLowerCase();
+      let policyType: 'privacy' | 'terms' | 'shipping' | 'refund' = 'privacy';
+      if (p.includes('terms')) policyType = 'terms';
+      else if (p.includes('shipping')) policyType = 'shipping';
+      else if (p.includes('refund') || p.includes('return')) policyType = 'refund';
+
+      const template = getIndexHtmlTemplate();
+      const enrichedHtml = injectPolicyIntoHtml(template, policyType, req.path);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      return res.status(200).send(enrichedHtml);
+    } catch (err) {
+      next();
+    }
+  });
+
+  // Dynamic Product Landing Page Pre-renderer (Google Merchant Center & SEO Engine)
+  app.get("/products/:slug", async (req, res, next) => {
+    // Pass through if the request targets a static asset file
+    if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.params.slug)) {
+      return next();
+    }
+
+    try {
+      const slug = req.params.slug;
+      const liveProducts = await getLiveCatalogProducts();
+      const product = findProductInCatalog(liveProducts, slug);
+
+      if (product) {
+        const template = getIndexHtmlTemplate();
+        const enrichedHtml = injectProductIntoHtml(template, product, slug);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(200).send(enrichedHtml);
+      }
+    } catch (err: any) {
+      console.warn("[ProductSSR] Error rendering product HTML:", err?.message || err);
+    }
+
+    // If not a matched product (e.g. category subpage), proceed to normal SPA router
+    next();
   });
 
   // Google Merchant Center Product Feed (/merchant-feed.xml)

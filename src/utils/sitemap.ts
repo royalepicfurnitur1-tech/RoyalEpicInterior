@@ -80,10 +80,16 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   { path: '/best-interior-design-company-bangalore', changefreq: 'weekly', priority: 0.8 },
   { path: '/latest-home-interior-trends', changefreq: 'weekly', priority: 0.75 },
   { path: '/wardrobe-design-ideas', changefreq: 'weekly', priority: 0.75 },
-  { path: '/false-ceiling-design-ideas', changefreq: 'weekly', priority: 0.75 }
+  { path: '/false-ceiling-design-ideas', changefreq: 'weekly', priority: 0.75 },
+
+  // Legal & Customer Policies (Google Merchant Center Requirements)
+  { path: '/privacy-policy', changefreq: 'monthly', priority: 0.7 },
+  { path: '/terms-and-conditions', changefreq: 'monthly', priority: 0.7 },
+  { path: '/shipping-policy', changefreq: 'monthly', priority: 0.7 },
+  { path: '/refund-policy', changefreq: 'monthly', priority: 0.7 }
 ];
 
-export function generateSitemapXml(): string {
+export function generateSitemapXml(products?: any[]): string {
   const today = new Date().toISOString().split('T')[0];
   const seenUrls = new Set<string>();
   const urlNodes: string[] = [];
@@ -109,9 +115,12 @@ export function generateSitemapXml(): string {
     addUrlNode(fullLoc, route.changefreq, route.priority.toFixed(2));
   }
 
-  // 2. Individual product URLs
-  for (const product of PRODUCTS_DATA) {
+  // 2. Individual product URLs (Dynamic live catalog from Supabase, or fallback)
+  const productList = Array.isArray(products) && products.length > 0 ? products : PRODUCTS_DATA;
+  for (const product of productList) {
+    if (!product || product.category === '__SYSTEM__') continue;
     const slug = getProductSlug(product);
+    if (!slug) continue;
     const fullLoc = `${SITE_URL}/products/${slug}`;
     addUrlNode(fullLoc, 'weekly', '0.85');
   }
