@@ -11,7 +11,9 @@ import {
   getLiveCatalogProducts, 
   findProductInCatalog, 
   injectProductIntoHtml, 
-  injectPolicyIntoHtml 
+  injectPolicyIntoHtml,
+  injectHomepageIntoHtml,
+  injectCatalogIntoHtml 
 } from "./src/server/productHtmlRenderer";
 import { PRODUCTS_DATA } from "./src/data/mockData";
 import { 
@@ -477,13 +479,21 @@ async function startServer() {
       res.setHeader("Content-Type", "application/xml; charset=utf-8");
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.setHeader("X-Content-Type-Options", "nosniff");
-      res.status(200).send(sitemapXml);
+      return res.status(200).send(sitemapXml);
     } catch (err) {
+      // In event of network timeout, serve pre-built public/sitemap.xml which contains all active products
+      const publicSitemap = path.join(process.cwd(), "public", "sitemap.xml");
+      if (fs.existsSync(publicSitemap)) {
+        res.setHeader("Content-Type", "application/xml; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(200).send(fs.readFileSync(publicSitemap, "utf-8"));
+      }
       const sitemapXml = generateSitemapXml();
       res.setHeader("Content-Type", "application/xml; charset=utf-8");
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.setHeader("X-Content-Type-Options", "nosniff");
-      res.status(200).send(sitemapXml);
+      return res.status(200).send(sitemapXml);
     }
   });
 
@@ -503,6 +513,38 @@ async function startServer() {
       res.setHeader("X-Content-Type-Options", "nosniff");
       return res.status(200).send(enrichedHtml);
     } catch (err) {
+      next();
+    }
+  });
+
+  // Dynamic Catalog Index Pre-renderer (/products) - Canonical must be /products
+  app.get("/products", async (req, res, next) => {
+    try {
+      const liveProducts = await getLiveCatalogProducts();
+      const template = getIndexHtmlTemplate();
+      const enrichedHtml = injectCatalogIntoHtml(template, liveProducts);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      return res.status(200).send(enrichedHtml);
+    } catch (err: any) {
+      console.warn("[CatalogSSR] Error rendering catalog HTML:", err?.message || err);
+      next();
+    }
+  });
+
+  // Dynamic Homepage Pre-renderer (/) - Eliminates empty root for automated crawlers
+  app.get("/", async (req, res, next) => {
+    try {
+      const liveProducts = await getLiveCatalogProducts();
+      const template = getIndexHtmlTemplate();
+      const enrichedHtml = injectHomepageIntoHtml(template, liveProducts);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      return res.status(200).send(enrichedHtml);
+    } catch (err: any) {
+      console.warn("[HomepageSSR] Error rendering homepage HTML:", err?.message || err);
       next();
     }
   });

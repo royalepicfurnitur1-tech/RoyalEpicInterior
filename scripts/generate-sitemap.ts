@@ -1,9 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 import { generateSitemapXml, generateRobotsTxt } from '../src/utils/sitemap.ts';
+import { getLiveCatalogProducts } from '../src/server/productHtmlRenderer.ts';
 
-function buildSitemapAndRobots() {
-  const xmlContent = generateSitemapXml();
+async function buildSitemapAndRobots() {
+  let products: any[] = [];
+  try {
+    products = await getLiveCatalogProducts();
+    console.log(`Fetched ${products.length} live products for automated sitemap.`);
+  } catch (err: any) {
+    console.warn(`Warning fetching live products for sitemap: ${err?.message}`);
+  }
+
+  const xmlContent = generateSitemapXml(products);
   const robotsContent = generateRobotsTxt();
 
   // 1. Write to public/ directory
