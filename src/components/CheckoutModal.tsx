@@ -146,6 +146,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const serverOrderNumber = rzpData.order_number || rzpData.app_order_id;
       const verifiedAmount = rzpData.amount_in_rupees || finalTotal;
 
+      // Ensure Razorpay SDK is loaded on-demand
+      if (typeof window !== 'undefined' && !(window as any).Razorpay) {
+        const isLoaded = await new Promise<boolean>((resolve) => {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.async = true;
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+        if (!isLoaded) {
+          throw new Error('Unable to load secure Razorpay payment gateway. Please check your network connection.');
+        }
+      }
+
       if (typeof window !== 'undefined' && (window as any).Razorpay) {
         const options = {
           key: keyId,

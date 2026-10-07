@@ -1,20 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+export { supabase };
 import { PortfolioProject } from '../types';
 import { PORTFOLIO_PROJECTS as DEFAULT_PORTFOLIO } from '../data/mockData';
-
-// Supabase Connection Credentials (with fallbacks)
-const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
-
-const SUPABASE_URL = 
-  metaEnv.VITE_SUPABASE_URL || 
-  'https://lwrfoztfsyffgtybesia.supabase.co';
-
-const SUPABASE_ANON_KEY = 
-  metaEnv.VITE_SUPABASE_ANON_KEY || 
-  metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY || 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const PORTFOLIO_STORAGE_KEY = 'royal_epic_portfolio_projects';
 
@@ -27,7 +14,21 @@ export async function getPortfolioProjects(): Promise<{ projects: PortfolioProje
       .select('*')
       .order('id', { ascending: false });
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      const isMissingTable = 
+        error.code === 'PGRST204' || 
+        error.code === 'PGRST200' || 
+        error.code === 'PGRST205' || 
+        error.code === '42P01' || 
+        error.message?.includes('not found') || 
+        error.message?.includes('schema cache') || 
+        error.message?.includes('relation "portfolio_projects" does not exist') ||
+        error.message?.includes('404');
+
+      if (!isMissingTable) {
+        console.warn('Supabase portfolio query note:', error.message);
+      }
+    } else if (data && data.length > 0) {
       // Map from DB row to TypeScript interface
       const formatted: PortfolioProject[] = data.map((item: any) => ({
         id: item.id,
@@ -51,8 +52,10 @@ export async function getPortfolioProjects(): Promise<{ projects: PortfolioProje
       }
       return { projects: formatted, source: 'supabase' };
     }
-  } catch (e) {
-    console.warn('Failed to query Supabase portfolio_projects:', e);
+  } catch (e: any) {
+    if (!e?.message?.includes('404') && !e?.message?.includes('not found')) {
+      console.warn('Failed to query Supabase portfolio_projects:', e);
+    }
   }
 
   // 2. Local storage cache fallback

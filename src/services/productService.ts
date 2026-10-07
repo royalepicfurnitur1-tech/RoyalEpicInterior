@@ -1,21 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+export { supabase };
 import { Product } from '../types';
 import { PRODUCTS_DATA } from '../data/mockData';
 import { deduplicateProducts } from '../utils/productSlug';
-
-// Supabase Connection Credentials (with fallbacks)
-const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
-
-const SUPABASE_URL = 
-  metaEnv.VITE_SUPABASE_URL || 
-  'https://lwrfoztfsyffgtybesia.supabase.co';
-
-const SUPABASE_ANON_KEY = 
-  metaEnv.VITE_SUPABASE_ANON_KEY || 
-  metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY || 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Helper to convert database snake_case row to frontend Product interface
 export function mapRowToProduct(row: any): Product {

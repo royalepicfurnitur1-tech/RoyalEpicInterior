@@ -1,4 +1,4 @@
-import { supabase } from './productService';
+import { supabase } from '../lib/supabase';
 
 export interface UploadResult {
   success: boolean;

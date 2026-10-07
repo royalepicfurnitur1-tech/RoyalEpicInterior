@@ -961,12 +961,12 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
   },
   "/our-services": {
     "slug": "/our-services",
-    "title": "Interior Design & Turnkey Execution Services | Royal Epic Bengaluru",
-    "metaDescription": "Comprehensive interior services: Residential turnkey interiors, modular kitchens, office fit-outs, beauty spas, restaurant interiors, and custom furniture.",
-    "h1": "End-to-End Interior Design & Architectural Services",
-    "subtitle": "Turnkey Execution | Custom Manufacturing | Commercial Space Planning",
+    "title": "Turnkey Interior Designers & Contractors in Bangalore | Royal Epic",
+    "metaDescription": "Royal Epic Interior & Furniture provides turnkey interior design and execution for homes, offices, PGs, restaurants and commercial spaces across Bangalore. Custom furniture, modular kitchens, wardrobes and complete interior solutions.",
+    "h1": "Turnkey Interior Designers & Contractors in Bangalore",
+    "subtitle": "From Design & 3D Planning to Custom Manufacturing and Complete Site Execution",
     "category": "main",
-    "heroImage": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?auto=format&fit=crop&w=1600&q=80",
+    "heroImage": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=80",
     "breadcrumbs": [
       {
         "name": "Home",
@@ -980,18 +980,19 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     "schema": {
       "@context": "https://schema.org",
       "@type": "Service",
-      "name": "Turnkey Interior Design & Manufacturing Services",
-      "serviceType": "Interior Architecture & Manufacturing",
-      "description": "Comprehensive interior services: Residential turnkey interiors, modular kitchens, office fit-outs, beauty spas, restaurant interiors, and custom furniture.",
+      "name": "Turnkey Interior Designers & Contractors in Bangalore",
+      "serviceType": "Turnkey Interior Design and Site Execution",
+      "description": "Royal Epic Interior & Furniture provides turnkey interior design and execution for homes, offices, PGs, restaurants and commercial spaces across Bangalore. Custom furniture, modular kitchens, wardrobes and complete interior solutions.",
       "provider": {
         "@context": "https://schema.org",
         "@type": "HomeAndConstructionBusiness",
         "name": "Royal Epic Interior & Furniture",
-        "image": "https://royalepicfurniture.com/logo.png",
-        "@id": "https://royalepicfurniture.com/#organization",
-        "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
-        "priceRange": "₹₹₹",
+        "image": "https://royalepicinterior.com/logo.png",
+        "@id": "https://royalepicinterior.com/#organization",
+        "url": "https://royalepicinterior.com",
+        "telephone": "+91 99166 33338",
+        "email": "enquiry@royalepicinterior.com",
+        "priceRange": "₹₹ - ₹₹₹₹",
         "address": {
           "@type": "PostalAddress",
           "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
@@ -1018,11 +1019,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {

@@ -555,137 +555,89 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
 }
 
 /**
- * Render basic initial HTML for the homepage (/) to ensure non-JS crawlers see genuine business content.
+ * Injects SEO metadata, Open Graph, Twitter cards, and Schema.org structured data
+ * into <head> for the homepage (/) while keeping <div id="root"></div> clean
+ * for the React client application to mount the 3D spinning ThreeHeroRing homepage.
  */
-export function injectHomepageIntoHtml(templateHtml: string, products: any[]): string {
-  const featured = Array.isArray(products) ? products.slice(0, 8) : [];
+export function injectHomepageSeoIntoHtml(templateHtml: string): string {
+  const title = 'Royal Epic Interior & Furniture | Luxury Turnkey Interiors Bengaluru';
+  const description = 'Royal Epic Interior & Furniture provides complete end-to-end turnkey interior design, factory-manufactured modular furniture, WPC doors, and commercial spaces in Bengaluru.';
+  const canonical = `${SITE_URL}/`;
+  const heroImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
-  const featuredHtml = featured.map(p => {
-    const slug = slugify(p.name || '') || String(p.id);
-    const price = Math.round(Number(p.price) || 0);
-    const img = p.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
-    return `
-      <div style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #ffffff; display: flex; flex-direction: column;">
-        <a href="/products/${slug}" style="text-decoration: none; color: inherit;">
-          <img src="${img}" alt="${escapeHtml(p.name)}" style="width: 100%; height: 200px; object-fit: cover;" loading="lazy" />
-          <div style="padding: 16px;">
-            <span style="font-size: 11px; font-weight: 700; color: #b45309; text-transform: uppercase;">${escapeHtml(p.category || 'Luxury Furniture')}</span>
-            <h3 style="font-size: 16px; font-weight: 700; color: #111827; margin: 4px 0 8px 0; line-height: 1.3;">${escapeHtml(p.name)}</h3>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-              <span style="font-size: 16px; font-weight: 700; color: #b45309;">₹${price.toLocaleString('en-IN')} INR</span>
-              <span style="font-size: 12px; color: #15803d; font-weight: 600;">● In Stock</span>
-            </div>
-          </div>
-        </a>
-      </div>
-    `;
-  }).join('');
+  const schemaOrgJson = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "HomeAndConstructionBusiness",
+        "@id": `${SITE_URL}/#organization`,
+        "name": "Royal Epic Interior & Furniture",
+        "url": canonical,
+        "image": `${SITE_URL}/logo.png`,
+        "telephone": "+91 99166 33338",
+        "email": "enquiry@royalepicinterior.com",
+        "priceRange": "₹₹ - ₹₹₹₹",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "addressLocality": "Bengaluru",
+          "addressRegion": "Karnataka",
+          "postalCode": "560077",
+          "addressCountry": "IN"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 13.0612,
+          "longitude": 77.6254
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "09:30",
+          "closes": "20:00"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        "url": canonical,
+        "name": "Royal Epic Interior & Furniture",
+        "publisher": {
+          "@id": `${SITE_URL}/#organization`
+        }
+      }
+    ]
+  };
 
-  const preRenderedHome = `
-    <div id="root">
-      <main style="min-height: 100vh; background-color: #ffffff; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <!-- Top Announcement & Header -->
-        <header style="border-bottom: 1px solid #e5e7eb; padding: 16px 24px; background: #ffffff;">
-          <div style="max-width: 1280px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-            <div>
-              <a href="/" style="text-decoration: none; font-size: 20px; font-weight: 800; color: #111827; letter-spacing: -0.02em;">
-                ROYAL EPIC <span style="color: #b45309; font-weight: 400;">INTERIOR &amp; FURNITURE</span>
-              </a>
-              <p style="font-size: 12px; color: #6b7280; margin: 2px 0 0 0;">Luxury Turnkey Interiors &amp; Bespoke Furniture Factory Bengaluru</p>
-            </div>
-            <nav style="display: flex; gap: 20px; font-size: 14px; font-weight: 500;">
-              <a href="/" style="color: #111827; text-decoration: none; font-weight: 700;">Home</a>
-              <a href="/products" style="color: #4b5563; text-decoration: none;">Products</a>
-              <a href="/our-services" style="color: #4b5563; text-decoration: none;">Services</a>
-              <a href="/portfolio" style="color: #4b5563; text-decoration: none;">Portfolio</a>
-              <a href="/about-us" style="color: #4b5563; text-decoration: none;">About</a>
-              <a href="/contact-us" style="color: #4b5563; text-decoration: none;">Contact</a>
-            </nav>
-          </div>
-        </header>
+  let html = templateHtml;
+  html = html.replace(/<title>.*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+  html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, `<meta name="description" content="${escapeHtml(description)}" />`);
+  html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, `<link rel="canonical" href="${canonical}" />`);
 
-        <!-- Hero Section -->
-        <section style="background: #fdfaf6; border-bottom: 1px solid #f3ebe1; padding: 48px 24px;">
-          <div style="max-width: 1280px; margin: 0 auto;">
-            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #b45309; display: block; margin-bottom: 8px;">
-              Manufacturing Excellence • Thanisandra, Bengaluru
-            </span>
-            <h1 style="font-size: 38px; font-weight: 800; color: #111827; margin: 0 0 16px 0; line-height: 1.2;">
-              Luxury Turnkey Interiors, Modular Kitchens &amp; Handcrafted Furniture
-            </h1>
-            <p style="font-size: 17px; line-height: 1.6; color: #4b5563; max-width: 800px; margin: 0 0 24px 0;">
-              Royal Epic Interior &amp; Furniture operates an advanced manufacturing facility and interior design studio in Bengaluru. We specialize in precision modular kitchens, luxury sliding wardrobes, solid onyx &amp; marble dining tables, acoustic sound-absorbing wall panels, and factory-tested WPC waterproof doors.
-            </p>
-            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-              <a href="/products" style="background: #b45309; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
-                Explore 85+ Factory Products
-              </a>
-              <a href="/contact-us" style="background: #ffffff; color: #111827; border: 1px solid #d1d5db; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
-                Consult an Architect (+91 99166 33338)
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <!-- Core Categories Navigation -->
-        <section style="padding: 40px 24px; background: #ffffff;">
-          <div style="max-width: 1280px; margin: 0 auto;">
-            <h2 style="font-size: 24px; font-weight: 700; color: #111827; margin: 0 0 20px 0;">Product Categories</h2>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px;">
-              <a href="/products/dining-tables" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">Dining Tables</a>
-              <a href="/products/modular-kitchens" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">Modular Kitchens</a>
-              <a href="/products/sliding-wardrobes" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">Sliding Wardrobes</a>
-              <a href="/products/sofas" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">Sofas &amp; Couches</a>
-              <a href="/products/tv-units" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">TV Entertainment Units</a>
-              <a href="/products/main-entrance-doors" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">Main Entrance Doors</a>
-              <a href="/products/wpc-bathroom-doors" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">WPC Waterproof Doors</a>
-              <a href="/products/commercial-furniture" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px; color: #374151; text-decoration: none; background: #f9fafb;">Commercial &amp; Office Furniture</a>
-            </div>
-
-            <!-- Featured Products Grid -->
-            <h2 style="font-size: 24px; font-weight: 700; color: #111827; margin: 0 0 20px 0;">Featured Handcrafted Furniture</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px;">
-              ${featuredHtml}
-            </div>
-          </div>
-        </section>
-
-        <!-- Business Identity & Trust Footer -->
-        <footer style="background: #111827; color: #9ca3af; padding: 48px 24px 24px; border-top: 1px solid #1f2937;">
-          <div style="max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 32px; font-size: 13px;">
-            <div>
-              <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 12px 0;">Royal Epic Interior &amp; Furniture Ltd.</h4>
-              <p style="line-height: 1.6; margin: 0 0 8px 0;">Factory &amp; Studio: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru, Karnataka 560077</p>
-              <p style="margin: 0 0 4px 0;">Phone: <strong style="color: #ffffff;">+91 99166 33338</strong> / +91 96063 56839</p>
-              <p style="margin: 0;">Email: <strong style="color: #ffffff;">enquiry@royalepicinterior.com</strong></p>
-            </div>
-            <div>
-              <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 12px 0;">Customer Legal &amp; Policies</h4>
-              <ul style="list-style: none; padding: 0; margin: 0; line-height: 2;">
-                <li><a href="/privacy-policy" style="color: #9ca3af; text-decoration: none;">Privacy Policy</a></li>
-                <li><a href="/terms-and-conditions" style="color: #9ca3af; text-decoration: none;">Terms &amp; Conditions</a></li>
-                <li><a href="/shipping-policy" style="color: #9ca3af; text-decoration: none;">Shipping &amp; Delivery Policy</a></li>
-                <li><a href="/refund-policy" style="color: #9ca3af; text-decoration: none;">Refund &amp; Return Policy</a></li>
-                <li><a href="/track-order" style="color: #9ca3af; text-decoration: none;">Live Order Tracking</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 12px 0;">Factory Guarantees</h4>
-              <p style="line-height: 1.6; margin: 0 0 8px 0;">● 10-Year Factory Warranty on Solid Wood &amp; Hardware</p>
-              <p style="line-height: 1.6; margin: 0 0 8px 0;">● Free White-Glove Installation Across Bengaluru</p>
-              <p style="line-height: 1.6; margin: 0;">● Safe Transit Insurance on All Pan-India Freight</p>
-            </div>
-          </div>
-          <div style="max-width: 1280px; margin: 32px auto 0; padding-top: 24px; border-top: 1px solid #1f2937; text-align: center; font-size: 12px;">
-            &copy; 2026 Royal Epic Interior &amp; Furniture Ltd. All rights reserved. Registered in Bengaluru, India.
-          </div>
-        </footer>
-      </main>
-    </div>
+  const metaTags = `
+    <!-- Homepage SEO & OpenGraph Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${heroImage}" />
+    <meta property="og:url" content="${canonical}" />
+    <meta property="og:site_name" content="Royal Epic Interior &amp; Furniture" />
+    <meta property="og:locale" content="en_IN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${heroImage}" />
+    <script type="application/ld+json" id="homepage-schema">${JSON.stringify(schemaOrgJson)}</script>
   `;
 
-  return templateHtml.replace('<div id="root"></div>', preRenderedHome);
+  html = html.replace('</head>', `${metaTags}\n  </head>`);
+
+  // Return clean HTML with empty <div id="root"></div> for React client mounting
+  return html;
 }
+
+// Retain alias for backwards compatibility
+export const injectHomepageIntoHtml = injectHomepageSeoIntoHtml;
 
 /**
  * Render basic initial HTML for the catalog index (/products) with exact canonical tag.
@@ -785,3 +737,241 @@ export function injectCatalogIntoHtml(templateHtml: string, products: any[]): st
 
   return html.replace('<div id="root"></div>', preRenderedCatalog);
 }
+
+/**
+ * Render dedicated SEO-optimized HTML for /our-services landing page.
+ */
+export function injectOurServicesIntoHtml(templateHtml: string): string {
+  const title = 'Turnkey Interior Designers & Contractors in Bangalore | Royal Epic';
+  const description = 'Royal Epic Interior & Furniture provides turnkey interior design and execution for homes, offices, PGs, restaurants and commercial spaces across Bangalore. Custom furniture, modular kitchens, wardrobes and complete interior solutions.';
+  const canonical = `${SITE_URL}/our-services`;
+  const heroImage = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=80';
+
+  const schemaOrgJson = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "HomeAndConstructionBusiness",
+        "@id": `${SITE_URL}/#organization`,
+        "name": "Royal Epic Interior & Furniture",
+        "url": canonical,
+        "telephone": "+91 99166 33338",
+        "email": "enquiry@royalepicinterior.com",
+        "priceRange": "₹₹ - ₹₹₹₹",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "addressLocality": "Bengaluru",
+          "addressRegion": "Karnataka",
+          "postalCode": "560077",
+          "addressCountry": "IN"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 13.0612,
+          "longitude": 77.6254
+        }
+      },
+      {
+        "@type": "Service",
+        "name": "Turnkey Interior Designers & Contractors in Bangalore",
+        "serviceType": "Turnkey Interior Design & Custom Manufacturing",
+        "provider": {
+          "@type": "HomeAndConstructionBusiness",
+          "name": "Royal Epic Interior & Furniture",
+          "telephone": "+91 99166 33338"
+        },
+        "areaServed": {
+          "@type": "City",
+          "name": "Bengaluru"
+        },
+        "description": description
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Do you provide turnkey interior execution?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Royal Epic provides end-to-end interior solutions covering design, planning, custom furniture and coordinated execution. Depending on the project scope, execution can include civil, electrical, ceiling, painting, furniture, partitions and related interior works."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do you provide home interior design in Bangalore?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Royal Epic provides interior solutions for apartments, independent homes and villas, including kitchens, wardrobes, living spaces, bedrooms, lighting, ceilings and custom furniture."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do you handle office interiors?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Office solutions can include workstations, cabins, reception areas, meeting rooms, partitions, storage, lighting and custom furniture."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do you provide PG interior design?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Royal Epic provides PG and co-living interior and furniture solutions focused on practical layouts, room furniture, storage, common areas and durable finishes."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do you design restaurant interiors?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Royal Epic provides restaurant and café interior solutions covering layout, furniture, feature elements, ceiling, lighting and related interior execution."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can you manufacture custom furniture?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Royal Epic provides custom furniture solutions designed around the dimensions, functional requirements, materials and finishes of the project."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which areas of Bangalore do you serve?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Royal Epic serves interior requirements across Bengaluru, including HSR Layout, Koramangala, Indiranagar, Whitefield, Electronic City, Hebbal, Nagavara, Thanisandra, Yelahanka and other surrounding areas."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I start an interior project?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Contact the Royal Epic team with your project type, location and requirements. The team can then discuss the scope and next steps for consultation and site assessment."
+            }
+          }
+        ]
+      }
+    ]
+  };
+
+  let html = templateHtml;
+  html = html.replace(/<title>.*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+  html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, `<meta name="description" content="${escapeHtml(description)}" />`);
+  html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, `<link rel="canonical" href="${canonical}" />`);
+
+  const metaTags = `
+    <!-- Dedicated Services Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${heroImage}" />
+    <meta property="og:url" content="${canonical}" />
+    <meta property="og:site_name" content="Royal Epic Interior &amp; Furniture" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${heroImage}" />
+    <script type="application/ld+json" id="services-schema">${JSON.stringify(schemaOrgJson)}</script>
+  `;
+
+  html = html.replace('</head>', `${metaTags}\n  </head>`);
+
+  const preRenderedServices = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #0a0a0a; color: #f5f5f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <!-- Header -->
+        <header style="border-bottom: 1px solid #262626; padding: 16px 24px; background: #0a0a0a;">
+          <div style="max-width: 1280px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <a href="/" style="text-decoration: none; font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">
+                ROYAL EPIC <span style="color: #d97706; font-weight: 400;">INTERIOR &amp; FURNITURE</span>
+              </a>
+              <p style="font-size: 12px; color: #a3a3a3; margin: 2px 0 0 0;">Thanisandra, Bengaluru • Tel: +91 99166 33338</p>
+            </div>
+            <nav style="display: flex; gap: 20px; font-size: 14px; font-weight: 500;">
+              <a href="/" style="color: #a3a3a3; text-decoration: none;">Home</a>
+              <a href="/our-services" style="color: #ffffff; text-decoration: none; font-weight: 700;">Services</a>
+              <a href="/products" style="color: #a3a3a3; text-decoration: none;">Products</a>
+              <a href="/portfolio" style="color: #a3a3a3; text-decoration: none;">Portfolio</a>
+              <a href="/contact-us" style="color: #a3a3a3; text-decoration: none;">Contact</a>
+            </nav>
+          </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section style="padding: 60px 24px; text-align: center; max-width: 1000px; margin: 0 auto;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #d97706; display: inline-block; margin-bottom: 16px; background: rgba(217, 119, 6, 0.1); border: 1px solid rgba(217, 119, 6, 0.3); padding: 4px 12px; border-radius: 9999px;">
+            Design • Manufacturing • Execution
+          </span>
+          <h1 style="font-size: 38px; font-weight: 800; color: #ffffff; margin: 0 0 16px 0; line-height: 1.2;">
+            Turnkey Interior Designers &amp; Contractors in Bangalore
+          </h1>
+          <p style="font-size: 18px; font-weight: 500; color: #fef3c7; margin: 0 0 16px 0;">
+            From Design &amp; 3D Planning to Custom Manufacturing and Complete Site Execution
+          </p>
+          <p style="font-size: 15px; line-height: 1.6; color: #d4d4d4; max-width: 750px; margin: 0 auto 32px auto;">
+            Royal Epic Interior &amp; Furniture delivers end-to-end interior solutions for homes, offices, PGs, restaurants, retail spaces and commercial environments across Bengaluru.
+          </p>
+          <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+            <a href="tel:+919916633338" style="background: #d97706; color: #ffffff; padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none;">
+              Call +91 99166 33338
+            </a>
+            <a href="https://wa.me/919916633338" style="background: #047857; color: #ffffff; padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none;">
+              WhatsApp Us
+            </a>
+          </div>
+        </section>
+
+        <!-- What We Do -->
+        <section style="padding: 40px 24px; background: #171717; border-top: 1px solid #262626;">
+          <div style="max-width: 1200px; margin: 0 auto;">
+            <h2 style="font-size: 26px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;">Complete Interior Solutions Under One Roof</h2>
+            <p style="font-size: 15px; color: #d4d4d4; line-height: 1.6; max-width: 800px; margin: 0 0 24px 0;">
+              Royal Epic combines interior design, planning, custom furniture manufacturing and turnkey execution to simplify the process of creating and transforming interior spaces.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+              <div style="background: #0a0a0a; border: 1px solid #262626; border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #d97706; margin: 0 0 8px 0;">Home &amp; Villa Interiors</h3>
+                <p style="font-size: 13px; color: #a3a3a3; margin: 0;">Apartments, independent homes and luxury villas with modular kitchens, wardrobes, lighting, ceilings and woodwork.</p>
+              </div>
+              <div style="background: #0a0a0a; border: 1px solid #262626; border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #d97706; margin: 0 0 8px 0;">Office &amp; Corporate Interiors</h3>
+                <p style="font-size: 13px; color: #a3a3a3; margin: 0;">Workstations, executive cabins, reception spaces, glass partitions, conference rooms and storage.</p>
+              </div>
+              <div style="background: #0a0a0a; border: 1px solid #262626; border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #d97706; margin: 0 0 8px 0;">PG &amp; Co-Living Interiors</h3>
+                <p style="font-size: 13px; color: #a3a3a3; margin: 0;">Space-efficient beds, study desks, lockers, common areas, durable finishes and factory woodwork.</p>
+              </div>
+              <div style="background: #0a0a0a; border: 1px solid #262626; border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #d97706; margin: 0 0 8px 0;">Restaurants, Cafés &amp; Retail</h3>
+                <p style="font-size: 13px; color: #a3a3a3; margin: 0;">Dining layouts, booth furniture, feature walls, retail display units and turnkey coordination.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- From Factory to Finished Interior -->
+        <section style="padding: 40px 24px; background: #0a0a0a; border-top: 1px solid #262626;">
+          <div style="max-width: 1200px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 26px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0;">From Factory to Finished Interior</h2>
+            <p style="font-size: 16px; color: #d97706; font-weight: 500; margin: 0 0 20px 0;">One team from manufacturing to site execution.</p>
+            <p style="font-size: 14px; color: #a3a3a3; max-width: 700px; margin: 0 auto 24px auto;">
+              Design → Planning → Manufacturing → Site Execution → Finishing → Handover
+            </p>
+            <p style="font-size: 13px; color: #737373;">
+              Workshop Address: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru – 560077
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', preRenderedServices);
+}
+

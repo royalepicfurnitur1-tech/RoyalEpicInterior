@@ -42,7 +42,8 @@ export async function fetchPublicReviews(options?: {
     if (qs) url += `?${qs}`;
 
     const res = await fetch(url);
-    if (res.ok) {
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    if (res.ok && isJson) {
       const data = await res.json();
       if (data && data.success) {
         return {
@@ -75,7 +76,18 @@ export async function fetchPublicReviews(options?: {
       }
 
       const { data, error } = await query;
-      if (!error && data) {
+      if (error) {
+        const isMissingTable =
+          error.code === 'PGRST204' ||
+          error.code === '42P01' ||
+          error.message?.includes('not found') ||
+          error.message?.includes('relation "customer_reviews" does not exist') ||
+          error.message?.includes('404');
+
+        if (!isMissingTable) {
+          console.warn('Direct Supabase reviews fetch note:', error.message);
+        }
+      } else if (data) {
         const reviews = data as CustomerReview[];
         const total = reviews.length;
         const avg = total > 0
@@ -95,8 +107,10 @@ export async function fetchPublicReviews(options?: {
           reviews
         };
       }
-    } catch (e) {
-      console.warn('Direct Supabase reviews fetch note:', e);
+    } catch (e: any) {
+      if (!e?.message?.includes('404') && !e?.message?.includes('not found')) {
+        console.warn('Direct Supabase reviews fetch note:', e);
+      }
     }
   }
 
@@ -128,7 +142,8 @@ export async function fetchAdminReviews(options?: {
     if (qs) url += `?${qs}`;
 
     const res = await fetch(url);
-    if (res.ok) {
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    if (res.ok && isJson) {
       const data = await res.json();
       if (data && data.success) {
         return {
@@ -207,7 +222,8 @@ export async function submitCustomerReview(payload: SubmitReviewPayload): Promis
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (res.ok) {
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    if (res.ok && isJson) {
       const data = await res.json();
       if (data && data.success) {
         // Dispatch global event for live listeners
@@ -289,7 +305,8 @@ export async function moderateReview(params: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params)
     });
-    if (res.ok) {
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    if (res.ok && isJson) {
       const data = await res.json();
       if (data && data.success) {
         // Broadcast change event
@@ -342,7 +359,8 @@ export async function deleteReview(reviewId: string): Promise<{ success: boolean
     const res = await fetch(`/api/reviews/${encodeURIComponent(reviewId)}`, {
       method: 'DELETE'
     });
-    if (res.ok) {
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    if (res.ok && isJson) {
       const data = await res.json();
       if (data && data.success) {
         if (typeof window !== 'undefined') {

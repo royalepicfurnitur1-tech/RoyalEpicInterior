@@ -44,6 +44,9 @@ export const getSupabase = (): SupabaseClient | null => {
   return clientInstance;
 };
 
+// Single shared instance export to prevent multiple GoTrueClient warnings
+export const supabase = getSupabase()!;
+
 // Lead / Inquiry Payload Type
 export interface LeadInquiryPayload {
   id?: string;

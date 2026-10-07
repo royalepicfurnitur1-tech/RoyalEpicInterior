@@ -152,11 +152,11 @@ export const ThreeHeroRing: React.FC<ThreeHeroRingProps> = ({ onSelectItem, onRe
       particlesMeshRef.current = particlesMesh;
 
       // Continuous 3D Animation Loop
-      let clock = new THREE.Clock();
+      const startTime = performance.now();
 
       const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
-        const elapsedTime = clock.getElapsedTime();
+        const elapsedTime = (performance.now() - startTime) * 0.001;
 
         if (ringMeshRef.current) {
           ringMeshRef.current.rotation.z = elapsedTime * 0.2;

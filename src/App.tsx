@@ -7,6 +7,7 @@ import { SeoPageRenderer } from './components/SeoPageRenderer';
 import { Header } from './components/Header';
 import { HeritageHomes } from './pages/HeritageHomes';
 import { TurnkeyInteriorsPage } from './pages/TurnkeyInteriorsPage';
+import { OurServicesPage } from './pages/OurServicesPage';
 import { ThreeHeroRing } from './components/ThreeHeroRing';
 import { ServicesSection } from './components/ServicesSection';
 import { ProductCatalog } from './components/ProductCatalog';
@@ -534,6 +535,11 @@ export default function App() {
             onNavigate={navigateTo}
             onRequestQuote={(title) => handleOpenQuote(title)}
           />
+        ) : (currentPath === '/our-services' || currentPath === '/services') ? (
+          <OurServicesPage
+            onNavigate={navigateTo}
+            onRequestQuote={(title) => handleOpenQuote(title)}
+          />
         ) : currentPath === '/privacy-policy' ? (
           <PolicyPage policyType="privacy" onNavigate={navigateTo} />
         ) : currentPath === '/terms-and-conditions' || currentPath === '/terms' ? (
@@ -605,7 +611,10 @@ export default function App() {
             )}
 
             {activeTab === 'services' && (
-              <ServicesSection onRequestQuote={(title) => handleOpenQuote(title)} />
+              <OurServicesPage
+                onNavigate={navigateTo}
+                onRequestQuote={(title) => handleOpenQuote(title)}
+              />
             )}
 
             {activeTab === 'products' && (
