@@ -212,7 +212,7 @@ export const ContactSection: React.FC = () => {
                 <span className="text-[10px] font-bold uppercase text-stone-400 block mb-2 font-mono">Follow Royal Epic On Social Media</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <a
-                    href="https://instagram.com"
+                    href="https://www.instagram.com/royalepicinteriordesign/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 hover:border-stone-400 text-stone-700 flex items-center gap-2 transition-all"
@@ -220,7 +220,7 @@ export const ContactSection: React.FC = () => {
                     <Instagram className="w-4 h-4 text-pink-600 shrink-0" />
                     <div className="overflow-hidden">
                       <span className="text-[11px] font-bold block truncate">Instagram</span>
-                      <span className="text-[9px] text-stone-400 block truncate">@royalepic</span>
+                      <span className="text-[9px] text-stone-400 block truncate">@royalepicinteriordesign</span>
                     </div>
                   </a>
 

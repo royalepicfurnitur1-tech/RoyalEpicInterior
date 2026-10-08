@@ -333,11 +333,11 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
               Connect With Us:
             </span>
             <a 
-              href="https://instagram.com" 
+              href="https://www.instagram.com/royalepicinteriordesign/" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="p-2 rounded-xl bg-neutral-900 border border-white/10 text-neutral-300 hover:text-pink-400 hover:border-pink-500/50 transition-all flex items-center gap-1.5"
-              title="Instagram - @royalepicinterior"
+              title="Instagram - @royalepicinteriordesign"
             >
               <Instagram className="w-4 h-4 text-pink-400" />
               <span className="text-[11px] font-medium hidden sm:inline">Instagram</span>

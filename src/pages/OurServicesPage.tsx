@@ -1487,7 +1487,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
                 View Portfolio
               </button>
               <a
-                href="https://www.instagram.com/royal_epic_interiors"
+                href="https://www.instagram.com/royalepicinteriordesign/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/40 text-amber-300 text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
