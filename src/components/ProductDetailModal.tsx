@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Product, ProductVariation } from '../types';
+import { formatProductPrice } from '../utils/priceFormatter';
 import { 
   X, Box, Rotate3d, Heart, ShoppingBag, Download, MessageSquare, 
   Phone, CheckCircle2, ShieldCheck, Sparkles, Truck, FileText,
@@ -180,7 +181,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const handleDownloadBrochure = () => {
     const blob = new Blob(
-      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ₹${(currentPrice || 0).toLocaleString('en-IN')}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338`],
+      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
@@ -431,11 +432,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {/* Price & Discount */}
               <div className="flex items-baseline gap-3 mb-4 p-3 rounded-xl bg-black/40 border border-white/10">
                 <span className="text-2xl font-mono font-bold text-gold">
-                  ₹{(currentPrice * quantity).toLocaleString('en-IN')}
+                  {formatProductPrice(currentPrice * quantity, product)}
                 </span>
                 {currentOriginalPrice > currentPrice && (
                   <span className="text-xs text-neutral-500 line-through font-mono">
-                    ₹{(currentOriginalPrice * quantity).toLocaleString('en-IN')}
+                    {formatProductPrice(currentOriginalPrice * quantity, product)}
                   </span>
                 )}
                 {product.taxGst && (
@@ -493,7 +494,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           </div>
                           <div className="text-right">
                             <span className="text-xs font-mono font-bold text-gold">
-                              ₹{(v.discountPrice || v.price).toLocaleString('en-IN')}
+                              {formatProductPrice(v.discountPrice || v.price, product)}
                             </span>
                             <span className="block text-[9px] text-neutral-400">Stock: {v.stock}</span>
                           </div>

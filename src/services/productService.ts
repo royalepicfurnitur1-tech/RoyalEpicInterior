@@ -48,7 +48,8 @@ export function mapRowToProduct(row: any): Product {
     has3dViewer: Boolean(row.has_3d_viewer),
     inStock: row.in_stock !== false,
     status: specs.status || (row.in_stock !== false ? 'Active' : 'Inactive'),
-    brochureUrl: row.brochure_url || undefined
+    brochureUrl: row.brochure_url || undefined,
+    priceType: (row.price_type || specs.priceType || specs.price_type || 'fixed') as any
   };
 }
 
@@ -61,7 +62,7 @@ export function mapRowToProduct(row: any): Product {
  *  brochure_url, updated_at]
  *
  * Additional attributes, SKU, status, stockQuantity, dimensions, material,
- * finish, etc. are safely embedded in the `specifications` JSONB column.
+ * finish, priceType, etc. are safely embedded in the `specifications` JSONB column.
  */
 export function mapProductToRow(product: Partial<Product>): any {
   const existingSpecs = typeof product.specifications === 'object' && product.specifications !== null 
@@ -82,7 +83,8 @@ export function mapProductToRow(product: Partial<Product>): any {
     stockQuantity: product.stockQuantity !== undefined ? product.stockQuantity : (existingSpecs.stockQuantity !== undefined ? existingSpecs.stockQuantity : 10),
     subCategory: product.subCategory || existingSpecs.subCategory,
     attributes: product.attributes || existingSpecs.attributes,
-    variations: product.variations || existingSpecs.variations
+    variations: product.variations || existingSpecs.variations,
+    priceType: product.priceType || existingSpecs.priceType || 'fixed'
   };
 
   return {

@@ -345,7 +345,7 @@ export async function generateMerchantFeedXml(): Promise<FeedGenerationResult> {
       `      <g:id>${escapeXml(rawId)}</g:id>`,
       `      <g:title>${escapeXml(rawName)}</g:title>`,
       `      <g:description>${escapeXml(rawDesc)}</g:description>`,
-      `      <link>${escapeXml(productUrl)}</link>`,
+      `      <g:link>${escapeXml(productUrl)}</g:link>`,
       `      <g:image_link>${escapeXml(rawImage)}</g:image_link>`
     ];
 

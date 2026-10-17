@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PRODUCTS_DATA, SERVICES_DATA, PORTFOLIO_PROJECTS } from '../data/mockData';
 import { Product } from '../types';
+import { formatProductPrice } from '../utils/priceFormatter';
 import { Search, X, ArrowRight, Box, Wrench, Sparkles } from 'lucide-react';
 
 interface SearchModalProps {
@@ -78,7 +79,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     <img src={p.image} alt={p.name} className="w-12 h-12 rounded-lg object-cover" />
                     <div>
                       <h4 className="text-xs font-bold text-white group-hover:text-gold transition-colors">{p.name}</h4>
-                      <span className="text-[10px] text-neutral-400 font-mono">₹{p.price.toLocaleString('en-IN')}</span>
+                      <span className="text-[10px] text-neutral-400 font-mono">{formatProductPrice(p.price, p)}</span>
                     </div>
                   </div>
                   <ArrowRight className="w-4 h-4 text-neutral-500 group-hover:text-gold transition-colors" />

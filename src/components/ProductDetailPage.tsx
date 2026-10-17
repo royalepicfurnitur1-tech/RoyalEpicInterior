@@ -4,6 +4,7 @@ import { Product, ProductVariation } from '../types';
 import { getProductSlug, getCategorySlug } from '../utils/productSlug';
 import { fetchPublicReviews } from '../services/reviewService';
 import { ReviewsSection } from './ReviewsSection';
+import { formatProductPrice, formatProductSavings } from '../utils/priceFormatter';
 import { 
   Heart, ShoppingBag, Rotate3d, CheckCircle2, ShieldCheck, 
   Sparkles, Download, Phone, MessageSquare, ChevronRight,
@@ -244,7 +245,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const handleDownloadBrochure = () => {
     const blob = new Blob(
-      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ₹${(currentPrice || 0).toLocaleString('en-IN')}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338\nAddress: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru`],
+      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338\nAddress: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
@@ -513,16 +514,16 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200">
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl sm:text-4xl font-mono font-bold text-neutral-900">
-                  ₹{(currentPrice || 0).toLocaleString('en-IN')}
+                  {formatProductPrice(currentPrice, product)}
                 </span>
                 {currentOriginalPrice && currentOriginalPrice > currentPrice && (
                   <span className="text-base font-mono text-neutral-400 line-through">
-                    ₹{(currentOriginalPrice || 0).toLocaleString('en-IN')}
+                    {formatProductPrice(currentOriginalPrice, product)}
                   </span>
                 )}
                 {currentOriginalPrice && currentOriginalPrice > currentPrice && (
                   <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-                    Save ₹{((currentOriginalPrice || 0) - (currentPrice || 0)).toLocaleString('en-IN')}
+                    {formatProductSavings((currentOriginalPrice || 0) - (currentPrice || 0), product)}
                   </span>
                 )}
               </div>
@@ -558,7 +559,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     >
                       <span className="text-xs font-bold">{v.name}</span>
                       <span className="text-[11px] font-mono mt-1 opacity-90">
-                        ₹{(v.discountPrice || v.price).toLocaleString('en-IN')}
+                        {formatProductPrice(v.discountPrice || v.price, product)}
                       </span>
                     </button>
                   ))}
@@ -744,7 +745,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       </div>
                       <div className="flex items-center justify-between mt-4 pt-3 border-t border-neutral-100">
                         <span className="font-mono font-bold text-sm text-neutral-900">
-                          ₹{(rel.price || 0).toLocaleString('en-IN')}
+                          {formatProductPrice(rel.price, rel)}
                         </span>
                         <span className="text-[11px] font-bold text-neutral-900 group-hover:translate-x-1 transition-transform flex items-center gap-0.5">
                           View Details <ChevronRight className="w-3 h-3" />

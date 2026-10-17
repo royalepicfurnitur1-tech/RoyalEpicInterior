@@ -35,6 +35,7 @@ export interface ProductItem {
   subCategory: string;
   sku: string;
   price: number;
+  priceType?: 'fixed' | 'per_sq_ft';
   discountPrice?: number;
   taxGst?: number;
   shortDescription?: string;
@@ -554,6 +555,7 @@ export function productToProductItem(p: Product): ProductItem {
     subCategory: p.subCategory || '',
     sku: p.sku || `RE-SKU-${p.id}`,
     price: p.price,
+    priceType: (p.priceType || p.specifications?.priceType || 'fixed') as 'fixed' | 'per_sq_ft',
     discountPrice: p.discountPrice,
     taxGst: p.taxGst || 18,
     shortDescription: p.shortDescription || '',
@@ -591,6 +593,7 @@ export async function getAddonProducts(): Promise<ProductItem[]> {
 export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ success: boolean; product?: ProductItem; error?: string }> {
   try {
     const id = prod.id || `prod-${Date.now()}`;
+    const priceType = prod.priceType || 'fixed';
     const productPayload: Partial<Product> = {
       id,
       name: prod.name?.trim() || 'New Product',
@@ -598,6 +601,7 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
       subCategory: prod.subCategory || '',
       sku: prod.sku?.trim() || `RE-SKU-${Math.floor(1000 + Math.random() * 9000)}`,
       price: Number(prod.price) || 0,
+      priceType,
       discountPrice: prod.discountPrice !== undefined ? Number(prod.discountPrice) : undefined,
       taxGst: prod.taxGst !== undefined ? Number(prod.taxGst) : 18,
       shortDescription: prod.shortDescription?.trim() || '',
@@ -618,7 +622,8 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
         finish: prod.finish || '',
         size: prod.size || prod.dimensions || '',
         warranty: prod.warranty || '10 Years Warranty',
-        sku: prod.sku || ''
+        sku: prod.sku || '',
+        priceType
       },
       status: prod.status || 'Active',
       inStock: prod.status !== 'Inactive' && (prod.stock === undefined || prod.stock > 0)

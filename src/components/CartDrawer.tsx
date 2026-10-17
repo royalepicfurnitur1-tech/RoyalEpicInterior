@@ -1,5 +1,6 @@
 import React from 'react';
 import { CartItem } from '../types';
+import { formatProductPrice } from '../utils/priceFormatter';
 import { 
   X, Trash2, ShoppingBag, ArrowRight, AlertCircle, LogIn 
 } from 'lucide-react';
@@ -120,7 +121,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-xs font-mono font-bold text-white">
-                        ₹{(itemPrice * item.quantity).toLocaleString('en-IN')}
+                        {formatProductPrice(itemPrice * item.quantity, item.product)}
                       </span>
 
                       {/* Quantity controls */}

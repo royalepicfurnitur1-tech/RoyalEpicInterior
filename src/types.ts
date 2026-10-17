@@ -13,6 +13,8 @@ export interface ProductVariation {
   image?: string;
 }
 
+export type PriceType = 'fixed' | 'per_sq_ft';
+
 export interface Product {
   id: string;
   name: string;
@@ -24,6 +26,7 @@ export interface Product {
   originalPrice: number;
   discount: number; // percentage
   discountPrice?: number;
+  priceType?: PriceType; // 'fixed' | 'per_sq_ft' (defaults to 'fixed')
   taxGst?: number; // GST percentage (e.g. 18)
   stockQuantity?: number;
   rating: number;
@@ -44,6 +47,7 @@ export interface Product {
     origin?: string;
     hardware?: string;
     dimensions?: string;
+    priceType?: PriceType;
     [key: string]: any;
   };
   features: string[];

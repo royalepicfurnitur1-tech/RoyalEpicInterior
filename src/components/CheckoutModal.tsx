@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CartItem } from '../types';
+import { formatProductPrice } from '../utils/priceFormatter';
 import { 
   X, CreditCard, ShieldCheck, CheckCircle2, Truck, 
   MapPin, Phone, Mail, User, Lock, Sparkles, AlertCircle, LogIn 
@@ -547,7 +548,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           Qty: <strong className="text-white font-mono">{item.quantity}</strong>
                         </span>
                         <span className="text-xs font-mono font-bold text-amber-400">
-                          ₹{(itemPrice * item.quantity).toLocaleString('en-IN')}
+                          {formatProductPrice(itemPrice * item.quantity, item.product)}
                         </span>
                       </div>
                     </div>

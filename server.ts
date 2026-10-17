@@ -12,9 +12,9 @@ import {
   findProductInCatalog, 
   injectProductIntoHtml, 
   injectPolicyIntoHtml,
-  injectHomepageSeoIntoHtml,
+  injectHomepageIntoHtml,
   injectCatalogIntoHtml,
-  injectOurServicesIntoHtml
+  SITE_URL
 } from "./src/server/productHtmlRenderer";
 import { PRODUCTS_DATA } from "./src/data/mockData";
 import { 
@@ -26,12 +26,6 @@ import {
 } from "./src/server/emailNotificationService";
 
 dotenv.config();
-
-// Detect production: either explicitly NODE_ENV=production, or running compiled server.cjs
-const isProduction =
-  process.env.NODE_ENV === "production" ||
-  Boolean(process.argv[1]?.endsWith(".cjs")) ||
-  (typeof __filename !== "undefined" && __filename.endsWith(".cjs"));
 
 // Lazy initialization helper for Razorpay
 let razorpayInstance: Razorpay | null = null;
@@ -447,13 +441,18 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Initialize Vite dev server early in dev mode for template transformations and HMR
+  // Detect production: either explicitly NODE_ENV=production, or running compiled server.cjs
+  const isProduction =
+    process.env.NODE_ENV === "production" ||
+    Boolean(process.argv[1]?.endsWith(".cjs")) ||
+    (typeof __filename !== "undefined" && __filename.endsWith(".cjs"));
+
   let vite: any = null;
   if (!isProduction) {
     const { createServer: createViteServer } = await import("vite");
     vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "custom",
+      appType: "spa",
     });
   }
 
@@ -478,25 +477,22 @@ async function startServer() {
 
   // Helper to load index.html template for SSR meta/pre-render injection
   const getIndexHtmlTemplate = async (url: string = "/"): Promise<string> => {
+    let template = "";
     if (isProduction) {
       const distHtml = path.join(process.cwd(), "dist", "index.html");
       if (fs.existsSync(distHtml)) {
-        return fs.readFileSync(distHtml, "utf-8");
+        template = fs.readFileSync(distHtml, "utf-8");
+      } else {
+        template = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
       }
-    }
-    const devHtml = path.join(process.cwd(), "index.html");
-    if (fs.existsSync(devHtml)) {
-      let html = fs.readFileSync(devHtml, "utf-8");
+    } else {
+      const devHtml = path.join(process.cwd(), "index.html");
+      template = fs.readFileSync(devHtml, "utf-8");
       if (vite) {
-        html = await vite.transformIndexHtml(url, html);
+        template = await vite.transformIndexHtml(url, template);
       }
-      return html;
     }
-    const distHtmlFallback = path.join(process.cwd(), "dist", "index.html");
-    if (fs.existsSync(distHtmlFallback)) {
-      return fs.readFileSync(distHtmlFallback, "utf-8");
-    }
-    return "<!DOCTYPE html><html><head><title>Royal Epic Interior</title></head><body><div id=\"root\"></div></body></html>";
+    return template;
   };
 
   app.get("/sitemap.xml", async (req, res) => {
@@ -533,7 +529,7 @@ async function startServer() {
       else if (p.includes('shipping')) policyType = 'shipping';
       else if (p.includes('refund') || p.includes('return')) policyType = 'refund';
 
-      const template = await getIndexHtmlTemplate(req.originalUrl || req.path);
+      const template = await getIndexHtmlTemplate(req.path);
       const enrichedHtml = injectPolicyIntoHtml(template, policyType, req.path);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "public, max-age=3600");
@@ -544,48 +540,46 @@ async function startServer() {
     }
   });
 
-  // Dedicated High-Converting Services Landing Page (/our-services) - Google Ads & SEO Engine
-  app.get(["/our-services", "/services"], async (req, res, next) => {
-    try {
-      const template = await getIndexHtmlTemplate(req.originalUrl || req.path);
-      const enrichedHtml = injectOurServicesIntoHtml(template);
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      return res.status(200).send(enrichedHtml);
-    } catch (err: any) {
-      console.warn("[ServicesSSR] Error rendering services HTML:", err?.message || err);
-      next();
-    }
-  });
-
-  // Dynamic Catalog Index Pre-renderer (/products) - Canonical must be /products
+  // Product Catalog Route (/products) - Serves authentic application shell with canonical meta tags
   app.get("/products", async (req, res, next) => {
     try {
-      const liveProducts = await getLiveCatalogProducts();
-      const template = await getIndexHtmlTemplate(req.originalUrl || req.path);
-      const enrichedHtml = injectCatalogIntoHtml(template, liveProducts);
+      let html = await getIndexHtmlTemplate(req.path || "/products");
+      const catalogCanonical = `${SITE_URL}/products`;
+      const catalogTitle = 'Product Catalog | Luxury Handcrafted Furniture & Architectural Doors | Royal Epic Interior Bengaluru';
+      const catalogDesc = 'Explore Royal Epic Interior\'s handcrafted furniture catalog in Bengaluru. Factory-direct dining tables, modular kitchens, sliding wardrobes, sofas, and WPC waterproof doors.';
+
+      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${catalogTitle}</title>`);
+      const canonicalTag = `<link rel="canonical" href="${catalogCanonical}" />`;
+      if (html.includes('<link rel="canonical"')) {
+        html = html.replace(/<link rel="canonical"[\s\S]*?\/>/i, canonicalTag);
+      } else {
+        html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+      }
+
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
       res.setHeader("X-Content-Type-Options", "nosniff");
-      return res.status(200).send(enrichedHtml);
+      return res.status(200).send(html);
     } catch (err: any) {
-      console.warn("[CatalogSSR] Error rendering catalog HTML:", err?.message || err);
+      console.warn("[CatalogRoute] Error serving catalog HTML:", err?.message || err);
       next();
     }
   });
 
-  // Dynamic Homepage SEO Pre-renderer (/) - Injects SEO/OpenGraph/Schema into <head> with clean #root for ThreeHeroRing React mounting
+  // Homepage Route (/) - Serves authentic application shell with branded loader and clean cache control
   app.get("/", async (req, res, next) => {
     try {
-      const template = await getIndexHtmlTemplate(req.originalUrl || req.path);
-      const enrichedHtml = injectHomepageSeoIntoHtml(template);
+      const template = await getIndexHtmlTemplate(req.originalUrl || "/");
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
       res.setHeader("X-Content-Type-Options", "nosniff");
-      return res.status(200).send(enrichedHtml);
+      return res.status(200).send(template);
     } catch (err: any) {
-      console.warn("[HomepageSSR] Error rendering homepage SEO HTML:", err?.message || err);
+      console.warn("[HomepageRoute] Error serving homepage HTML:", err?.message || err);
       next();
     }
   });
@@ -603,7 +597,7 @@ async function startServer() {
       const product = findProductInCatalog(liveProducts, slug);
 
       if (product) {
-        const template = await getIndexHtmlTemplate(req.originalUrl || req.path);
+        const template = await getIndexHtmlTemplate(req.originalUrl || `/products/${slug}`);
         const enrichedHtml = injectProductIntoHtml(template, product, slug);
         res.setHeader("Content-Type", "text/html; charset=utf-8");
         res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes cache
@@ -1402,306 +1396,6 @@ async function startServer() {
       return res.json({ success: true, feedback: sorted, source: "server_db" });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message || "Failed to fetch feedback" });
-    }
-  });
-
-  // =========================================================================
-  // CUSTOMER REVIEWS ENDPOINTS (/api/reviews)
-  // Backed by dbFeedback and Supabase customer_reviews
-  // =========================================================================
-  app.get("/api/reviews/public", async (req, res) => {
-    try {
-      const { productId, projectType } = req.query;
-      let allReviews: any[] = [];
-
-      // 1. Try Supabase customer_reviews first if configured
-      try {
-        const { url, key } = getSupabaseConfig();
-        let sbQuery = `${url}/rest/v1/customer_reviews?status=eq.approved&order=created_at.desc&select=*`;
-        if (productId) sbQuery += `&product_id=eq.${encodeURIComponent(String(productId))}`;
-        if (projectType) sbQuery += `&project_type=eq.${encodeURIComponent(String(projectType))}`;
-
-        const sbRes = await fetch(sbQuery, {
-          headers: { apikey: key, Authorization: `Bearer ${key}` }
-        });
-        if (sbRes.ok) {
-          const rows = await sbRes.json();
-          if (Array.isArray(rows) && rows.length > 0) {
-            allReviews = rows;
-          }
-        }
-      } catch (_) {}
-
-      // 2. Combine with server dbFeedback (mapped to reviews) if not already present
-      const existingIds = new Set(allReviews.map(r => r.id));
-      for (const item of dbFeedback) {
-        if (!existingIds.has(item.id)) {
-          // If status is specified, only include approved (default to approved for existing verified feedback)
-          if (!item.status || item.status === 'approved') {
-            if (productId && item.product_id && item.product_id !== productId) continue;
-            if (projectType && item.project_type && item.project_type !== projectType) continue;
-            allReviews.push({
-              id: item.id,
-              name: item.name,
-              rating: Number(item.rating) || 5,
-              review_title: item.review_title || item.title || "Client Feedback",
-              review_message: item.review_message || item.message || "",
-              product_id: item.product_id || null,
-              product_name: item.product_name || null,
-              project_type: item.project_type || "Interior & Furniture Execution",
-              status: "approved",
-              created_at: item.created_at || new Date().toISOString()
-            });
-          }
-        }
-      }
-
-      const total = allReviews.length;
-      const avg = total > 0
-        ? Number((allReviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0) / total).toFixed(1))
-        : 0;
-
-      const breakdown: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      allReviews.forEach(r => {
-        const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
-        breakdown[star] = (breakdown[star] || 0) + 1;
-      });
-
-      res.setHeader("Content-Type", "application/json");
-      return res.json({
-        success: true,
-        totalReviews: total,
-        averageRating: avg,
-        ratingBreakdown: breakdown,
-        reviews: allReviews
-      });
-    } catch (err: any) {
-      console.error("Public reviews fetch error:", err);
-      res.setHeader("Content-Type", "application/json");
-      return res.status(500).json({
-        success: false,
-        totalReviews: 0,
-        averageRating: 0,
-        ratingBreakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        reviews: [],
-        error: err.message
-      });
-    }
-  });
-
-  app.get("/api/reviews/admin", async (req, res) => {
-    try {
-      const { status, productId, search } = req.query;
-      let allReviews: any[] = [];
-
-      try {
-        const { url, key } = getSupabaseConfig();
-        let sbQuery = `${url}/rest/v1/customer_reviews?order=created_at.desc&select=*`;
-        if (status && status !== "all") sbQuery += `&status=eq.${encodeURIComponent(String(status))}`;
-        if (productId) sbQuery += `&product_id=eq.${encodeURIComponent(String(productId))}`;
-
-        const sbRes = await fetch(sbQuery, {
-          headers: { apikey: key, Authorization: `Bearer ${key}` }
-        });
-        if (sbRes.ok) {
-          const rows = await sbRes.json();
-          if (Array.isArray(rows)) {
-            allReviews = rows;
-          }
-        }
-      } catch (_) {}
-
-      const existingIds = new Set(allReviews.map(r => r.id));
-      for (const item of dbFeedback) {
-        if (!existingIds.has(item.id)) {
-          const mappedStatus = item.status || "approved";
-          if (!status || status === "all" || status === mappedStatus) {
-            allReviews.push({
-              id: item.id,
-              name: item.name,
-              rating: Number(item.rating) || 5,
-              review_title: item.review_title || item.title || "Client Feedback",
-              review_message: item.review_message || item.message || "",
-              product_id: item.product_id || null,
-              product_name: item.product_name || null,
-              project_type: item.project_type || "Interior & Furniture Execution",
-              status: mappedStatus,
-              created_at: item.created_at || new Date().toISOString()
-            });
-          }
-        }
-      }
-
-      if (search && typeof search === "string") {
-        const s = search.toLowerCase();
-        allReviews = allReviews.filter(r => 
-          r.name?.toLowerCase().includes(s) || 
-          r.review_title?.toLowerCase().includes(s) || 
-          r.review_message?.toLowerCase().includes(s)
-        );
-      }
-
-      const counts = {
-        total: allReviews.length,
-        pending: allReviews.filter(r => r.status === "pending").length,
-        approved: allReviews.filter(r => r.status === "approved").length,
-        rejected: allReviews.filter(r => r.status === "rejected").length
-      };
-
-      res.setHeader("Content-Type", "application/json");
-      return res.json({
-        success: true,
-        counts,
-        reviews: allReviews
-      });
-    } catch (err: any) {
-      console.error("Admin reviews fetch error:", err);
-      res.setHeader("Content-Type", "application/json");
-      return res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post("/api/reviews/submit", async (req, res) => {
-    try {
-      const { name, email, phone, rating, review_title, review_message, product_id, product_name, project_type } = req.body;
-      if (!name || !name.trim()) {
-        return res.status(400).json({ success: false, error: "Name is required." });
-      }
-      if (!rating || Number(rating) < 1 || Number(rating) > 5) {
-        return res.status(400).json({ success: false, error: "Valid rating between 1 and 5 is required." });
-      }
-      if (!review_title || !review_title.trim()) {
-        return res.status(400).json({ success: false, error: "Review title is required." });
-      }
-      if (!review_message || !review_message.trim()) {
-        return res.status(400).json({ success: false, error: "Review message is required." });
-      }
-
-      const newReview = {
-        id: `REV-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`,
-        name: name.trim(),
-        email: email && email.trim() ? email.trim() : null,
-        phone: phone && phone.trim() ? phone.trim() : null,
-        rating: Math.min(5, Math.max(1, Math.round(Number(rating)))),
-        review_title: review_title.trim(),
-        review_message: review_message.trim(),
-        product_id: product_id && product_id.trim() ? product_id.trim() : null,
-        product_name: product_name && product_name.trim() ? product_name.trim() : null,
-        project_type: project_type && project_type.trim() ? project_type.trim() : "Custom Interior & Furniture Work",
-        status: "pending",
-        created_at: new Date().toISOString()
-      };
-
-      // Try Supabase insert
-      try {
-        const { url, key } = getSupabaseConfig();
-        await fetch(`${url}/rest/v1/customer_reviews`, {
-          method: "POST",
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(newReview)
-        });
-      } catch (_) {}
-
-      // Persist to server dbFeedback
-      dbFeedback.unshift(newReview);
-      saveFeedbackDb();
-
-      res.setHeader("Content-Type", "application/json");
-      return res.json({
-        success: true,
-        message: "Review submitted successfully and is pending approval.",
-        review: newReview
-      });
-    } catch (err: any) {
-      console.error("Submit review error:", err);
-      res.setHeader("Content-Type", "application/json");
-      return res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.patch("/api/reviews/moderate", async (req, res) => {
-    try {
-      const { id, status, admin_notes, rating, review_title, review_message, name } = req.body;
-      if (!id) {
-        return res.status(400).json({ success: false, error: "Review ID is required." });
-      }
-
-      const index = dbFeedback.findIndex(f => f.id === id);
-      if (index !== -1) {
-        if (status) dbFeedback[index].status = status;
-        if (admin_notes !== undefined) dbFeedback[index].admin_notes = admin_notes;
-        if (rating !== undefined) dbFeedback[index].rating = Number(rating);
-        if (review_title !== undefined) dbFeedback[index].review_title = review_title;
-        if (review_message !== undefined) dbFeedback[index].review_message = review_message;
-        if (name !== undefined) dbFeedback[index].name = name;
-        dbFeedback[index].updated_at = new Date().toISOString();
-        saveFeedbackDb();
-      }
-
-      try {
-        const { url, key } = getSupabaseConfig();
-        const updates: any = { updated_at: new Date().toISOString() };
-        if (status) updates.status = status;
-        if (admin_notes !== undefined) updates.admin_notes = admin_notes;
-        if (rating !== undefined) updates.rating = rating;
-        if (review_title !== undefined) updates.review_title = review_title;
-        if (review_message !== undefined) updates.review_message = review_message;
-        if (name !== undefined) updates.name = name;
-
-        await fetch(`${url}/rest/v1/customer_reviews?id=eq.${encodeURIComponent(id)}`, {
-          method: "PATCH",
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(updates)
-        });
-      } catch (_) {}
-
-      res.setHeader("Content-Type", "application/json");
-      return res.json({
-        success: true,
-        message: "Review status updated successfully.",
-        review: index !== -1 ? dbFeedback[index] : { id, status }
-      });
-    } catch (err: any) {
-      console.error("Moderate review error:", err);
-      res.setHeader("Content-Type", "application/json");
-      return res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.delete("/api/reviews/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const index = dbFeedback.findIndex(f => f.id === id);
-      if (index !== -1) {
-        dbFeedback.splice(index, 1);
-        saveFeedbackDb();
-      }
-
-      try {
-        const { url, key } = getSupabaseConfig();
-        await fetch(`${url}/rest/v1/customer_reviews?id=eq.${encodeURIComponent(id)}`, {
-          method: "DELETE",
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`
-          }
-        });
-      } catch (_) {}
-
-      res.setHeader("Content-Type", "application/json");
-      return res.json({ success: true, message: "Review deleted successfully." });
-    } catch (err: any) {
-      console.error("Delete review error:", err);
-      res.setHeader("Content-Type", "application/json");
-      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
@@ -3311,30 +3005,18 @@ Provide a JSON response with the following keys:
     }
   });
 
+  const distPath = path.join(process.cwd(), "dist");
+
+  // Always serve dist/assets statically if available (prevents missing bundle errors)
+  app.use("/assets", express.static(path.join(distPath, "assets"), {
+    immutable: true,
+    maxAge: "1y",
+    fallthrough: true
+  }));
+
   if (!isProduction && vite) {
-    const distPath = path.join(process.cwd(), "dist");
-    // If client requests built assets in dev mode (e.g. from browser cache), serve from dist/assets if available
-    if (fs.existsSync(path.join(distPath, "assets"))) {
-      app.use("/assets", express.static(path.join(distPath, "assets")));
-    }
-
     app.use(vite.middlewares);
-
-    // Dev catch-all SPA route
-    app.get("*", async (req, res, next) => {
-      if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.path)) {
-        return next();
-      }
-      try {
-        const html = await getIndexHtmlTemplate(req.originalUrl || req.path);
-        res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.status(200).send(html);
-      } catch (e) {
-        next(e);
-      }
-    });
   } else {
-    const distPath = path.join(process.cwd(), "dist");
 
     // Guard against relative asset requests originating from nested subpaths (e.g. /products/assets/* -> /assets/*)
     app.use(/^\/(?:products|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res, next) => {

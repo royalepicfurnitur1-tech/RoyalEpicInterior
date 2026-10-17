@@ -14,6 +14,7 @@ import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } f
 import { uploadProductImage } from '../services/storageService';
 import { CategorySelectorField } from './CategorySelectorField';
 import { getCategories, DEFAULT_CATEGORIES } from '../services/productManagementService';
+import { formatProductPrice } from '../utils/priceFormatter';
 
 interface ProductManagerPortalProps {
   onBackToWebsite?: () => void;
@@ -147,6 +148,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
       category: 'Living Room Luxury',
       categorySlug: 'living-room-luxury',
       price: 45000,
+      priceType: 'fixed',
       originalPrice: 55000,
       discount: 18,
       rating: 4.9,
@@ -160,7 +162,8 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
         finish: 'Italian PU Matte / High Gloss',
         warranty: '10 Years Factory Warranty',
         brand: 'Royal Epic Interior',
-        origin: 'Bengaluru Factory'
+        origin: 'Bengaluru Factory',
+        priceType: 'fixed'
       },
       features: [
         '100% Waterproof & Termite Proof',
@@ -178,6 +181,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
   const handleOpenEdit = (p: Product) => {
     setEditingProduct({
       ...p,
+      priceType: p.priceType || (p.specifications as any)?.priceType || 'fixed',
       specifications: { ...p.specifications },
       features: [...(p.features || [])],
       galleryImages: [...(p.galleryImages || [])]
@@ -197,6 +201,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
       const price = Number(editingProduct.price);
       const originalPrice = Number(editingProduct.originalPrice) || Math.round(price * 1.2);
       const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+      const priceType = editingProduct.priceType || 'fixed';
       
       const productId = editingProduct.id || `prod-${Date.now()}`;
       let finalImage = editingProduct.image || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80';
@@ -229,6 +234,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
         category: editingProduct.category || 'Living Room Luxury',
         categorySlug: (editingProduct.category || 'furniture').toLowerCase().replace(/[^a-z0-9]/g, '-'),
         price,
+        priceType,
         originalPrice,
         discount,
         rating: Number(editingProduct.rating) || 4.9,
@@ -236,13 +242,16 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
         image: finalImage,
         galleryImages: finalGallery,
         description: editingProduct.description || 'Custom crafted luxury interior piece by Royal Epic.',
-        specifications: editingProduct.specifications || {
-          material: 'Solid Burma Teak Core',
-          size: 'Custom Factory Dimensions',
-          finish: 'Italian PU Matte',
-          warranty: '10 Years Factory Guarantee',
-          brand: 'Royal Epic Interior',
-          origin: 'Bengaluru Factory'
+        specifications: {
+          ...(editingProduct.specifications || {
+            material: 'Solid Burma Teak Core',
+            size: 'Custom Factory Dimensions',
+            finish: 'Italian PU Matte',
+            warranty: '10 Years Factory Guarantee',
+            brand: 'Royal Epic Interior',
+            origin: 'Bengaluru Factory'
+          }),
+          priceType
         },
         features: editingProduct.features && editingProduct.features.length > 0 ? editingProduct.features : ['100% Termite Resistant', 'Factory Finish Guarantee'],
         isHot: Boolean(editingProduct.isHot),
@@ -719,11 +728,11 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                       {/* Pricing */}
                       <td className="p-3.5 font-mono">
                         <div className="font-bold text-gold text-sm">
-                          ₹{p.price.toLocaleString('en-IN')}
+                          {formatProductPrice(p.price, p)}
                         </div>
                         {p.originalPrice && p.originalPrice > p.price && (
                           <div className="text-[10px] text-neutral-500 line-through">
-                            ₹{p.originalPrice.toLocaleString('en-IN')} ({p.discount}% OFF)
+                            {formatProductPrice(p.originalPrice, p)} ({p.discount}% OFF)
                           </div>
                         )}
                       </td>
@@ -847,7 +856,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                   <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
                     <div>
                       <span className="text-[10px] text-neutral-500 uppercase font-mono block">Factory Price</span>
-                      <div className="text-lg font-bold font-mono text-gold">₹{p.price.toLocaleString('en-IN')}</div>
+                      <div className="text-lg font-bold font-mono text-gold">{formatProductPrice(p.price, p)}</div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -943,20 +952,33 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                 </div>
               </div>
 
-              {/* SECTION 2: PRICING & MRP */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* SECTION 2: PRICING, PRICE TYPE & MRP */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">
-                    Selling Price (₹) *
+                    {editingProduct.priceType === 'per_sq_ft' ? 'Price (₹ / sq. ft.) *' : 'Selling Price (₹) *'}
                   </label>
                   <input
                     type="number"
                     required
-                    placeholder="95000"
+                    placeholder={editingProduct.priceType === 'per_sq_ft' ? '500' : '95000'}
                     value={editingProduct.price || ''}
                     onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
                     className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-2.5 text-white focus:outline-none font-mono"
                   />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">
+                    Price Type *
+                  </label>
+                  <select
+                    value={editingProduct.priceType || 'fixed'}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, priceType: e.target.value as any })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-2.5 text-white focus:outline-none"
+                  >
+                    <option value="fixed">Fixed Price (Whole Product)</option>
+                    <option value="per_sq_ft">Price per Square Foot (sq. ft.)</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">

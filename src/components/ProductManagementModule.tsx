@@ -15,6 +15,7 @@ import {
 } from '../services/productManagementService';
 import { uploadProductImage } from '../services/storageService';
 import { CategorySelectorField } from './CategorySelectorField';
+import { formatProductPrice } from '../utils/priceFormatter';
 
 interface ProductManagementModuleProps {
   onBackToWebsite?: () => void;
@@ -192,6 +193,7 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
       subCategory: '',
       sku: `RE-${Math.floor(1000 + Math.random() * 9000)}`,
       price: 0,
+      priceType: 'fixed',
       description: '',
       material: '',
       size: '',
@@ -208,6 +210,7 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
   const handleOpenEditProduct = (prod: ProductItem) => {
     setEditingProduct({ 
       ...prod,
+      priceType: prod.priceType || 'fixed',
       galleryImages: prod.galleryImages ? [...prod.galleryImages] : [],
       selectedAttributes: prod.selectedAttributes ? { ...prod.selectedAttributes } : {}
     });
@@ -748,7 +751,7 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
                           )}
                         </td>
                         <td className="py-3.5 px-4 font-mono font-bold text-white text-sm">
-                          ₹{p.price.toLocaleString('en-IN')}
+                          {formatProductPrice(p.price, p)}
                         </td>
                         <td className="py-3.5 px-4 font-mono">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -843,7 +846,7 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
                         )}
 
                         <div className="flex items-center justify-between pt-1">
-                          <span className="text-sm font-bold text-white font-mono">₹{p.price.toLocaleString('en-IN')}</span>
+                          <span className="text-sm font-bold text-white font-mono">{formatProductPrice(p.price, p)}</span>
                           <span className="text-[10px] font-mono text-neutral-400">{p.stock} in stock</span>
                         </div>
                       </div>
@@ -1234,18 +1237,32 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
                 )}
               </div>
 
-              {/* Price & Stock & Status */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Price, Price Type, Stock & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Price (₹) *</label>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">
+                    {editingProduct.priceType === 'per_sq_ft' ? 'Price (₹ / sq. ft.) *' : 'Price (₹) *'}
+                  </label>
                   <input
                     type="number"
                     required
-                    placeholder="95000"
+                    placeholder={editingProduct.priceType === 'per_sq_ft' ? '500' : '95000'}
                     value={editingProduct.price || ''}
                     onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
                     className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none font-mono"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Price Type *</label>
+                  <select
+                    value={editingProduct.priceType || 'fixed'}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, priceType: e.target.value as any })}
+                    className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"
+                  >
+                    <option value="fixed">Fixed Price (Whole Product)</option>
+                    <option value="per_sq_ft">Price per Square Foot (sq. ft.)</option>
+                  </select>
                 </div>
 
                 <div>

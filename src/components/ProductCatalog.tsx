@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getCategories, DEFAULT_CATEGORIES } from '../services/productManagementService';
+import { formatProductPrice } from '../utils/priceFormatter';
 
 interface ProductCatalogProps {
   products?: Product[];
@@ -511,7 +512,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       <div>
                         <span className="text-[10px] uppercase text-stone-400 block font-mono">Factory Rate</span>
                         <span className="text-base font-bold text-stone-900 font-mono">
-                          ₹{p.price.toLocaleString('en-IN')}
+                          {formatProductPrice(p.price, p)}
                         </span>
                       </div>
                       <button
@@ -804,11 +805,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           {/* Price Display */}
                           <div className="flex items-baseline gap-2 mb-4">
                             <span className="text-lg font-bold text-stone-900 font-mono">
-                              ₹{product.price.toLocaleString('en-IN')}
+                              {formatProductPrice(product.price, product)}
                             </span>
                             {product.originalPrice > product.price && (
                               <span className="text-xs text-stone-400 line-through font-mono">
-                                ₹{product.originalPrice.toLocaleString('en-IN')}
+                                {formatProductPrice(product.originalPrice, product)}
                               </span>
                             )}
                           </div>
