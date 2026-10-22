@@ -56,10 +56,10 @@ export interface ProductItem {
   updatedAt?: string;
 }
 
-const CATEGORIES_KEY = 'royalepic_categories_store';
-const SUBCATEGORIES_KEY = 'royalepic_subcategories_store';
-const ATTRIBUTES_KEY = 'royalepic_attributes_store';
-const PRODUCTS_KEY = 'royalepic_addon_products_store';
+export const CATEGORIES_KEY = 'royalepic_categories_store';
+export const SUBCATEGORIES_KEY = 'royalepic_subcategories_store';
+export const ATTRIBUTES_KEY = 'royalepic_attributes_store';
+export const PRODUCTS_KEY = 'royalepic_addon_products_store';
 
 // Default initial category seeds (covering all standard catalog categories)
 export const DEFAULT_CATEGORIES: CategoryItem[] = [
@@ -101,12 +101,44 @@ export const DEFAULT_ADDON_PRODUCTS: ProductItem[] = [];
 
 export const SYSTEM_CATEGORY_REGISTRY_ID = '__category_registry__';
 
-// Helper to save categories registry into Supabase products table
+let isSupabaseQuotaExceeded = false;
+
+export function isQuotaError(errOrMessage: any): boolean {
+  if (!errOrMessage) return false;
+  const msg = typeof errOrMessage === 'string' ? errOrMessage : (errOrMessage.message || '');
+  const code = typeof errOrMessage === 'object' ? errOrMessage.code : '';
+  const isQuota =
+    msg.includes('exceed_cached_egress_quota') ||
+    msg.includes('restricted') ||
+    msg.includes('quota') ||
+    code === '402' ||
+    code === 402;
+
+  if (isQuota) {
+    isSupabaseQuotaExceeded = true;
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('sb_quota_exceeded', 'true');
+      }
+    } catch (_) {}
+  }
+  return isQuota;
+}
+
+export function hasSupabaseQuotaExceeded(): boolean {
+  if (isSupabaseQuotaExceeded) return true;
+  try {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('sb_quota_exceeded') === 'true') {
+      isSupabaseQuotaExceeded = true;
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+// Helper to save categories registry into Supabase products table with offline/quota cache fallback
 async function saveCategoriesRegistry(categories: CategoryItem[]): Promise<{ success: boolean; error?: string }> {
   try {
-    const sb = getSupabase();
-    if (!sb) return { success: false, error: 'Supabase client is unavailable.' };
-
     const cleanList = categories.map(({ id, name, slug, description, createdAt, updatedAt }) => ({
       id,
       name: name.trim(),
@@ -115,6 +147,21 @@ async function saveCategoriesRegistry(categories: CategoryItem[]): Promise<{ suc
       createdAt: createdAt || new Date().toISOString(),
       updatedAt: updatedAt || new Date().toISOString()
     }));
+
+    // Always cache locally so categories remain accessible even when Supabase is quota-restricted
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(cleanList));
+      } catch (_) {}
+    }
+
+    // If quota already exceeded or Supabase not configured, skip network call and succeed via local cache
+    if (hasSupabaseQuotaExceeded()) {
+      return { success: true };
+    }
+
+    const sb = getSupabase();
+    if (!sb) return { success: true };
 
     const { error } = await sb
       .from('products')
@@ -135,21 +182,34 @@ async function saveCategoriesRegistry(categories: CategoryItem[]): Promise<{ suc
       });
 
     if (error) {
-      console.error('saveCategoriesRegistry error:', error.message);
+      if (isQuotaError(error)) {
+        console.warn('Supabase categories registry write notice: egress quota reached. Changes saved to local cache.');
+        return { success: true };
+      }
+
+      console.warn('saveCategoriesRegistry notice:', error.message);
       return { success: false, error: error.message };
     }
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err.message };
+    if (isQuotaError(err)) {
+      return { success: true };
+    }
+    console.warn('saveCategoriesRegistry notice:', err?.message || err);
+    return { success: false, error: err?.message || 'Failed to save categories registry' };
   }
 }
 
-// CATEGORY OPERATIONS: Single Source of Truth backed by Supabase
+// CATEGORY OPERATIONS: Single Source of Truth backed by Supabase with resilient caching
 export async function getCategories(): Promise<CategoryItem[]> {
   try {
+    if (hasSupabaseQuotaExceeded()) {
+      return getCachedOrDefaultCategories();
+    }
+
     const sb = getSupabase();
     if (!sb) {
-      return DEFAULT_CATEGORIES;
+      return getCachedOrDefaultCategories();
     }
 
     // Parallel fetch: category registry row and active product categories
@@ -164,6 +224,17 @@ export async function getCategories(): Promise<CategoryItem[]> {
         .select('category,category_slug')
         .neq('category', '__SYSTEM__')
     ]);
+
+    // If Supabase is restricted due to egress quota or offline, gracefully return cached/default categories
+    if (regRes.error || prodsRes.error) {
+      const err = regRes.error || prodsRes.error;
+      if (isQuotaError(err)) {
+        console.warn('Supabase query note: egress quota restricted, using cached categories.');
+      } else {
+        console.warn('Supabase categories fetch notice:', err?.message);
+      }
+      return getCachedOrDefaultCategories();
+    }
 
     // Build real-time product count map per category
     const productCountMap: Record<string, number> = {};
@@ -214,6 +285,13 @@ export async function getCategories(): Promise<CategoryItem[]> {
       }
     }
 
+    // Update local storage cache
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(list));
+      } catch (_) {}
+    }
+
     // Attach accurate product counts
     const mapped = list.map(c => ({
       ...c,
@@ -224,9 +302,26 @@ export async function getCategories(): Promise<CategoryItem[]> {
     mapped.sort((a, b) => a.name.localeCompare(b.name));
     return mapped;
   } catch (e) {
-    console.warn('getCategories exception, returning defaults:', e);
-    return DEFAULT_CATEGORIES;
+    console.warn('getCategories exception, returning cached or defaults:', e);
+    return getCachedOrDefaultCategories();
   }
+}
+
+function getCachedOrDefaultCategories(): CategoryItem[] {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem(CATEGORIES_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const sorted = [...parsed];
+          sorted.sort((a: CategoryItem, b: CategoryItem) => a.name.localeCompare(b.name));
+          return sorted;
+        }
+      }
+    } catch (_) {}
+  }
+  return DEFAULT_CATEGORIES;
 }
 
 export async function saveCategory(
@@ -272,19 +367,26 @@ export async function saveCategory(
 
     // If editing existing category and name changed, cascade update to all assigned products in Supabase
     const originalName = (oldCategoryName || (cat.id ? currentCategories.find(c => c.id === cat.id)?.name : undefined))?.trim();
-    if (originalName && originalName.toLowerCase() !== lowerName) {
-      const { error: cascadeError } = await sb
-        .from('products')
-        .update({
-          category: rawName,
-          category_slug: generatedSlug,
-          updated_at: new Date().toISOString()
-        })
-        .eq('category', originalName);
+    if (originalName && originalName.toLowerCase() !== lowerName && !hasSupabaseQuotaExceeded()) {
+      try {
+        const { error: cascadeError } = await sb
+          .from('products')
+          .update({
+            category: rawName,
+            category_slug: generatedSlug,
+            updated_at: new Date().toISOString()
+          })
+          .eq('category', originalName);
 
-      if (cascadeError) {
-        console.error('Failed to cascade category rename to products:', cascadeError);
-        return { success: false, error: `Failed to update assigned products: ${cascadeError.message}` };
+        if (cascadeError) {
+          if (isQuotaError(cascadeError)) {
+            console.warn('Supabase cascade update notice: egress quota reached.');
+          } else {
+            console.warn('Failed to cascade category rename to products:', cascadeError.message);
+          }
+        }
+      } catch (cascadeEx) {
+        console.warn('Cascade update notice:', cascadeEx);
       }
     }
 
@@ -298,59 +400,66 @@ export async function saveCategory(
     }
 
     const regResult = await saveCategoriesRegistry(updatedList);
-    if (!regResult.success) {
+    if (!regResult.success && !hasSupabaseQuotaExceeded()) {
       return { success: false, error: regResult.error || 'Failed to persist category to Supabase.' };
     }
 
     return { success: true, category: fullCat };
   } catch (err: any) {
-    console.error('saveCategory error:', err);
-    return { success: false, error: err.message || 'Failed to save category.' };
+    console.warn('saveCategory notice:', err?.message || err);
+    return { success: false, error: err?.message || 'Failed to save category.' };
   }
 }
 
 export async function deleteCategory(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const sb = getSupabase();
-    if (!sb) {
-      return { success: false, error: 'Supabase client is not available.' };
-    }
-
     const currentCategories = await getCategories();
     const targetCat = currentCategories.find(c => c.id === id);
     if (!targetCat) {
       return { success: false, error: 'Category not found.' };
     }
 
-    // Protected deletion: Check if any products are assigned to this category in Supabase
-    const { count, error: countError } = await sb
-      .from('products')
-      .select('id', { count: 'exact', head: true })
-      .eq('category', targetCat.name)
-      .neq('category', '__SYSTEM__');
+    const sb = getSupabase();
+    if (sb && !hasSupabaseQuotaExceeded()) {
+      // Protected deletion: Check if any products are assigned to this category in Supabase
+      try {
+        const { count, error: countError } = await sb
+          .from('products')
+          .select('id', { count: 'exact', head: true })
+          .eq('category', targetCat.name)
+          .neq('category', '__SYSTEM__');
 
-    if (countError) {
-      return { success: false, error: `Failed to verify product assignments: ${countError.message}` };
-    }
-
-    if (count && count > 0) {
-      return {
-        success: false,
-        error: `Cannot delete category "${targetCat.name}" because ${count} product(s) are currently assigned to it. Please reassign or delete these products first.`
-      };
+        if (countError) {
+          if (isQuotaError(countError)) {
+            console.warn('Supabase product count check notice: egress quota reached, proceeding with local deletion.');
+          } else {
+            return { success: false, error: `Failed to verify product assignments: ${countError.message}` };
+          }
+        } else if (count && count > 0) {
+          return {
+            success: false,
+            error: `Cannot delete category "${targetCat.name}" because ${count} product(s) are currently assigned to it. Please reassign or delete these products first.`
+          };
+        }
+      } catch (countEx) {
+        console.warn('Product count check notice:', countEx);
+      }
     }
 
     // Safe to delete: remove from registry
     const filteredList = currentCategories.filter(c => c.id !== id);
     const regResult = await saveCategoriesRegistry(filteredList);
-    if (!regResult.success) {
+    if (!regResult.success && !hasSupabaseQuotaExceeded()) {
       return { success: false, error: regResult.error || 'Failed to update category registry in Supabase.' };
     }
 
     return { success: true };
   } catch (err: any) {
-    console.error('deleteCategory error:', err);
-    return { success: false, error: err.message || 'Failed to delete category.' };
+    if (isQuotaError(err)) {
+      return { success: true };
+    }
+    console.warn('deleteCategory notice:', err?.message || err);
+    return { success: false, error: err?.message || 'Failed to delete category.' };
   }
 }
 

@@ -24,6 +24,7 @@ import {
   OrderEmailPayload, 
   OrderEmailItem 
 } from "./src/server/emailNotificationService";
+import { crmRouter } from "./src/server/crmRoutes";
 
 dotenv.config();
 
@@ -2956,6 +2957,9 @@ Provide a JSON response with the following keys:
       ...getSmtpConfigStatus()
     });
   });
+
+  // Mount Telecaller CRM API Routes
+  app.use("/api/crm", crmRouter);
 
   // =========================================================================
   // STORAGE & ASSET MANAGEMENT API

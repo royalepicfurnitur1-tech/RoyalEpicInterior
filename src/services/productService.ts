@@ -190,7 +190,12 @@ export async function saveProduct(product: Partial<Product>): Promise<{ success:
       .single();
 
     if (error) {
-      console.error('Supabase upsert error:', error.message);
+      const isQuota = error.message?.includes('exceed_cached_egress_quota') || error.message?.includes('restricted') || error.message?.includes('quota');
+      if (isQuota) {
+        console.warn('Supabase upsert notice: egress quota reached.', error.message);
+      } else {
+        console.error('Supabase upsert error:', error.message);
+      }
       return { 
         success: false, 
         error: `Database save error: ${error.message}` 
@@ -200,7 +205,7 @@ export async function saveProduct(product: Partial<Product>): Promise<{ success:
     const savedProduct = mapRowToProduct(data || row);
     return { success: true, product: savedProduct };
   } catch (err: any) {
-    console.error('saveProduct exception:', err);
+    console.warn('saveProduct exception:', err?.message || err);
     return { success: false, error: err.message || 'Unknown database save exception' };
   }
 }
@@ -216,13 +221,18 @@ export async function deleteProductById(id: string): Promise<{ success: boolean;
       .eq('id', id);
 
     if (error) {
-      console.error('Supabase delete error:', error.message);
+      const isQuota = error.message?.includes('exceed_cached_egress_quota') || error.message?.includes('restricted') || error.message?.includes('quota');
+      if (isQuota) {
+        console.warn('Supabase delete notice: egress quota reached.', error.message);
+      } else {
+        console.error('Supabase delete error:', error.message);
+      }
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err: any) {
-    console.error('deleteProductById exception:', err);
+    console.warn('deleteProductById exception:', err?.message || err);
     return { success: false, error: err.message };
   }
 }

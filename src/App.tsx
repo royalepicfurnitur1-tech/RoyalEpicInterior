@@ -52,6 +52,7 @@ function safeLazy<T extends React.ComponentType<any>>(
 const AdminDashboard = safeLazy<typeof import('./components/AdminDashboard').AdminDashboard>(() => import('./components/AdminDashboard'), 'AdminDashboard');
 const CustomersSubdomainPortal = safeLazy<typeof import('./components/CustomersSubdomainPortal').CustomersSubdomainPortal>(() => import('./components/CustomersSubdomainPortal'), 'CustomersSubdomainPortal');
 const ProductManagerPortal = safeLazy<typeof import('./components/ProductManagerPortal').ProductManagerPortal>(() => import('./components/ProductManagerPortal'), 'ProductManagerPortal');
+const TelecallerCrmApp = safeLazy<typeof import('./crm/TelecallerCrmApp').TelecallerCrmApp>(() => import('./crm/TelecallerCrmApp'), 'TelecallerCrmApp');
 
 const SubdomainLoadingFallback = () => (
   <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-white px-4">
@@ -63,6 +64,7 @@ const SubdomainLoadingFallback = () => (
 /**
  * Helper to detect current hostname.
  * Detects:
+ * - tele.royalepicinteriors.com -> Telecaller CRM directly
  * - admin.royalepicinterior.com -> Admin Dashboard directly
  * - customers.royalepicinterior.com -> Customer Subdomain Portal directly
  * - royalepicinterior.com / www.royalepicinterior.com -> Normal public homepage
@@ -77,6 +79,7 @@ function getResolvedHostname(): string {
       return hostParam.toLowerCase().trim();
     }
     const subdomainParam = params.get('subdomain');
+    if (subdomainParam === 'tele' || subdomainParam === 'crm' || subdomainParam === 'telecaller') return 'tele.royalepicinteriors.com';
     if (subdomainParam === 'admin') return 'admin.royalepicinterior.com';
     if (subdomainParam === 'customers' || subdomainParam === 'customer') return 'customers.royalepicinterior.com';
     if (subdomainParam === 'products' || subdomainParam === 'product') return 'products.royalepicinterior.com';
@@ -146,6 +149,13 @@ export default function App() {
     hostname.startsWith('products.') || 
     hostname.startsWith('product.');
 
+  const isTelecallerSubdomain = 
+    hostname === 'tele.royalepicinteriors.com' || 
+    hostname === 'tele.royalepicinterior.com' || 
+    hostname.startsWith('tele.') || 
+    currentPath.startsWith('/tele-crm') || 
+    currentPath.startsWith('/crm');
+
   const navigateTo = (path: string) => {
     window.history.pushState({}, '', path);
     setCurrentPath(path);
@@ -164,17 +174,19 @@ export default function App() {
 
   // Update document title for dedicated subdomains
   useEffect(() => {
-    if (isAdminSubdomain) {
+    if (isTelecallerSubdomain) {
+      document.title = 'Royal Epic Interiors | Telecaller CRM & Sales Engine';
+    } else if (isAdminSubdomain) {
       document.title = 'Royal Epic Admin Dashboard | ERP & Management Portal';
     } else if (isCustomersSubdomain) {
       document.title = 'Royal Epic Customer Portal | Client & Executive Workspace';
     } else if (isProductsSubdomain) {
       document.title = 'Royal Epic Product Hub | Luxury Furniture & Architectural Elements';
     }
-  }, [isAdminSubdomain, isCustomersSubdomain, isProductsSubdomain]);
+  }, [isTelecallerSubdomain, isAdminSubdomain, isCustomersSubdomain, isProductsSubdomain]);
 
   const handleSubdomainBackToWebsite = () => {
-    if (window.location.hostname.endsWith('royalepicinterior.com')) {
+    if (window.location.hostname.endsWith('royalepicinterior.com') || window.location.hostname.endsWith('royalepicinteriors.com')) {
       window.location.href = 'https://royalepicinterior.com';
     } else {
       const url = new URL(window.location.href);
@@ -193,6 +205,17 @@ export default function App() {
     } else {
       const url = new URL(window.location.href);
       url.searchParams.set('subdomain', 'admin');
+      window.history.pushState({}, '', url.pathname + url.search);
+      setHostname(getResolvedHostname());
+    }
+  };
+
+  const handleSubdomainNavigateToTelecaller = () => {
+    if (window.location.hostname.endsWith('royalepicinteriors.com') || window.location.hostname.endsWith('royalepicinterior.com')) {
+      window.location.href = 'https://tele.royalepicinteriors.com';
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set('subdomain', 'tele');
       window.history.pushState({}, '', url.pathname + url.search);
       setHostname(getResolvedHostname());
     }
@@ -454,6 +477,7 @@ export default function App() {
             onBackToWebsite={handleSubdomainBackToWebsite}
             onNavigateToCustomers={handleSubdomainNavigateToCustomers}
             onNavigateToProducts={handleSubdomainNavigateToProducts}
+            onNavigateToTelecaller={handleSubdomainNavigateToTelecaller}
           />
         </React.Suspense>
       </div>
@@ -506,7 +530,22 @@ export default function App() {
   }
 
   // -------------------------------------------------------------
-  // 3. MAIN DOMAIN & WWW (royalepicinterior.com / www.royalepicinterior.com)
+  // 4. DEDICATED TELECALLER CRM SUBDOMAIN (tele.royalepicinteriors.com)
+  // When visited at https://tele.royalepicinteriors.com or /tele-crm,
+  // load the Telecaller CRM directly.
+  // -------------------------------------------------------------
+  if (isTelecallerSubdomain) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white font-sans">
+        <React.Suspense fallback={<SubdomainLoadingFallback />}>
+          <TelecallerCrmApp onBackToWebsite={handleSubdomainBackToWebsite} />
+        </React.Suspense>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 5. MAIN DOMAIN & WWW (royalepicinterior.com / www.royalepicinterior.com)
   // Loads normal public website with all existing path-based routes preserved.
   // -------------------------------------------------------------
   return (

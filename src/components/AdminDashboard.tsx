@@ -33,6 +33,7 @@ interface AdminDashboardProps {
   onBackToWebsite?: () => void;
   onNavigateToCustomers?: () => void;
   onNavigateToProducts?: () => void;
+  onNavigateToTelecaller?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -40,7 +41,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onProductsUpdated, 
   onBackToWebsite,
   onNavigateToCustomers,
-  onNavigateToProducts
+  onNavigateToProducts,
+  onNavigateToTelecaller
 }) => {
   const { user, profile, isAdmin, loginWithEmail, loginAsDemoAdmin, logout } = useAuth();
 
@@ -767,6 +769,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   title="Open Customers & Marketing Executive Portal"
                 >
                   <Users className="w-4 h-4 text-gold" /> Customers Portal
+                </button>
+              )}
+
+              {onNavigateToTelecaller && (
+                <button
+                  onClick={onNavigateToTelecaller}
+                  className="px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="Open Telecaller CRM & Sales Engine (tele.royalepicinteriors.com)"
+                >
+                  <Phone className="w-4 h-4 text-amber-400" /> Telecaller CRM
                 </button>
               )}
 
