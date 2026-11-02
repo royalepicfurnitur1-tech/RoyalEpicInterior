@@ -8,6 +8,7 @@ import { Header } from './components/Header';
 import { HeritageHomes } from './pages/HeritageHomes';
 import { TurnkeyInteriorsPage } from './pages/TurnkeyInteriorsPage';
 import { OurServicesPage } from './pages/OurServicesPage';
+import { HeroSection } from './components/HeroSection';
 import { ThreeHeroRing } from './components/ThreeHeroRing';
 import { ServicesSection } from './components/ServicesSection';
 import { ProductCatalog } from './components/ProductCatalog';
@@ -79,7 +80,7 @@ function getResolvedHostname(): string {
       return hostParam.toLowerCase().trim();
     }
     const subdomainParam = params.get('subdomain');
-    if (subdomainParam === 'tele' || subdomainParam === 'crm' || subdomainParam === 'telecaller') return 'tele.royalepicinteriors.com';
+    if (subdomainParam === 'tele' || subdomainParam === 'crm' || subdomainParam === 'telecaller') return 'tele.royalepicinterior.com';
     if (subdomainParam === 'admin') return 'admin.royalepicinterior.com';
     if (subdomainParam === 'customers' || subdomainParam === 'customer') return 'customers.royalepicinterior.com';
     if (subdomainParam === 'products' || subdomainParam === 'product') return 'products.royalepicinterior.com';
@@ -212,7 +213,7 @@ export default function App() {
 
   const handleSubdomainNavigateToTelecaller = () => {
     if (window.location.hostname.endsWith('royalepicinteriors.com') || window.location.hostname.endsWith('royalepicinterior.com')) {
-      window.location.href = 'https://tele.royalepicinteriors.com';
+      window.location.href = 'https://tele.royalepicinterior.com';
     } else {
       const url = new URL(window.location.href);
       url.searchParams.set('subdomain', 'tele');
@@ -549,7 +550,7 @@ export default function App() {
   // Loads normal public website with all existing path-based routes preserved.
   // -------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#A8A492] flex flex-col font-sans">
       <Header 
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
@@ -563,7 +564,7 @@ export default function App() {
         onOpenSearch={() => setIsSearchOpen(true)}
         onSearchClick={() => setIsSearchOpen(true)}
       />
-      <main className="flex-1 flex flex-col pt-[72px]">
+      <main className="flex-1 flex flex-col">
         {currentPath === '/services/heritage-homes' ? (
           <HeritageHomes
             onNavigate={navigateTo}
@@ -599,7 +600,7 @@ export default function App() {
             const productMatch = findProductBySlug(products, slug);
             if (!productMatch && !isProductsLoaded) {
               return (
-                <div className="min-h-screen bg-white text-neutral-900 pt-32 pb-20 flex flex-col items-center justify-center">
+                <div className="min-h-screen bg-[#A8A492] text-neutral-900 pt-32 pb-20 flex flex-col items-center justify-center">
                   <div className="w-10 h-10 border-4 border-gold/30 border-t-gold rounded-full animate-spin mb-4" />
                   <span className="text-xs font-mono uppercase tracking-widest text-neutral-500">Loading Product Catalog...</span>
                 </div>
@@ -626,8 +627,7 @@ export default function App() {
           <>
             {activeTab === 'home' && (
               <>
-                <ThreeHeroRing 
-                  onSelectItem={(cat, title) => {}}
+                <HeroSection 
                   onRequestQuote={(title) => handleOpenQuote(title)} 
                 />
                 <ServicesSection 

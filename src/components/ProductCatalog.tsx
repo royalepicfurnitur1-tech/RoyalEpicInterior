@@ -310,7 +310,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   };
 
   return (
-    <section className="py-20 sm:py-28 bg-[#FBFBFA] text-stone-900 relative" id="shop">
+    <section className="py-20 sm:py-28 bg-[#A8A492] text-stone-900 relative" id="shop">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ========================================================================= */}

@@ -440,7 +440,7 @@ const getUserCartItems = (userId: string): ServerCartItem[] => {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // Detect production: either explicitly NODE_ENV=production, or running compiled server.cjs
   const isProduction =
@@ -2855,7 +2855,7 @@ Provide a JSON response with the following keys:
     homeHeroSubtitle: "10,000 Sq.Ft In-House Manufacturing Facility • 15-Year Waterproof Guarantee",
     bannerOfferText: "🎉 Special Festive Season Offer: Free 3D VR Walkthrough & 10% Discount on Modular Kitchens!",
     bannerOfferActive: true,
-    contactAddress: "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru, Karnataka 560077",
+    contactAddress: "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045",
     contactPhone: "+91 99000 00000",
     contactEmail: "info@royalepicinterior.com"
   };
@@ -3020,6 +3020,20 @@ Provide a JSON response with the following keys:
 
   if (!isProduction && vite) {
     app.use(vite.middlewares);
+    // Dev SPA catch-all fallback for client routes like /tele-crm, /checkout, etc.
+    app.use("*", async (req, res, next) => {
+      if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.path)) {
+        return next();
+      }
+      try {
+        const url = req.originalUrl || "/";
+        const template = await getIndexHtmlTemplate(url);
+        res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).end(template);
+      } catch (e: any) {
+        if (vite) vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
 
     // Guard against relative asset requests originating from nested subpaths (e.g. /products/assets/* -> /assets/*)
@@ -3100,6 +3114,7 @@ Provide a JSON response with the following keys:
 
   server.on("error", (err: any) => {
     console.error("Server listen error:", err);
+    process.exit(1);
   });
 }
 

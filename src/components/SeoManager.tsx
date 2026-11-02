@@ -45,10 +45,10 @@ const DEFAULT_SEO_PAGES: SeoPageData[] = [
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Main Road, Near Manyata Tech Park",
-        "addressLocality": "Thanisandra",
-        "addressRegion": "Bangalore",
-        "postalCode": "560077",
+        "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
+        "addressLocality": "Bengaluru",
+        "addressRegion": "Karnataka",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {

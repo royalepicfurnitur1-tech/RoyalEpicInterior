@@ -365,8 +365,8 @@ export function formatLeadEmailHtml(lead: LeadEmailPayload): string {
       <!-- Footer -->
       <tr>
         <td class="footer">
-          <div><strong>Royal Epic Interior & Furniture</strong></div>
-          <div>No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru, Karnataka 560077</div>
+          <div><strong>Royal Epic Commercial &amp; Home Interiors</strong></div>
+          <div>No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</div>
           <div style="margin-top: 6px; color: #525252;">
             Automated Hostinger SMTP notification engine • Do not share confidential credentials
           </div>
@@ -413,8 +413,10 @@ Project Scope / Message:
 ${scopeMessage}
 
 =========================================
-Royal Epic Interior & Furniture
-Thanisandra, Bengaluru, Karnataka 560077
+Royal Epic Commercial & Home Interiors
+No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road,
+Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara,
+Bengaluru, Karnataka 560045
 =========================================
 `.trim();
 }
@@ -998,8 +1000,8 @@ export function formatOrderEmailHtml(order: OrderEmailPayload): string {
       <!-- Footer -->
       <tr>
         <td class="footer">
-          <div><strong>Royal Epic Interior & Furniture</strong></div>
-          <div>No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru, Karnataka 560077</div>
+          <div><strong>Royal Epic Commercial &amp; Home Interiors</strong></div>
+          <div>No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</div>
           <div style="margin-top: 6px; color: #525252;">
             Automated Hostinger SMTP notification engine • enquiry@royalepicinterior.com
           </div>
@@ -1065,9 +1067,10 @@ Razorpay Payment ID:   ${order.razorpay_payment_id}
 Internal Order ID:     ${order.order_id}
 
 =========================================
-Royal Epic Interior & Furniture
-No. 169, Anjanadri Badavana, Rachenahalli, 
-Thanisandra, Bengaluru, Karnataka 560077
+Royal Epic Commercial & Home Interiors
+No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, 
+Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, 
+Bengaluru, Karnataka 560045
 =========================================
 `.trim();
 }

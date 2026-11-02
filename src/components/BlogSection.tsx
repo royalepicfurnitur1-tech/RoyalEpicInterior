@@ -27,7 +27,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote }) => {
     : BLOG_POSTS.filter((post) => post.category.toLowerCase().includes(selectedCategory.toLowerCase()));
 
   return (
-    <section className="py-20 sm:py-28 bg-[#FBFBFA] text-stone-900 relative" id="blog">
+    <section className="py-20 sm:py-28 bg-[#A8A492] text-stone-900 relative" id="blog">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}

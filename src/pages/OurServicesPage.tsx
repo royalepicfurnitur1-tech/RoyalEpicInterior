@@ -95,16 +95,16 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
           '@context': 'https://schema.org',
           '@type': 'HomeAndConstructionBusiness',
           '@id': 'https://royalepicinterior.com/#organization',
-          name: 'Royal Epic Interior & Furniture',
+          name: 'Royal Epic Commercial & Home Interiors',
           url: 'https://royalepicinterior.com/our-services',
           telephone: '+91 99166 33338',
           email: 'enquiry@royalepicinterior.com',
           address: {
             '@type': 'PostalAddress',
-            streetAddress: 'No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra',
+            streetAddress: 'No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara',
             addressLocality: 'Bengaluru',
             addressRegion: 'Karnataka',
-            postalCode: '560077',
+            postalCode: '560045',
             addressCountry: 'IN'
           },
           geo: {
@@ -1748,7 +1748,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
               {/* Official Office Info */}
               <div className="pt-4 border-t border-neutral-800/80 text-xs text-neutral-400 space-y-2">
                 <p className="font-bold text-neutral-300">Office &amp; Workshop Address:</p>
-                <p>No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru – 560077</p>
+                <p>No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru – 560045</p>
                 <p>Email: <a href="mailto:enquiry@royalepicinterior.com" className="text-amber-400 hover:underline">enquiry@royalepicinterior.com</a></p>
               </div>
 

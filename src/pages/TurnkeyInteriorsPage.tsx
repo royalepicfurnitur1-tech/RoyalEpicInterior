@@ -34,7 +34,7 @@ export const TurnkeyInteriorsPage: React.FC<TurnkeyInteriorsPageProps> = ({
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#A8A492]">
       <div className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
@@ -62,11 +62,11 @@ export const TurnkeyInteriorsPage: React.FC<TurnkeyInteriorsPageProps> = ({
         </div>
       </div>
 
-      <div className="py-20 bg-neutral-50">
+      <div className="py-20 bg-[#A8A492]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-serif text-neutral-900 mb-4">Our Comprehensive Services</h2>
-            <p className="text-neutral-600">
+            <p className="text-neutral-800">
               We offer end-to-end solutions for residential and commercial spaces, ensuring a seamless journey from concept to reality.
             </p>
           </div>
@@ -107,11 +107,11 @@ export const TurnkeyInteriorsPage: React.FC<TurnkeyInteriorsPageProps> = ({
         </div>
       </div>
 
-      <div className="py-20 bg-white">
+      <div className="py-20 bg-[#A8A492]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-serif text-neutral-900 mb-4">Why Choose Royal Epic Interiors?</h2>
-            <p className="text-neutral-600">
+            <p className="text-neutral-800">
               Our turnkey approach eliminates the stress of coordinating multiple contractors and suppliers.
             </p>
           </div>
@@ -123,7 +123,7 @@ export const TurnkeyInteriorsPage: React.FC<TurnkeyInteriorsPageProps> = ({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {features.map((feature) => (
-                <div key={feature.id} className="text-center p-6 bg-neutral-50 rounded-xl">
+                <div key={feature.id} className="text-center p-6 bg-white rounded-xl shadow-sm border border-neutral-100">
                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                     <Hammer className="w-8 h-8 text-amber-600" />
                   </div>

@@ -17,10 +17,10 @@ const COMMON_ORGANIZATION_SCHEMA = {
   "priceRange": "₹₹₹",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+    "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
     "addressLocality": "Bengaluru",
     "addressRegion": "Karnataka",
-    "postalCode": "560077",
+    "postalCode": "560045",
     "addressCountry": "IN"
   },
   "geo": {
@@ -231,7 +231,7 @@ function buildStructuredSchema(slug: string, page: any) {
         "streetAddress": `${localityName} Main Road`,
         "addressLocality": `${localityName}, Bengaluru`,
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {

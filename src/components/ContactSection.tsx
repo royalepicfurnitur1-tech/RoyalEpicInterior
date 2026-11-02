@@ -45,7 +45,7 @@ export const ContactSection: React.FC = () => {
 
 
   return (
-    <section className="py-20 sm:py-28 bg-[#F5F5F3] text-stone-900 relative overflow-hidden" id="contact">
+    <section className="py-20 sm:py-28 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="contact">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
@@ -79,7 +79,7 @@ export const ContactSection: React.FC = () => {
                   <MapPin className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-stone-900 block">Main Office Address</span>
-                    <span className="leading-relaxed">No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru - 560077</span>
+                    <span className="leading-relaxed">No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045</span>
                   </div>
                 </div>
 
@@ -138,11 +138,11 @@ export const ContactSection: React.FC = () => {
                     <span className="text-xs font-bold text-stone-900 uppercase tracking-wider font-mono">Company Showroom Location</span>
                   </div>
                   <p className="text-[11px] text-stone-500 font-medium mt-1">
-                    📍 No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru
+                    📍 No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045
                   </p>
                 </div>
                 <a
-                  href="https://maps.google.com/?q=No.+169,+Anjanadri+Badavana,+Rachenahalli,+Thanisandra,+Bengaluru"
+                  href="https://maps.google.com/?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3.5 py-1.5 rounded-xl bg-stone-900 text-white hover:bg-amber-600 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0"
@@ -154,8 +154,8 @@ export const ContactSection: React.FC = () => {
               {/* Responsive Embedded Google Map Iframe */}
               <div className="w-full h-60 rounded-2xl overflow-hidden border border-stone-200 relative bg-stone-100">
                 <iframe
-                  title="Royal Epic Interior Showroom Location - Thanisandra Bengaluru"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3886.627763636531!2d77.6232111!3d13.0612111!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDAzJzQwLjQiTiA3N8KwMzcnMjMuNiJF!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
+                  title="Royal Epic Commercial & Home Interiors - Thanisandra Nagawara Bengaluru"
+                  src="https://maps.google.com/maps?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045&t=&z=16&ie=UTF8&iwloc=&output=embed"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -198,7 +198,7 @@ export const ContactSection: React.FC = () => {
               </p>
 
               <a
-                href="https://maps.google.com/?q=No.+169,+Anjanadri+Badavana,+Rachenahalli,+Thanisandra,+Bengaluru+-+560077"
+                href="https://maps.google.com/?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-2.5 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-900 border border-stone-200 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"

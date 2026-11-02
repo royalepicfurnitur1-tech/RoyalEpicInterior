@@ -236,9 +236,9 @@ export const ThreeHeroRing: React.FC<ThreeHeroRingProps> = ({ onSelectItem, onRe
   };
 
   return (
-    <div className="relative w-full min-h-[720px] lg:min-h-[840px] flex items-center justify-center overflow-hidden py-12 bg-gradient-to-b from-white via-neutral-50 to-neutral-100 text-neutral-900">
+    <div className="relative w-full min-h-[720px] lg:min-h-[840px] flex items-center justify-center overflow-hidden py-12 bg-[#A8A492] text-neutral-900">
       {/* Background Static Soft Glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(15,23,42,0.06)_0%,transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.06)_0%,transparent_70%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
 
       {/* Three.js Static Background Canvas Container */}

@@ -54,10 +54,10 @@ const COMMON_ORGANIZATION_SCHEMA = {
   "priceRange": "₹₹₹",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+    "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
     "addressLocality": "Bengaluru",
     "addressRegion": "Karnataka",
-    "postalCode": "560077",
+    "postalCode": "560045",
     "addressCountry": "IN"
   },
   "geo": {
@@ -140,10 +140,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+        "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
         "addressLocality": "Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -178,7 +178,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       },
       {
         "question": "Where is Royal Epic interior factory located?",
-        "answer": "Our main factory and experience center is located at No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru - 560077."
+        "answer": "Our main factory and experience center is located at No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045."
       }
     ],
     "contentSections": [
@@ -314,10 +314,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -486,10 +486,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -529,7 +529,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "title": "Visit Our Showroom & Factory",
         "description": "Experience materials, soft-close hardware, acrylic finishes, and 3D VR walk-throughs in person.",
         "highlights": [
-          "Address: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru - 560077",
+          "Address: No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045",
           "Phone: +91 99166 33338",
           "Email: royalepicfurnitur1@gmail.com"
         ]
@@ -657,10 +657,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -828,10 +828,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -995,10 +995,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹ - ₹₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -1161,10 +1161,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -1323,10 +1323,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -1627,10 +1627,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -1794,10 +1794,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -1974,10 +1974,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -2154,10 +2154,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -2349,10 +2349,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -2529,10 +2529,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -2709,10 +2709,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -2904,10 +2904,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -3099,10 +3099,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -3294,10 +3294,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -3489,10 +3489,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -3684,10 +3684,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -3879,10 +3879,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -4074,10 +4074,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -4269,10 +4269,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -4464,10 +4464,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -4659,10 +4659,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -4854,10 +4854,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -5049,10 +5049,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -5239,7 +5239,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Whitefield Main Road",
         "addressLocality": "Whitefield, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -5258,10 +5258,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -5431,7 +5431,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "JP Nagar Main Road",
         "addressLocality": "JP Nagar, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -5450,10 +5450,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -5623,7 +5623,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "HSR Layout Main Road",
         "addressLocality": "HSR Layout, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -5642,10 +5642,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -5815,7 +5815,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Electronic City Main Road",
         "addressLocality": "Electronic City, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -5834,10 +5834,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -6007,7 +6007,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Yelahanka Main Road",
         "addressLocality": "Yelahanka, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -6026,10 +6026,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -6199,7 +6199,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Hebbal Main Road",
         "addressLocality": "Hebbal, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -6218,10 +6218,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -6391,7 +6391,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Koramangala Main Road",
         "addressLocality": "Koramangala, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -6410,10 +6410,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -6583,7 +6583,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Marathahalli Main Road",
         "addressLocality": "Marathahalli, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -6602,10 +6602,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -6775,7 +6775,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Indiranagar Main Road",
         "addressLocality": "Indiranagar, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -6794,10 +6794,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -6967,7 +6967,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "streetAddress": "Thanisandra Main Road",
         "addressLocality": "Thanisandra, Bengaluru",
         "addressRegion": "Karnataka",
-        "postalCode": "560077",
+        "postalCode": "560045",
         "addressCountry": "IN"
       },
       "geo": {
@@ -6986,10 +6986,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -7026,7 +7026,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     "faqs": [
       {
         "question": "Where is Royal Epic factory located in Thanisandra?",
-        "answer": "At No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bangalore - 560077 (Near Manyata Tech Park)."
+        "answer": "At No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045 (Near Manyata Tech Park)."
       }
     ],
     "contentSections": [
@@ -7172,10 +7172,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -7349,10 +7349,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -7526,10 +7526,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -7703,10 +7703,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -7880,10 +7880,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -8057,10 +8057,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -8239,10 +8239,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -8416,10 +8416,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {
@@ -8593,10 +8593,10 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
           "addressLocality": "Bengaluru",
           "addressRegion": "Karnataka",
-          "postalCode": "560077",
+          "postalCode": "560045",
           "addressCountry": "IN"
         },
         "geo": {

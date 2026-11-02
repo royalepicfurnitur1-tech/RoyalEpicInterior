@@ -149,7 +149,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     homeHeroSubtitle: '10,000 Sq.Ft In-House Manufacturing Facility • 15-Year Waterproof Guarantee',
     bannerOfferText: '🎉 Special Festive Season Offer: Free 3D VR Walkthrough & 10% Discount on Modular Kitchens!',
     bannerOfferActive: true,
-    contactAddress: 'No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru, Karnataka 560077',
+    contactAddress: 'No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045',
     contactPhone: '+91 99000 00000',
     contactEmail: 'info@royalepicfurniture.com'
   });

@@ -143,7 +143,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
             <div className="space-y-2 text-xs text-neutral-300">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-gold shrink-0 mt-0.5" />
-                <span>No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru - 560077</span>
+                <span>No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045</span>
               </div>
               <div className="flex items-start gap-2">
                 <Phone className="w-4 h-4 text-gold shrink-0 mt-0.5" />

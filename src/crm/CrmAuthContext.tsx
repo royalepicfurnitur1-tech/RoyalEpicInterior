@@ -10,7 +10,6 @@ interface CrmAuthContextType {
   isAuthenticated: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  initFirstAdmin: (data: { email: string; name: string; password?: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
 }
 
@@ -109,33 +108,6 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
   };
 
-  const initFirstAdmin = async (data: { email: string; name: string; password?: string; phone?: string }): Promise<{ success: boolean; error?: string }> => {
-    setError(null);
-    try {
-      const res = await fetch('/api/crm/auth/init-first-admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      const resData = await res.json().catch(() => ({}));
-      if (!res.ok || !resData.success) {
-        const errMsg = resData.error || 'Failed to initialize first admin.';
-        setError(errMsg);
-        return { success: false, error: errMsg };
-      }
-      setUser(resData.user);
-      localStorage.setItem('royal_epic_crm_session', JSON.stringify({
-        token: resData.token || 'crm_admin_' + Date.now(),
-        user: resData.user
-      }));
-      return { success: true };
-    } catch (err: any) {
-      const msg = err.message || 'Network error initializing admin';
-      setError(msg);
-      return { success: false, error: msg };
-    }
-  };
-
   const clearError = () => setError(null);
 
   const isAdmin = user?.role === 'admin';
@@ -153,7 +125,6 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isAuthenticated,
         login,
         logout,
-        initFirstAdmin,
         clearError
       }}
     >

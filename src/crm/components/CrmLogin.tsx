@@ -1,25 +1,16 @@
 import React, { useState } from 'react';
 import { useCrmAuth } from '../CrmAuthContext';
-import { Phone, Lock, Mail, Shield, UserCheck, AlertCircle, ArrowLeft, KeyRound } from 'lucide-react';
+import { Phone, Lock, Mail, Shield, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface CrmLoginProps {
   onBackToWebsite?: () => void;
 }
 
 export const CrmLogin: React.FC<CrmLoginProps> = ({ onBackToWebsite }) => {
-  const { login, initFirstAdmin, error, clearError } = useCrmAuth();
+  const { login, error } = useCrmAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showInitAdminModal, setShowInitAdminModal] = useState(false);
-
-  // Admin init form state
-  const [adminName, setAdminName] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminPhone, setAdminPhone] = useState('');
-  const [initError, setInitError] = useState<string | null>(null);
-  const [isInitSubmitting, setIsInitSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,39 +18,6 @@ export const CrmLogin: React.FC<CrmLoginProps> = ({ onBackToWebsite }) => {
     setIsSubmitting(true);
     await login(email, password);
     setIsSubmitting(false);
-  };
-
-  const handleInitAdminSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminEmail.trim() || !adminName.trim() || !adminPassword.trim()) {
-      setInitError('Please fill in all required fields.');
-      return;
-    }
-    setInitError(null);
-    setIsInitSubmitting(true);
-    const res = await initFirstAdmin({
-      email: adminEmail,
-      name: adminName,
-      password: adminPassword,
-      phone: adminPhone
-    });
-    setIsInitSubmitting(false);
-    if (!res.success) {
-      setInitError(res.error || 'Failed to initialize admin.');
-    } else {
-      setShowInitAdminModal(false);
-    }
-  };
-
-  const setDemoCredentials = (role: 'admin' | 'telecaller') => {
-    clearError();
-    if (role === 'admin') {
-      setEmail('admin@royalepicinterior.com');
-      setPassword('Admin@RoyalEpic2026');
-    } else {
-      setEmail('telecaller1@royalepicinterior.com');
-      setPassword('Tele@RoyalEpic2026');
-    }
   };
 
   return (
@@ -162,51 +120,6 @@ export const CrmLogin: React.FC<CrmLoginProps> = ({ onBackToWebsite }) => {
               )}
             </button>
           </form>
-
-          {/* Preset Roles Helper */}
-          <div className="mt-6 pt-5 border-t border-neutral-800">
-            <div className="flex items-center justify-between text-xs text-neutral-400 mb-2.5">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">Quick Test Credentials:</span>
-              <span className="text-[10px] text-amber-500/80 font-mono">MVP Sandbox</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('admin')}
-                className="py-2 px-3 bg-neutral-950/70 hover:bg-neutral-800 border border-neutral-700/80 rounded-lg text-left text-xs transition flex items-center gap-2 group cursor-pointer"
-              >
-                <Shield className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="font-medium text-white text-[11px]">Admin Role</div>
-                  <div className="text-[9px] text-neutral-400 font-mono">Full Permissions</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('telecaller')}
-                className="py-2 px-3 bg-neutral-950/70 hover:bg-neutral-800 border border-neutral-700/80 rounded-lg text-left text-xs transition flex items-center gap-2 group cursor-pointer"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="font-medium text-white text-[11px]">Telecaller Role</div>
-                  <div className="text-[9px] text-neutral-400 font-mono">Calling & Leads</div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* First-Time Admin Setup Trigger */}
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setShowInitAdminModal(true)}
-              className="text-xs text-neutral-400 hover:text-amber-300 font-mono transition flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-amber-500" />
-              <span>Configure New Admin Account</span>
-            </button>
-          </div>
         </div>
 
         {/* Security & Scope Footer Note */}
@@ -215,102 +128,6 @@ export const CrmLogin: React.FC<CrmLoginProps> = ({ onBackToWebsite }) => {
           <p className="font-mono text-[10px] text-neutral-400">Host: tele.royalepicinteriors.com</p>
         </div>
       </div>
-
-      {/* First-Time Admin Modal */}
-      {showInitAdminModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl relative">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-4">
-              <div className="flex items-center gap-2 text-amber-400 font-serif font-bold text-lg">
-                <Shield className="w-5 h-5" />
-                <span>Initialize CRM Administrator</span>
-              </div>
-              <button
-                onClick={() => setShowInitAdminModal(false)}
-                className="text-neutral-400 hover:text-white text-sm"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
-              Use this procedure to securely register or activate your primary CRM administrator account with role <code>admin</code>.
-            </p>
-
-            {initError && (
-              <div className="mb-4 bg-red-950/50 border border-red-800 p-3 rounded-lg text-xs text-red-200">
-                {initError}
-              </div>
-            )}
-
-            <form onSubmit={handleInitAdminSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-mono uppercase text-neutral-400 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={adminName}
-                  onChange={(e) => setAdminName(e.target.value)}
-                  placeholder="e.g. Royal Epic Admin"
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-sm text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase text-neutral-400 mb-1">Work Email</label>
-                <input
-                  type="email"
-                  required
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="admin@royalepicinterior.com"
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-sm text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase text-neutral-400 mb-1">Phone (Optional)</label>
-                <input
-                  type="tel"
-                  value={adminPhone}
-                  onChange={(e) => setAdminPhone(e.target.value)}
-                  placeholder="+91 99166 33338"
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-sm text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase text-neutral-400 mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Minimum 6 characters"
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-sm text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowInitAdminModal(false)}
-                  className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-xs font-mono rounded-lg transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isInitSubmitting}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs rounded-lg transition"
-                >
-                  {isInitSubmitting ? 'Creating Admin...' : 'Create & Sign In'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

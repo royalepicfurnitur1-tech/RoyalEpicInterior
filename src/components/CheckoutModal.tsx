@@ -468,7 +468,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <label className="block text-xs font-medium text-neutral-300 mb-1">PIN Code *</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. 560077" 
+                  placeholder="e.g. 560045" 
                   required
                   value={formData.pincode} 
                   onChange={e => setFormData({...formData, pincode: e.target.value})} 

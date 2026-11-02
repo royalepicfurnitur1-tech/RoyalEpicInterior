@@ -135,10 +135,10 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
   }, [pageData]);
 
   return (
-    <div className="w-full bg-white text-neutral-900 min-h-screen">
+    <div className="w-full bg-[#A8A492] text-neutral-900 min-h-screen">
       
       {/* 1. Breadcrumb Navigation */}
-      <nav aria-label="Breadcrumb" className="bg-neutral-100 py-3 border-b border-neutral-200 text-xs">
+      <nav aria-label="Breadcrumb" className="bg-[#9E9A88]/30 py-3 border-b border-[#928E7D] text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center flex-wrap gap-2 text-neutral-600">
           {pageData.breadcrumbs.map((item, idx) => (
             <React.Fragment key={item.url + idx}>
@@ -227,7 +227,7 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
       </section>
 
       {/* 3. Metrics Banner */}
-      <section className="py-8 bg-neutral-50 border-b border-neutral-200">
+      <section className="py-8 bg-[#9E9A88]/25 border-b border-[#928E7D]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div className="p-4 bg-white rounded-xl shadow-sm border border-neutral-200/80">
             <span className="text-2xl sm:text-3xl font-serif font-bold text-neutral-900 font-mono">15 Years</span>

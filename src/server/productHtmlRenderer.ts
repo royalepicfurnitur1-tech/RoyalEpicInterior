@@ -534,8 +534,8 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
           <!-- Business Contact Information -->
           <div style="margin-top: 40px; padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 14px; color: #374151; line-height: 1.8;">
             <h3 style="font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">Official Business Information</h3>
-            <p style="margin: 0;"><strong>Company:</strong> Royal Epic Interior &amp; Furniture Ltd.</p>
-            <p style="margin: 0;"><strong>Factory &amp; Studio Address:</strong> No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru, Karnataka 560077</p>
+            <p style="margin: 0;"><strong>Company:</strong> Royal Epic Commercial &amp; Home Interiors</p>
+            <p style="margin: 0;"><strong>Factory &amp; Studio Address:</strong> No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</p>
             <p style="margin: 0;"><strong>Official Phone:</strong> +91 99166 33338 / +91 96063 56839</p>
             <p style="margin: 0;"><strong>Email Support:</strong> enquiry@royalepicinterior.com</p>
           </div>
@@ -611,22 +611,22 @@ export function injectHomepageIntoHtml(templateHtml: string, products: any[]): s
         </header>
 
         <!-- Hero Section -->
-        <section style="background: #fdfaf6; border-bottom: 1px solid #f3ebe1; padding: 48px 24px;">
+        <section style="background: #0f0d0b; color: #ffffff; border-bottom: 1px solid #27221d; padding: 56px 24px;">
           <div style="max-width: 1280px; margin: 0 auto;">
-            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #b45309; display: block; margin-bottom: 8px;">
-              Manufacturing Excellence • Thanisandra, Bengaluru
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.22em; color: #d4af37; display: block; margin-bottom: 12px;">
+              PREMIUM INTERIORS &amp; FURNITURE
             </span>
-            <h1 style="font-size: 38px; font-weight: 800; color: #111827; margin: 0 0 16px 0; line-height: 1.2;">
-              Luxury Turnkey Interiors, Modular Kitchens &amp; Handcrafted Furniture
+            <h1 style="font-size: 42px; font-weight: 500; font-style: italic; font-family: 'Playfair Display', Georgia, serif; color: #ffffff; margin: 0 0 16px 0; line-height: 1.15;">
+              Designing Elegant Spaces for Modern Living
             </h1>
-            <p style="font-size: 17px; line-height: 1.6; color: #4b5563; max-width: 800px; margin: 0 0 24px 0;">
-              Royal Epic Interior &amp; Furniture operates an advanced manufacturing facility and interior design studio in Bengaluru. We specialize in precision modular kitchens, luxury sliding wardrobes, solid onyx &amp; marble dining tables, acoustic sound-absorbing wall panels, and factory-tested WPC waterproof doors.
+            <p style="font-size: 18px; line-height: 1.6; color: #d1d5db; max-width: 800px; margin: 0 0 24px 0;">
+              Bespoke Furniture, Doors &amp; Complete Interior Solutions for Homes and Businesses.
             </p>
             <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-              <a href="/products" style="background: #b45309; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
-                Explore 85+ Factory Products
+              <a href="/products" style="background: linear-gradient(to right, #c29645, #9e732e); color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+                Get Callback &bull; Free Consultation
               </a>
-              <a href="/contact-us" style="background: #ffffff; color: #111827; border: 1px solid #d1d5db; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+              <a href="/contact-us" style="background: #1f1b18; color: #ffffff; border: 1px solid #443c34; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
                 Consult an Architect (+91 99166 33338)
               </a>
             </div>
@@ -660,8 +660,8 @@ export function injectHomepageIntoHtml(templateHtml: string, products: any[]): s
         <footer style="background: #111827; color: #9ca3af; padding: 48px 24px 24px; border-top: 1px solid #1f2937;">
           <div style="max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 32px; font-size: 13px;">
             <div>
-              <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 12px 0;">Royal Epic Interior &amp; Furniture Ltd.</h4>
-              <p style="line-height: 1.6; margin: 0 0 8px 0;">Factory &amp; Studio: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru, Karnataka 560077</p>
+              <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 12px 0;">Royal Epic Commercial &amp; Home Interiors</h4>
+              <p style="line-height: 1.6; margin: 0 0 8px 0;">Factory &amp; Studio: No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</p>
               <p style="margin: 0 0 4px 0;">Phone: <strong style="color: #ffffff;">+91 99166 33338</strong> / +91 96063 56839</p>
               <p style="margin: 0;">Email: <strong style="color: #ffffff;">enquiry@royalepicinterior.com</strong></p>
             </div>

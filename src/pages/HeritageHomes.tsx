@@ -115,7 +115,7 @@ export const HeritageHomes: React.FC<HeritageHomesProps> = ({ onNavigate, onRequ
   };
 
   return (
-    <div className="bg-[#fcfbf7] text-neutral-900 min-h-screen selection:bg-amber-500 selection:text-black">
+    <div className="bg-[#A8A492] text-neutral-900 min-h-screen selection:bg-amber-500 selection:text-black">
       
       {/* Schema.org Structured Data for SEO */}
       <script

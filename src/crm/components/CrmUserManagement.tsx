@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const CrmUserManagement: React.FC = () => {
-  const { isAdmin, initFirstAdmin } = useCrmAuth();
+  const { isAdmin } = useCrmAuth();
   const [users, setUsers] = useState<CrmUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

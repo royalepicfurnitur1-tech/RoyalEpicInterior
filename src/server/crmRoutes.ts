@@ -283,8 +283,8 @@ function extractUserFromReq(req: Request): ServerCrmUser | null {
     if (found && found.status === 'active') return found;
   }
 
-  // Default fallback for development/demo ease
-  return Object.values(dbCrmUsers).find(u => u.role === 'admin') || null;
+  // No unauthenticated fallback: caller must present valid credentials
+  return null;
 }
 
 // =========================================================================
@@ -345,48 +345,12 @@ crmRouter.post('/auth/logout', (_req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// POST /api/crm/auth/init-first-admin
-crmRouter.post('/auth/init-first-admin', (req: Request, res: Response) => {
-  try {
-    const { email, name, password, phone } = req.body;
-    if (!email || !name || !password) {
-      return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
-    }
-
-    const normEmail = email.trim().toLowerCase();
-    const existing = dbCrmUsers[normEmail];
-    if (existing) {
-      existing.role = 'admin';
-      existing.name = name.trim();
-      existing.password = password;
-      if (phone) existing.phone = phone.trim();
-      saveUsers();
-      const safe = { ...existing };
-      delete safe.password;
-      return res.json({ success: true, user: safe, token: `crm_admin_${existing.id}_${Date.now()}` });
-    }
-
-    const newAdmin: ServerCrmUser = {
-      id: `crm_admin_${Date.now()}`,
-      email: normEmail,
-      name: name.trim(),
-      phone: phone?.trim() || '',
-      password,
-      role: 'admin',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    dbCrmUsers[normEmail] = newAdmin;
-    saveUsers();
-
-    const safe = { ...newAdmin };
-    delete safe.password;
-    res.json({ success: true, user: safe, token: `crm_admin_${newAdmin.id}_${Date.now()}` });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Failed to initialize admin' });
-  }
+// POST /api/crm/auth/init-first-admin (Disabled for production security)
+crmRouter.post('/auth/init-first-admin', (_req: Request, res: Response) => {
+  res.status(403).json({
+    success: false,
+    error: 'Administrator self-registration is disabled for production security. Accounts must be provisioned by an authenticated administrator.'
+  });
 });
 
 // =========================================================================

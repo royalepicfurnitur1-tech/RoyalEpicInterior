@@ -245,7 +245,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const handleDownloadBrochure = () => {
     const blob = new Blob(
-      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338\nAddress: No. 169, Anjanadri Badavana, Rachenahalli, Thanisandra, Bengaluru`],
+      [`ROYAL EPIC COMMERCIAL & HOME INTERIORS\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338\nAddress: No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
@@ -275,10 +275,10 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     .slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900">
+    <div className="min-h-screen bg-[#A8A492] text-neutral-900">
       
       {/* 1. BREADCRUMBS BAR */}
-      <div className="bg-neutral-50 border-b border-neutral-200 py-3.5 px-4 sm:px-6 lg:px-8">
+      <div className="bg-[#9E9A88]/30 border-b border-[#928E7D] py-3.5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-neutral-500 overflow-x-auto whitespace-nowrap">
           <button 
             onClick={() => onNavigate('/')}

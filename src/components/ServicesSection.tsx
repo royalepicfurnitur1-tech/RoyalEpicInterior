@@ -76,7 +76,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
     : ALL_SERVICE_ITEMS.filter(s => s.category === selectedFilter);
 
   return (
-    <section className="py-20 sm:py-28 bg-[#FBFBFA] text-stone-900 relative overflow-hidden" id="services">
+    <section className="py-20 sm:py-28 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="services">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* ========================================================================= */}
