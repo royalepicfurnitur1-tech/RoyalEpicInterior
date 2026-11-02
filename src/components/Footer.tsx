@@ -49,15 +49,15 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
   ];
 
   const productLinks = [
-    { label: 'Main Entrance Doors', path: '/products/main-entrance-doors' },
-    { label: 'WPC Bathroom Doors', path: '/products/wpc-bathroom-doors' },
-    { label: 'Modular Kitchen Units', path: '/products/modular-kitchens' },
-    { label: 'Sliding Wardrobes', path: '/products/sliding-wardrobes' },
-    { label: 'TV Console Units', path: '/products/tv-units' },
-    { label: 'Chesterfield Sofas', path: '/products/sofas' },
-    { label: 'Onyx Dining Tables', path: '/products/dining-tables' },
-    { label: 'Commercial Equipment', path: '/products/kitchen-equipment' },
-    { label: 'Glass Partitions', path: '/products/glass-partitions' }
+    { label: 'All Products & Collections', path: '/products' },
+    { label: 'Living Room Interiors', path: '/products?category=living-room-interiors' },
+    { label: 'Modular Kitchen Units', path: '/products?category=modular-kitchen' },
+    { label: 'Bedroom & Wardrobes', path: '/products?category=bedroom-interiors' },
+    { label: 'Bathroom Doors & Vanities', path: '/products?category=bathroom-interiors' },
+    { label: 'Pooja Room Mandirs', path: '/products?category=pooja-room-interiors' },
+    { label: 'Modular Interiors', path: '/products?category=modular-interiors' },
+    { label: 'Onyx Dining Tables', path: '/products?category=dining-tables' },
+    { label: 'Commercial Equipment', path: '/products?category=commercial-kitchen-equipment' }
   ];
 
   const galleryLinks = [

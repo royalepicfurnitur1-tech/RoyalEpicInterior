@@ -169,22 +169,22 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                       </a>
                       <a
-                        href="/products/dining-tables"
+                        href="/products?category=living-room-interiors"
                         onClick={(e) => {
                           e.preventDefault();
-                          handleNavClick('products', '/products');
+                          handleNavClick('products', '/products?category=living-room-interiors');
                         }}
                         className="block px-3 py-2 rounded-xl hover:bg-neutral-800/60 transition-colors"
                       >
                         <span className="text-xs text-neutral-300 hover:text-amber-400 block">
-                          Italian Marble & Onyx Dining Tables
+                          Living Room Interiors & Sofas
                         </span>
                       </a>
                       <a
-                        href="/products/modular-kitchens"
+                        href="/products?category=modular-kitchen"
                         onClick={(e) => {
                           e.preventDefault();
-                          handleNavClick('products', '/products');
+                          handleNavClick('products', '/products?category=modular-kitchen');
                         }}
                         className="block px-3 py-2 rounded-xl hover:bg-neutral-800/60 transition-colors"
                       >
@@ -193,15 +193,27 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                       </a>
                       <a
-                        href="/products/wpc-bathroom-doors"
+                        href="/products?category=bedroom-interiors"
                         onClick={(e) => {
                           e.preventDefault();
-                          handleNavClick('products', '/products');
+                          handleNavClick('products', '/products?category=bedroom-interiors');
                         }}
                         className="block px-3 py-2 rounded-xl hover:bg-neutral-800/60 transition-colors"
                       >
                         <span className="text-xs text-neutral-300 hover:text-amber-400 block">
-                          WPC Waterproof Doors & Panels
+                          Bedroom Interiors & Wardrobes
+                        </span>
+                      </a>
+                      <a
+                        href="/products?category=dining-tables"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleNavClick('products', '/products?category=dining-tables');
+                        }}
+                        className="block px-3 py-2 rounded-xl hover:bg-neutral-800/60 transition-colors"
+                      >
+                        <span className="text-xs text-neutral-300 hover:text-amber-400 block">
+                          Italian Marble & Onyx Dining Tables
                         </span>
                       </a>
                     </div>

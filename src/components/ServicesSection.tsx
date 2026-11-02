@@ -1,24 +1,76 @@
 import React, { useState, useRef } from 'react';
 import { SERVICES_DATA } from '../data/mockData';
 import { ServiceCategory } from '../types';
+import {
+  RESIDENTIAL_SUBCATEGORIES,
+  COMMERCIAL_SUBCATEGORIES,
+  RESTAURANT_SUBCATEGORIES,
+  CategoryDefinition
+} from '../utils/categoryResolver';
 import { 
   Home, Building2, UtensilsCrossed, ChefHat, Flame, DoorClosed, 
-  Check, ArrowRight, ShieldCheck, Sparkles, Wrench, Layers,
-  Compass, Award, Clock, ShieldAlert, Cpu, ChevronLeft, ChevronRight
+  Check, ArrowRight, ShieldCheck, Sparkles, Layers,
+  Compass, Award, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ServicesSectionProps {
   onRequestQuote: (serviceTitle: string) => void;
+  onNavigateToCategory: (categorySlug: string) => void;
   showDirectory?: boolean;
 }
 
+const SECTION_DROPDOWN_MAP: Record<string, CategoryDefinition[]> = {
+  'serv-1': RESIDENTIAL_SUBCATEGORIES,
+  'serv-2': COMMERCIAL_SUBCATEGORIES,
+  'serv-3': RESTAURANT_SUBCATEGORIES,
+  'serv-4': [
+    {
+      id: 'kitch-1',
+      name: 'Modular Kitchen Layouts',
+      slug: 'modular-kitchen',
+      matchProduct: () => true
+    },
+    {
+      id: 'kitch-2',
+      name: 'Kitchen & Breakfast Counters',
+      slug: 'kitchen-service-counters',
+      matchProduct: () => true
+    }
+  ],
+  'serv-5': [
+    {
+      id: 'equip-1',
+      name: 'Commercial Kitchen & Service Counters',
+      slug: 'kitchen-service-counters',
+      matchProduct: () => true
+    }
+  ],
+  'serv-6': [
+    {
+      id: 'doors-1',
+      name: 'Main Entrance Doors',
+      slug: 'doors',
+      matchProduct: () => true
+    },
+    {
+      id: 'doors-2',
+      name: 'WPC Waterproof Bathroom Doors',
+      slug: 'bathroom',
+      matchProduct: () => true
+    }
+  ]
+};
+
 export const ServicesSection: React.FC<ServicesSectionProps> = ({ 
-  onRequestQuote, 
-  showDirectory = true 
+  onRequestQuote,
+  onNavigateToCategory,
+  showDirectory = false 
 }) => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [activeModalService, setActiveModalService] = useState<ServiceCategory | null>(null);
+  const [openDropdownServiceId, setOpenDropdownServiceId] = useState<string | null>(null);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollServices = (direction: 'left' | 'right') => {
@@ -26,6 +78,18 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
       const scrollAmount = direction === 'left' ? -380 : 380;
       scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
+  };
+
+  const handleToggleDropdown = (serviceId: string) => {
+    setOpenDropdownServiceId(prev => (prev === serviceId ? null : serviceId));
+  };
+
+  const handleSubcategoryClick = (slug: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    onNavigateToCategory(slug);
   };
 
   const iconMap: Record<string, React.ReactNode> = {
@@ -76,14 +140,11 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
     : ALL_SERVICE_ITEMS.filter(s => s.category === selectedFilter);
 
   return (
-    <section className="py-20 sm:py-28 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="services">
+    <section className="py-20 sm:py-24 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="services">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
-        {/* ========================================================================= */}
-        {/* ARCHITECTURAL TRUST PILLARS BAR (Directly below intro animation)          */}
-        {/* Material Depot-inspired clean reassurance markers for homeowners & pros  */}
-        {/* ========================================================================= */}
-        <div className="mb-20 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Architectural Trust Pillars Bar */}
+        <div className="mb-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 transition-colors">
             <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200/60">
               <Building2 className="w-5 h-5 text-amber-700" />
@@ -145,7 +206,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
           </div>
           <div className="flex items-center gap-4">
             <p className="text-sm text-stone-600 max-w-sm hidden sm:block leading-relaxed">
-              Precision manufacturing, bespoke 3D interior design, and turnkey execution.
+              Click any interior division below to view subcategories and explore products directly on our Products page.
             </p>
             {/* Scroll Navigation Arrows */}
             <div className="flex items-center gap-2 shrink-0">
@@ -169,87 +230,173 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
           </div>
         </div>
 
-        {/* Major Service Category Cards in a Single Horizontal Scrolling Line */}
+        {/* Major Service Category Cards with Clean Text-Based Dropdowns */}
         <div 
           ref={scrollContainerRef}
-          className={`flex gap-6 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory scroll-smooth no-scrollbar ${showDirectory ? 'mb-20' : 'mb-0'}`}
+          className="flex gap-6 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory scroll-smooth no-scrollbar mb-8"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          {SERVICES_DATA.map((service) => (
-            <motion.div
-              key={service.id}
-              whileHover={{ y: -6 }}
-              className="min-w-[300px] sm:min-w-[360px] md:min-w-[380px] max-w-[380px] shrink-0 snap-start bg-white border border-stone-200/90 rounded-3xl overflow-hidden flex flex-col justify-between hover:border-amber-400/70 hover:shadow-xl transition-all duration-300 group"
-            >
-              <div>
-                {/* Image Banner Header */}
-                <div className="relative h-52 sm:h-56 w-full overflow-hidden bg-stone-100">
-                  <img
-                    src={service.image}
-                    alt={service.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  
-                  <div className="absolute top-4 left-4 p-2.5 rounded-xl bg-white/95 backdrop-blur-md text-amber-700 shadow-sm border border-stone-200/60">
-                    {iconMap[service.iconName] || <Sparkles className="w-5 h-5 text-amber-700" />}
+          {SERVICES_DATA.map((service) => {
+            const isDropdownOpen = openDropdownServiceId === service.id;
+            const subcategories = SECTION_DROPDOWN_MAP[service.id] || [];
+
+            return (
+              <div
+                key={service.id}
+                className={`min-w-[300px] sm:min-w-[360px] md:min-w-[380px] max-w-[380px] shrink-0 snap-start bg-white rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 group border ${
+                  isDropdownOpen
+                    ? 'border-amber-600 shadow-xl ring-2 ring-amber-400/20'
+                    : 'border-stone-200/90 hover:border-amber-400/70 hover:shadow-lg'
+                }`}
+              >
+                <div>
+                  {/* Image Banner Header */}
+                  <div 
+                    onClick={() => handleToggleDropdown(service.id)}
+                    className="relative h-52 sm:h-56 w-full overflow-hidden bg-stone-100 cursor-pointer"
+                  >
+                    <img
+                      src={service.image}
+                      alt={service.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+                    
+                    <div className="absolute top-4 left-4 p-2.5 rounded-xl bg-white/95 backdrop-blur-md text-amber-700 shadow-sm border border-stone-200/60">
+                      {iconMap[service.iconName] || <Sparkles className="w-5 h-5 text-amber-700" />}
+                    </div>
+
+                    <span className="absolute top-4 right-4 text-[10px] uppercase font-bold text-stone-900 bg-white/95 px-3 py-1 rounded-full font-mono shadow-sm">
+                      ISO Certified
+                    </span>
+
+                    <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-2">
+                      <h3 className="text-xl font-serif font-bold text-white group-hover:text-amber-300 transition-colors drop-shadow-sm">
+                        {service.title}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleDropdown(service.id);
+                        }}
+                        aria-expanded={isDropdownOpen}
+                        aria-controls={`dropdown-list-${service.id}`}
+                        aria-label={isDropdownOpen ? `Close ${service.title} subcategories` : `Open ${service.title} subcategories`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                          isDropdownOpen
+                            ? 'bg-amber-500 text-stone-950 rotate-180'
+                            : 'bg-white/20 backdrop-blur-md text-white hover:bg-white hover:text-stone-900'
+                        }`}
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
-                  <span className="absolute top-4 right-4 text-[10px] uppercase font-bold text-stone-900 bg-white/95 px-3 py-1 rounded-full font-mono shadow-sm">
-                    ISO Certified
-                  </span>
+                  <div className="p-6">
+                    <p className="text-xs text-stone-600 mb-4 line-clamp-2 leading-relaxed">
+                      {service.description}
+                    </p>
 
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-xl font-serif font-bold text-white group-hover:text-amber-300 transition-colors drop-shadow-sm">
-                      {service.title}
-                    </h3>
+                    {/* Subservice checklist */}
+                    <div className="space-y-1.5 mb-2 bg-stone-50/80 p-3 rounded-2xl border border-stone-100">
+                      {service.subservices.slice(0, 3).map((sub, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-stone-700">
+                          <Check className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                          <span className="truncate font-medium">{sub}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Simple Text-Based Dropdown Menu */}
+                    <AnimatePresence>
+                      {isDropdownOpen && (
+                        <motion.div
+                          id={`dropdown-list-${service.id}`}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="mt-4 pt-3 border-t border-stone-200 overflow-hidden"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-mono uppercase font-bold tracking-wider text-amber-800">
+                              Subcategories ({subcategories.length}):
+                            </span>
+                            <span className="text-[10px] text-stone-400">
+                              Click to view on Products page
+                            </span>
+                          </div>
+
+                          <ul className="space-y-1 text-xs">
+                            {subcategories.map((sub) => (
+                              <li key={sub.id}>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleSubcategoryClick(sub.slug, e)}
+                                  className="w-full text-left py-2 px-3 rounded-xl text-stone-700 hover:text-amber-800 hover:bg-amber-50 font-medium transition-colors flex items-center justify-between group/link cursor-pointer"
+                                >
+                                  <span className="truncate">{sub.name}</span>
+                                  <ArrowRight className="w-3.5 h-3.5 text-stone-400 group-hover/link:text-amber-700 group-hover/link:translate-x-0.5 transition-all shrink-0" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
-                <div className="p-6">
-                  <p className="text-xs text-stone-600 mb-5 line-clamp-2 leading-relaxed">
-                    {service.description}
-                  </p>
-
-                  {/* Subservice checklist */}
-                  <div className="space-y-2 mb-2 bg-stone-50/80 p-3.5 rounded-2xl border border-stone-100">
-                    {service.subservices.slice(0, 4).map((sub, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-xs text-stone-700">
-                        <Check className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                        <span className="truncate font-medium">{sub}</span>
-                      </div>
-                    ))}
-                    {service.subservices.length > 4 && (
-                      <p className="text-[11px] text-amber-800 font-semibold pl-5 pt-0.5">
-                        +{service.subservices.length - 4} More Specialty Offerings
-                      </p>
+                {/* Card Footer Bar */}
+                <div className="px-6 pb-6 pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleDropdown(service.id)}
+                    aria-expanded={isDropdownOpen}
+                    className="text-xs font-bold text-stone-900 hover:text-amber-700 flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    {isDropdownOpen ? (
+                      <>
+                        <span>Close Menu</span>
+                        <ChevronUp className="w-3.5 h-3.5 text-amber-600" />
+                      </>
+                    ) : (
+                      <>
+                        <span>Subcategories</span>
+                        <ChevronDown className="w-3.5 h-3.5 text-amber-600" />
+                      </>
                     )}
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveModalService(service)}
+                      className="text-xs text-stone-500 hover:text-stone-800 underline transition-colors cursor-pointer"
+                      title="View specifications"
+                    >
+                      Specs
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRequestQuote(service.title)}
+                      className="px-3.5 py-1.5 rounded-xl bg-stone-900 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+                    >
+                      Quote
+                    </button>
                   </div>
                 </div>
               </div>
-
-              <div className="px-6 pb-6 pt-3 border-t border-stone-100 flex items-center justify-between">
-                <button
-                  onClick={() => setActiveModalService(service)}
-                  className="text-xs font-bold text-stone-900 hover:text-amber-700 flex items-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  View Full Details <ArrowRight className="w-3.5 h-3.5 text-amber-600" />
-                </button>
-                <button
-                  onClick={() => onRequestQuote(service.title)}
-                  className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
-                >
-                  Request Quote
-                </button>
-              </div>
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Filterable Service Directory Grid */}
+        {/* Directory Grid (Only shown if showDirectory is true) */}
         {showDirectory && (
-          <div className="bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-10 shadow-sm">
+          <div className="bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-10 shadow-sm mt-12">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 pb-6 border-b border-stone-100">
               <div>
                 <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-1">
@@ -258,7 +405,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
                 <h3 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 flex items-center gap-2">
                   <Layers className="w-5 h-5 text-amber-700" /> Complete Architectural & Interior Directory
                 </h3>
-                <p className="text-xs text-stone-500 mt-1">Browse 30+ turnkey manufacturing divisions and specialized fit-out modules</p>
+                <p className="text-xs text-stone-500 mt-1">Browse turnkey manufacturing divisions and specialized fit-out modules</p>
               </div>
 
               {/* Filter Tabs */}
@@ -286,14 +433,13 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
               </div>
             </div>
 
-            {/* Directory Items Grid with Images in Every Column */}
+            {/* Directory Items Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredServices.map((item, index) => (
                 <div
                   key={index}
                   className="p-3.5 rounded-2xl bg-stone-50/70 border border-stone-200/80 hover:border-amber-400/80 flex items-center gap-3.5 group transition-all hover:bg-white hover:shadow-md"
                 >
-                  {/* Service Column Image Thumbnail */}
                   <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-stone-200 relative bg-stone-100">
                     <img
                       src={item.image}

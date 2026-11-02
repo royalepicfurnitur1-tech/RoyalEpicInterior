@@ -7,11 +7,17 @@ import {
   Search, SlidersHorizontal, Heart, ShoppingBag, Eye, Box, 
   Rotate3d, Star, Sparkles, Check, FileText, Filter,
   ChefHat, Table, Grid, Printer, Download, Image as ImageIcon, X, ShieldCheck,
-  ChevronLeft, ChevronRight, ArrowRight, Layers, Award, Sparkle
+  ChevronLeft, ChevronRight, ArrowRight, Layers, Award, Sparkle, PackageOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getCategories, DEFAULT_CATEGORIES } from '../services/productManagementService';
 import { formatProductPrice } from '../utils/priceFormatter';
+import {
+  matchProductToSelectedCategory,
+  resolveCategoryDefinition,
+  RESIDENTIAL_SUBCATEGORIES,
+  slugify
+} from '../utils/categoryResolver';
 
 interface ProductCatalogProps {
   products?: Product[];
@@ -149,7 +155,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   }, []);
 
   useEffect(() => {
-    if (initialCategory && initialCategory !== selectedCategory) {
+    if (initialCategory !== undefined && initialCategory !== selectedCategory) {
       setSelectedCategory(initialCategory);
     }
   }, [initialCategory]);
@@ -178,9 +184,23 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     };
   }, []);
 
+  const selectedCategoryDef = useMemo(() => {
+    return resolveCategoryDefinition(selectedCategory);
+  }, [selectedCategory]);
+
+  const selectedCategoryTitle = selectedCategoryDef ? selectedCategoryDef.name : selectedCategory;
+
   const categories = useMemo(() => {
     const list = ['All'];
     const seen = new Set<string>(['All']);
+
+    // Always include the exact 6 Residential Categories as top pills
+    RESIDENTIAL_SUBCATEGORIES.forEach((cat) => {
+      if (!seen.has(cat.name)) {
+        seen.add(cat.name);
+        list.push(cat.name);
+      }
+    });
 
     supabaseCategories.forEach((name) => {
       if (name && !seen.has(name)) {
@@ -240,27 +260,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const filteredProducts = useMemo(() => {
     return allDeduplicatedProducts.filter((p) => {
       const matchesSearch = 
+        !searchQuery.trim() ||
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesCategory = 
-        selectedCategory === 'All' || 
-        p.category === selectedCategory ||
-        (selectedCategory === 'Sofas' && (
-          p.category === 'Luxury Sofas & Sectionals' || 
-          p.category === 'Living Room Luxury' || 
-          p.name.toLowerCase().includes('sofa')
-        )) ||
-        (selectedCategory === 'Main Entrance Doors' && (
-          p.category === 'Doors' || 
-          p.name.toLowerCase().includes('main entrance door')
-        )) ||
-        (selectedCategory === 'WPC Bathroom Doors' && (
-          p.category === 'WPC Waterproof Doors' || 
-          p.category === 'WPC Bathroom Doors' || 
-          p.name.toLowerCase().includes('wpc')
-        ));
+      const matchesCategory = matchProductToSelectedCategory(p, selectedCategory);
       const matchesPrice = p.price <= priceMax;
 
       return matchesSearch && matchesCategory && matchesPrice;
@@ -286,6 +291,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   const handleCategorySelect = (cat: string) => {
     setSelectedCategory(cat);
+    const def = resolveCategoryDefinition(cat);
+    const slug = def ? def.slug : (cat === 'All' ? '' : slugify(cat));
+    const targetUrl = slug ? `/products?category=${slug}` : '/products';
+    window.history.pushState({}, '', targetUrl);
     if (cat === 'Kitchen Equipment') {
       setViewMode('equipment-table');
     } else {
@@ -665,25 +674,66 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             </div>
           )}
 
+          {/* Mode B: Active Category Banner */}
+          {selectedCategory !== 'All' && (
+            <div className="mb-6 p-4 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-800 flex items-center justify-center shrink-0 border border-amber-500/20">
+                  <Filter className="w-4 h-4 text-amber-700" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase font-bold text-amber-800 tracking-wider block">
+                    Active Category
+                  </span>
+                  <h4 className="text-base font-serif font-bold text-stone-900">
+                    {selectedCategoryTitle}
+                  </h4>
+                </div>
+                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                  {filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}
+                </span>
+              </div>
+
+              <button
+                onClick={() => handleCategorySelect('All')}
+                className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-amber-600 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              >
+                <span>View All Products</span>
+                <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+              </button>
+            </div>
+          )}
+
           {/* VIEW MODE 1: E-STORE GRID */}
           {viewMode === 'grid' && (
             filteredProducts.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-3xl border border-stone-200 shadow-sm p-8">
-                <Filter className="w-12 h-12 text-stone-400 mx-auto mb-4" />
-                <h4 className="text-xl font-serif font-bold text-stone-900 mb-2">No matching products found</h4>
-                <p className="text-xs text-stone-500 mb-6 max-w-sm mx-auto">
-                  Try adjusting your budget slider, clearing your search query, or selecting another category.
+                <PackageOpen className="w-12 h-12 text-stone-400 mx-auto mb-4" />
+                <h4 className="text-xl font-serif font-bold text-stone-900 mb-2">
+                  No products are currently available in this category.
+                </h4>
+                <p className="text-xs text-stone-500 mb-6 max-w-sm mx-auto leading-relaxed">
+                  Products for this collection are being curated by our manufacturing unit. Explore all available products or request a custom quotation.
                 </p>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('All');
-                    setPriceMax(500000);
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-stone-900 text-white hover:bg-amber-600 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Reset All Filters
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      handleCategorySelect('All');
+                      setPriceMax(500000);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-stone-900 text-white hover:bg-amber-600 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+                  >
+                    <span>View All Products</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => onRequestQuote(selectedCategoryTitle)}
+                    className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
+                  >
+                    Request Custom Quote
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

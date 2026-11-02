@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PRODUCTS_DATA } from './data/mockData';
 import { getProducts, mapRowToProduct } from './services/productService';
 import { findProductBySlug, getProductSlug, findCategoryBySlug } from './utils/productSlug';
+import { resolveCategoryDefinition } from './utils/categoryResolver';
 import { SEO_PAGES } from './data/seoPages';
 import { SeoPageRenderer } from './components/SeoPageRenderer';
 import { Header } from './components/Header';
@@ -11,6 +12,7 @@ import { OurServicesPage } from './pages/OurServicesPage';
 import { HeroSection } from './components/HeroSection';
 import { ThreeHeroRing } from './components/ThreeHeroRing';
 import { ServicesSection } from './components/ServicesSection';
+import { ArchitecturalCollectionsShowcase } from './components/ArchitecturalCollectionsShowcase';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { PortfolioSection } from './components/PortfolioSection';
@@ -88,10 +90,35 @@ function getResolvedHostname(): string {
   return window.location.hostname.toLowerCase().trim();
 }
 
+function getInitialActiveTab(): ActiveTab {
+  if (typeof window === 'undefined') return 'home';
+  const path = window.location.pathname;
+  if (path === '/products' || path.startsWith('/products')) return 'products';
+  if (path === '/our-services' || path === '/services') return 'services';
+  if (path === '/portfolio' || path === '/projects') return 'portfolio';
+  if (path === '/gallery') return 'gallery';
+  if (path === '/blog') return 'blog';
+  if (path === '/admin') return 'admin';
+  if (path === '/customers' || path === '/customer') return 'customers';
+  if (path === '/track-order' || path === '/dashboard') return 'dashboard';
+  return 'home';
+}
+
+function getInitialProductCategory(): string {
+  if (typeof window === 'undefined') return 'All';
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get('category');
+    if (cat) return cat;
+  } catch (_) {}
+  return 'All';
+}
+
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [hostname, setHostname] = useState<string>(getResolvedHostname);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('home');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(getInitialActiveTab);
+  const [activeProductCategory, setActiveProductCategory] = useState<string>(getInitialProductCategory);
   const [products, setProducts] = useState(() => {
     if (typeof window !== 'undefined' && (window as any).__INITIAL_PRODUCT__) {
       try {
@@ -159,15 +186,49 @@ export default function App() {
 
   const navigateTo = (path: string) => {
     window.history.pushState({}, '', path);
-    setCurrentPath(path);
-    setHostname(getResolvedHostname());
+    try {
+      const url = new URL(path, window.location.origin);
+      setCurrentPath(url.pathname);
+      setHostname(getResolvedHostname());
+      const catParam = url.searchParams.get('category');
+      if (url.pathname === '/products') {
+        setActiveTab('products');
+        setActiveProductCategory(catParam || 'All');
+      } else if (url.pathname === '/') {
+        setActiveTab('home');
+      } else if (url.pathname === '/our-services' || url.pathname === '/services') {
+        setActiveTab('services');
+      } else if (url.pathname === '/portfolio' || url.pathname === '/projects') {
+        setActiveTab('portfolio');
+      }
+    } catch (_) {
+      setCurrentPath(path);
+    }
     window.scrollTo(0, 0);
+  };
+
+  const handleNavigateToCategory = (categorySlug: string) => {
+    navigateTo(`/products?category=${categorySlug}`);
+    setActiveTab('products');
+    setActiveProductCategory(categorySlug);
   };
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
+      const path = window.location.pathname;
+      setCurrentPath(path);
       setHostname(getResolvedHostname());
+      if (path === '/products') {
+        setActiveTab('products');
+        const params = new URLSearchParams(window.location.search);
+        setActiveProductCategory(params.get('category') || 'All');
+      } else if (path === '/') {
+        setActiveTab('home');
+      } else if (path === '/our-services' || path === '/services') {
+        setActiveTab('services');
+      } else if (path === '/portfolio' || path === '/projects') {
+        setActiveTab('portfolio');
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -606,6 +667,21 @@ export default function App() {
                 </div>
               );
             }
+            // If the slug actually refers to a category rather than a single product
+            const catDef = resolveCategoryDefinition(slug);
+            if (!productMatch && catDef) {
+              return (
+                <ProductCatalog
+                  products={products}
+                  initialCategory={slug}
+                  onSelectProduct={(p) => handleSelectProduct(p)}
+                  onAddToCart={(p) => handleAddToCart(p, 1)}
+                  onToggleWishlist={(p) => handleToggleWishlist(p)}
+                  wishlistIds={wishlistIds}
+                  onRequestQuote={(title) => handleOpenQuote(title)}
+                />
+              );
+            }
             return (
               <ProductDetailPage
                 product={productMatch || null}
@@ -632,15 +708,19 @@ export default function App() {
                 />
                 <ServicesSection 
                   onRequestQuote={(title) => handleOpenQuote(title)} 
+                  onNavigateToCategory={handleNavigateToCategory}
                   showDirectory={false}
                 />
-                <ProductCatalog
-                  products={products}
-                  initialCategory="All"
-                  onSelectProduct={(p) => handleSelectProduct(p)}
-                  onAddToCart={(p) => handleAddToCart(p, 1)}
-                  onToggleWishlist={(p) => handleToggleWishlist(p)}
-                  wishlistIds={wishlistIds}
+                <ArchitecturalCollectionsShowcase
+                  onNavigateToProducts={(slug) => {
+                    if (slug) {
+                      handleNavigateToCategory(slug);
+                    } else {
+                      navigateTo('/products');
+                      setActiveTab('products');
+                      setActiveProductCategory('All');
+                    }
+                  }}
                   onRequestQuote={(title) => handleOpenQuote(title)}
                 />
                 <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
@@ -659,7 +739,7 @@ export default function App() {
             {activeTab === 'products' && (
               <ProductCatalog
                 products={products}
-                initialCategory="All"
+                initialCategory={activeProductCategory}
                 onSelectProduct={(p) => handleSelectProduct(p)}
                 onAddToCart={(p) => handleAddToCart(p, 1)}
                 onToggleWishlist={(p) => handleToggleWishlist(p)}

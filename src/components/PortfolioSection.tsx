@@ -5,9 +5,37 @@ import { getPortfolioProjects } from '../services/portfolioService';
 import { fetchPublicReviews } from '../services/reviewService';
 import { 
   Sparkles, MapPin, Calendar, Maximize2, Star, Quote, 
-  Rotate3d, ArrowLeftRight, Check, Eye
+  Rotate3d, ArrowLeftRight, Check, Eye, ExternalLink
 } from 'lucide-react';
 import { motion } from 'motion/react';
+
+// Official Google Maps business destination configured for Royal Epic Commercial & Home Interiors
+const GOOGLE_REVIEWS_URL =
+  'https://maps.google.com/?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045';
+
+const GOOGLE_WRITE_REVIEW_URL =
+  'https://www.google.com/maps/search/?api=1&query=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045';
+
+const GoogleIcon: React.FC = () => (
+  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+    />
+  </svg>
+);
 
 interface PortfolioSectionProps {
   onRequestQuote: (projectTitle: string) => void;
@@ -216,7 +244,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
               )}
             </div>
 
-            {/* Right: Project Details & Client Testimonial */}
+            {/* Right: Project Execution Specifications */}
             <div className="lg:col-span-4 flex flex-col justify-between h-full">
               <div>
                 <div className="grid grid-cols-2 gap-3 mb-6">
@@ -249,48 +277,23 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
 
                   <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
                     <span className="text-[10px] text-stone-400 font-bold uppercase block flex items-center gap-1 font-mono">
-                      <Star className="w-3 h-3 text-amber-400 fill-current" /> Rating
+                      <Sparkles className="w-3 h-3 text-amber-400" /> Scope
                     </span>
-                    <span className="text-xs font-semibold text-white truncate block mt-0.5 font-mono">
-                      {activeProject.clientRating} / 5.0
+                    <span className="text-xs font-semibold text-white truncate block mt-0.5">
+                      Turnkey Execution
                     </span>
                   </div>
                 </div>
 
-                {/* Client Review Box (Live Approved Review from Supabase or Fallback Demo) */}
-                {(() => {
-                  const matchedReview = approvedServiceReviews.find(
-                    r => (r.project_type && r.project_type.toLowerCase().includes(activeProject.category.toLowerCase())) ||
-                         (r.project_type && r.project_type.toLowerCase().includes(activeProject.title.toLowerCase()))
-                  ) || (approvedServiceReviews.length > 0 ? approvedServiceReviews[0] : null);
-
-                  const reviewText = matchedReview ? matchedReview.review_message : activeProject.clientReview;
-                  const reviewerName = matchedReview ? matchedReview.name : activeProject.clientName;
-                  const reviewTitle = matchedReview ? matchedReview.review_title : null;
-                  const isVerifiedLive = Boolean(matchedReview);
-
-                  return (
-                    <div className="p-4 rounded-2xl bg-black/50 border border-amber-500/20 mb-6 relative">
-                      <Quote className="w-5 h-5 text-amber-500/30 absolute top-3 right-3" />
-                      {reviewTitle && (
-                        <h5 className="text-xs font-bold text-white mb-1.5 line-clamp-1">{reviewTitle}</h5>
-                      )}
-                      <p className="text-xs text-stone-300 italic leading-relaxed mb-3">
-                        "{reviewText}"
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-amber-400 block">
-                          — {reviewerName}
-                        </span>
-                        {isVerifiedLive && (
-                          <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Live Verified
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
+                {/* Project Overview Note */}
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 mb-6">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block mb-1">
+                    Design & Build Overview
+                  </span>
+                  <p className="text-xs text-stone-300 leading-relaxed">
+                    Custom manufacturing, factory-engineered finishes, and dedicated site supervision delivered for {activeProject.title}.
+                  </p>
+                </div>
               </div>
 
               <button
@@ -306,7 +309,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
         </div>
 
         {/* Other Portfolio Project Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {filteredProjects.map((project) => (
             <div
               key={project.id}
@@ -338,6 +341,91 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ========================================================================= */}
+        {/* CUSTOMER REVIEW SECTION: "What our customers say"                         */}
+        {/* Minimal, natural, elegant, premium design with Google Reviews attribution */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-3xl border border-stone-200/90 p-6 sm:p-8 lg:p-10 shadow-sm text-stone-900">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-stone-100">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <GoogleIcon />
+                <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-stone-500">
+                  Google Business Profile
+                </span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 tracking-tight">
+                What our customers say
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 mt-1 max-w-xl leading-relaxed">
+                Authentic client feedback, project photos, and ratings from residential and commercial clients across Bengaluru are hosted on our official Google Maps profile.
+              </p>
+            </div>
+
+            {/* Direct Google Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+              <a
+                href={GOOGLE_REVIEWS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold uppercase tracking-wider shadow-xs transition-all"
+              >
+                <span>Read All Google Reviews</span>
+                <ExternalLink className="w-3.5 h-3.5 text-stone-400" />
+              </a>
+
+              <a
+                href={GOOGLE_WRITE_REVIEW_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-800 border border-stone-200 hover:border-stone-300 text-xs font-semibold uppercase tracking-wider transition-all"
+              >
+                <Star className="w-3.5 h-3.5 text-amber-500" />
+                <span>Write a Google Review</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Dynamic Review Render: Genuine Verified Reviews only if available */}
+          {approvedServiceReviews && approvedServiceReviews.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
+              {approvedServiceReviews.slice(0, 3).map((review) => (
+                <div key={review.id} className="p-5 rounded-2xl bg-[#FCFAF7] border border-stone-200/80 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-1 text-amber-500 mb-2.5">
+                      {Array.from({ length: Math.min(5, Math.max(1, Math.round(review.rating || 5))) }).map((_, i) => (
+                        <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                      ))}
+                    </div>
+                    {review.review_title && (
+                      <h4 className="text-xs font-bold text-stone-900 mb-1.5">{review.review_title}</h4>
+                    )}
+                    <p className="text-xs text-stone-600 leading-relaxed italic mb-4">
+                      "{review.review_message}"
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-stone-200/60 flex items-center justify-between text-[11px] text-stone-500 font-medium">
+                    <span className="font-semibold text-stone-800">{review.name}</span>
+                    <span className="font-mono text-[10px] text-stone-400">
+                      {review.created_at ? new Date(review.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Verified Client'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-stone-500">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>Verified Studio Location: Thanisandra Main Road, Nagawara, Bengaluru</span>
+              </div>
+              <span className="text-[11px] font-mono text-stone-400">
+                Official Google Maps Destination
+              </span>
+            </div>
+          )}
         </div>
 
       </div>
