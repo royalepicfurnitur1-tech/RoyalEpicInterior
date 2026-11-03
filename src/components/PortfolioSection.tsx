@@ -181,25 +181,25 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
 
   const categories = ['All', 'Residential', 'Commercial', 'Modular Kitchen', 'Hospitality', 'Architectural'];
 
-  const filteredProjects = selectedCategory === 'All'
+  const filteredProjects = (selectedCategory === 'All'
     ? projectsList
-    : projectsList.filter(p => p.category === selectedCategory);
+    : projectsList.filter(p => p.category === selectedCategory)).slice(0, 4);
 
   return (
-    <section className="py-20 sm:py-28 bg-[#121214] text-white relative overflow-hidden" id="portfolio">
+    <section className="py-20 sm:py-24 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="portfolio">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div className="max-w-2xl">
-            <span className="text-xs font-bold uppercase tracking-widest text-amber-400 font-mono block mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#735422] font-mono block mb-2">
               Transformations & Case Studies
             </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-stone-900 tracking-tight">
               Interior Portfolio & Walkthroughs
             </h2>
           </div>
-          <p className="text-sm text-stone-400 max-w-md leading-relaxed">
+          <p className="text-sm text-stone-700 max-w-md leading-relaxed">
             Explore turnkey transformations and completed architectural projects delivered by Royal Epic across Bengaluru.
           </p>
         </div>
@@ -216,8 +216,8 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
               }}
               className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === cat
-                  ? 'bg-amber-500 text-black shadow-md font-bold'
-                  : 'bg-stone-900 border border-white/10 text-stone-300 hover:text-white hover:border-white/20'
+                  ? 'bg-stone-900 text-white shadow-md font-bold'
+                  : 'bg-white/80 border border-stone-300/80 text-stone-800 hover:text-stone-950 hover:bg-white hover:border-stone-400 font-medium'
               }`}
             >
               {cat}
@@ -225,34 +225,34 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
           ))}
         </div>
 
-        {/* Other Portfolio Project Cards */}
+        {/* Exactly 4 Portfolio Project Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {filteredProjects.map((project) => (
             <div
               key={project.id}
               onClick={() => setActiveProject(project)}
-              className={`rounded-3xl overflow-hidden border transition-all cursor-pointer group bg-stone-900 ${
+              className={`rounded-3xl overflow-hidden border transition-all cursor-pointer group bg-white shadow-sm hover:shadow-xl ${
                 activeProject.id === project.id
-                  ? 'border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.25)]'
-                  : 'border-white/10 hover:border-white/30'
+                  ? 'border-amber-600 ring-2 ring-amber-500/30'
+                  : 'border-stone-200/90 hover:border-amber-500/60'
               }`}
             >
-              <div className="h-52 overflow-hidden relative">
+              <div className="h-52 overflow-hidden relative bg-stone-100">
                 <img
                   src={project.afterImage}
                   alt={project.title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
-                <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-amber-400 text-[10px] font-bold uppercase font-mono">
+                <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-stone-900/85 backdrop-blur-md text-amber-300 text-[10px] font-bold uppercase font-mono shadow-xs">
                   {project.category}
                 </span>
               </div>
               <div className="p-4">
-                <h4 className="text-sm font-serif font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1">
+                <h4 className="text-sm font-serif font-bold text-stone-900 group-hover:text-amber-800 transition-colors line-clamp-1">
                   {project.title}
                 </h4>
-                <p className="text-xs text-stone-400 mt-1 font-mono">
+                <p className="text-xs text-stone-600 mt-1 font-mono">
                   {project.location} • {project.areaSqFt} sq.ft.
                 </p>
               </div>
@@ -261,21 +261,12 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
         </div>
 
         {/* ========================================================================= */}
-        {/* CUSTOMER REVIEW SECTION: Compact Warm Taupe Background with 5 White Cards  */}
-        {/* 3 cards top row, 2 cards centred bottom row on desktop, vertical on mobile */}
-        {/* ========================================================================= */}
-        {/* ========================================================================= */}
-        {/* CUSTOMER REVIEW SECTION: Compact Warm Taupe Background with White Cards     */}
-        {/* Manually managed from Admin Dashboard. Clean luxury aesthetic without       */}
-        {/* live Google sync dependencies or preview slot placeholders.                 */}
-        {/* ========================================================================= */}
-        {/* ========================================================================= */}
-        {/* CUSTOMER REVIEW SECTION: Exactly 4 Cards Simultaneously on Desktop        */}
+        {/* CUSTOMER REVIEW SECTION: Harmonized Warm Taupe Container with White Cards */}
         {/* Responsive: 4 desktop / 2 tablet / 1 mobile. Constant fixed height.       */}
         {/* Unlimited reviews slide horizontally without expanding page length.       */}
         {/* ========================================================================= */}
         <div 
-          className="bg-[#A8A492] rounded-3xl p-5 sm:p-7 lg:p-8 border border-stone-300/40 shadow-xs text-stone-900"
+          className="bg-[#9E9A88] rounded-3xl p-5 sm:p-7 lg:p-8 border border-stone-300/60 shadow-sm text-stone-900"
           onMouseEnter={() => setIsCarouselHovered(true)}
           onMouseLeave={() => setIsCarouselHovered(false)}
         >
@@ -371,8 +362,8 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
                                 <span className="font-serif font-bold text-stone-900 text-[13px] sm:text-sm tracking-tight block truncate">
                                   {name}
                                 </span>
-                                <span className="text-[10px] font-mono text-stone-500 uppercase tracking-wider block">
-                                  Interior Client
+                                <span className="text-[10px] font-mono text-stone-500 uppercase tracking-wider block truncate">
+                                  {card.city || card.project_type || 'Bengaluru Client'}
                                 </span>
                               </div>
                             </div>

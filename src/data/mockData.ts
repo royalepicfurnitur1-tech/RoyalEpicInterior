@@ -754,74 +754,74 @@ export const SERVICES_DATA: ServiceCategory[] = [
 export const PORTFOLIO_PROJECTS: PortfolioProject[] = [
   {
     id: 'port-1',
-    title: 'The Sky Villa Penthouse',
+    title: 'Sobha City 4BHK Turnkey Luxury Residence',
     category: 'Residential',
-    location: 'Worli Sea Face, Mumbai',
-    areaSqFt: 5200,
-    completionTime: '12 Weeks',
-    beforeImage: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80', // bare structure
-    afterImage: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80', // luxury interior
-    clientName: 'Dr. Vikramaditya & Family',
-    clientReview: 'Royal Epic transformed our raw slab shell into a world-class luxury home. The finish of the Italian marble, custom brass doors, and modular kitchen exceeded our highest expectations!',
+    location: 'Sobha City, Thanisandra, Bengaluru',
+    areaSqFt: 3850,
+    completionTime: '10 Weeks',
+    beforeImage: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80',
+    afterImage: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80',
+    clientName: 'Sanjay & Meera Hegde',
+    clientReview: 'Royal Epic transformed our raw shell at Sobha City into an immaculate home. The teakwood fluted wall paneling, Italian marble flooring, and modular kitchen exceeded our expectations!',
     clientRating: 5.0,
     has3dWalkthrough: true,
     gallery: [
-      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=80'
     ]
   },
   {
     id: 'port-2',
-    title: 'Nexus Fintech Headquarters',
+    title: 'Manyata Tech Park Corporate Headquarters',
     category: 'Commercial',
-    location: 'BKC Business District, Mumbai',
-    areaSqFt: 18500,
-    completionTime: '16 Weeks',
+    location: 'Manyata Embassy Business Park, Nagawara, Bengaluru',
+    areaSqFt: 14200,
+    completionTime: '14 Weeks',
     beforeImage: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-    afterImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
-    clientName: 'Rajesh Shah, VP Operations',
-    clientReview: 'The frameless acoustic glass partitions and ergonomic layout completely elevated our company workspace. Delivered on time with spotless quality!',
+    afterImage: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1200&q=80',
+    clientName: 'Arjun Nambiar, Director of Facilities',
+    clientReview: 'The acoustic frameless glass cabins, bespoke cafeteria seating, and ergonomic workstations were handed over on time with spotless manufacturing finish.',
     clientRating: 5.0,
     has3dWalkthrough: true,
     gallery: [
-      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
+      'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80'
     ]
   },
   {
     id: 'port-3',
-    title: 'Aura Luxury Hotel & Banquet Kitchen',
+    title: 'Lavelle Road Artisanal Bistro & Banquet Kitchen',
     category: 'Hospitality',
-    location: 'Aerocity, New Delhi',
-    areaSqFt: 8400,
-    completionTime: '10 Weeks',
+    location: 'Lavelle Road, Central Bengaluru',
+    areaSqFt: 6200,
+    completionTime: '9 Weeks',
     beforeImage: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80',
-    afterImage: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
-    clientName: 'Chef Sanjeev Oberoi, Director',
-    clientReview: 'Royal Epic manufactured and installed our entire 304 Grade stainless steel commercial kitchen setup. Flawless exhaust ducting and high performance gas ranges.',
+    afterImage: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+    clientName: 'Chef Sanjeev Oberoi, Partner',
+    clientReview: 'Royal Epic manufactured and installed our commercial kitchen exhaust ducting, stainless steel lines, and fine-dining warm timber decor. Flawless execution.',
     clientRating: 4.9,
     has3dWalkthrough: true,
     gallery: [
-      'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80'
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80'
     ]
   },
   {
     id: 'port-4',
-    title: 'Opulent Villa Modular Kitchen & Wardrobe Suite',
+    title: 'Prestige Golfshire Luxury Villa Modular Kitchen & Suites',
     category: 'Modular Kitchen',
-    location: 'Jubilee Hills, Hyderabad',
-    areaSqFt: 3600,
+    location: 'Prestige Golfshire, Nandi Hills Road, Bengaluru',
+    areaSqFt: 4600,
     completionTime: '8 Weeks',
     beforeImage: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80',
-    afterImage: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80',
-    clientName: 'K. V. Reddy, Business Magnate',
-    clientReview: 'The acrylic island kitchen with quartz countertops and sensor sliding wardrobes look straight out of an Italian luxury catalog. Magnificent execution.',
+    afterImage: 'https://images.unsplash.com/photo-1556909212-d5b604d0c90d?auto=format&fit=crop&w=1200&q=80',
+    clientName: 'K. V. Reddy, Villa Owner',
+    clientReview: 'The acrylic modular island kitchen with quartz waterfall edges and floor-to-ceiling lacquered glass wardrobes look breathtaking. Superb craftsmanship.',
     clientRating: 5.0,
     gallery: [
-      'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1558882224-dda166733046?auto=format&fit=crop&w=1200&q=80'
+      'https://images.unsplash.com/photo-1556909212-d5b604d0c90d?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
     ]
   }
 ];
@@ -829,75 +829,139 @@ export const PORTFOLIO_PROJECTS: PortfolioProject[] = [
 export const BLOG_POSTS: BlogPost[] = [
   {
     id: 'blog-1',
-    title: 'The Ultimate Guide to End-to-End Turnkey Interior Projects',
+    title: 'Architectural Turnkey Interiors: The Disciplined Path from Raw Blueprint to Finished Key',
     slug: 'turnkey-interior-projects-guide',
-    excerpt: 'How Royal Epic manages complete turnkey execution from initial 3D design and BOQ estimation to factory production, site civil works, and final handover.',
-    content: `Turnkey interior design is the gold standard for clients seeking seamless execution without handling multiple contractors. At Royal Epic Interior & Furniture, our turnkey process eliminates single points of failure by bringing design, manufacturing, electrical, plumbing, HVAC, civil finishing, and custom furniture under one single umbrella.\n\n### The 5 Phases of Royal Epic Turnkey Execution:\n\n1. **3D Design & BOQ Finalization**: Detailed spatial planning, material selection, and itemized billing before site mobilization.\n2. **In-House Factory Precision**: Automated German CNC machinery crafts custom wardrobes, modular kitchens, and wall panels to millimeter accuracy.\n3. **Site Engineering & Civil Execution**: Electrical conduits, concealed plumbing, gypsum false ceilings, and flooring prepared concurrently.\n4. **Dispatch & Fit-out Assembly**: Factory-made furniture and custom doors dispatched and installed by master craftsmen.\n5. **Quality Audit & Project Handover**: Strict ISO 9001 quality check for zero defects prior to final client key handover.\n\nBy controlling the entire supply chain and in-house manufacturing, turnkey projects eliminate cost overruns, reduce timelines by up to 30%, and ensure a single point of accountability.`,
+    excerpt: 'How single-source architectural accountability, computer-controlled factory joinery, and sequenced civil engineering eliminate cost overruns and construction friction.',
+    content: `Turnkey architectural execution represents the benchmark for homeowners and commercial operators who demand uncompromising craftsmanship without the chaos of managing disparate sub-contractors. At Royal Epic Interior & Furniture, our turnkey practice consolidates spatial planning, structural civil preparations, custom furniture manufacturing, MEP engineering, and finishing under a single unified contract.
+
+### The Five Pillars of Royal Epic Turnkey Execution
+
+1. **Integrated 3D Modeling & Itemized BOQ**: Every square foot is detailed with comprehensive bill-of-quantities before on-site mobilization, locking in material specifications, hardware brands, and completion schedules.
+2. **In-House CNC Factory Joinery**: Automated German CNC machinery shapes boiling-water-resistant HDHMR and solid hardwoods to millimeter accuracy at our Bengaluru facility, ensuring precision edge-banding and acoustic alignment.
+3. **Sequenced Civil & MEP Engineering**: Concealed plumbing lines, low-voltage lighting channels, and gypsum ceiling grids are engineered concurrently to eliminate rework.
+4. **Controlled Fit-Out Assembly**: Pre-fabricated wardrobe carcasses, architectural door frames, and modular kitchen units are dry-fitted in the factory prior to careful on-site assembly by master carpenters.
+5. **Standardized ISO Quality Audit**: Comprehensive multi-point inspection examining surface flatness, hinge tolerances, water-resistance seals, and paint uniformity prior to final key delivery.
+
+By commanding both precision manufacturing and on-site engineering, turnkey delivery reduces project timelines by up to 30% while guaranteeing single-source structural accountability.`,
     author: 'Project Director, Royal Epic',
     date: 'July 24, 2026',
-    category: 'Turnkey Projects',
+    category: 'Turnkey Architecture',
     readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
   },
   {
-    id: 'blog-2',
-    title: 'Designing Luxury Beauty Spa Interiors: Ambiance, Acoustic Privacy & Ergonomics',
-    slug: 'beauty-spa-interior-design',
-    excerpt: 'Key interior principles for high-end beauty parlors, wellness centers, and spas—focusing on mood lighting, sound isolation, waterproof millwork, and sensory luxury.',
-    content: `A luxury beauty spa interior must immediately induce calmness the moment a guest steps through the entrance. Spa design balances sensory relaxation with high-traffic durability and sterile hygiene.\n\n### Core Elements of Premier Spa Interior Architecture:\n\n- **Acoustic Soundproofing**: Double-layered gypsum ceilings with sound-dampening acoustic insulation prevent noise transfer between massage and treatment suites.\n- **Concealed Ambient Lighting**: Warm 2700K coved LED strips, indirect wall washers, and backlit onyx mirrors replace harsh overhead fixtures to promote deep relaxation.\n- **Moisture-Resistant Millwork**: Treatment rooms require 100% waterproof WPC cabinet carcasses and anti-microbial solid quartz worktops that withstand oils and frequent sanitization.\n- **Ergonomic Service Zones**: Pedicure chairs, hair washing stations, and facial beds engineered with concealed plumbing and smart power outlets for a clean visual appearance.\n- **Natural Material Palette**: Teak wood louvers, muted stone textures, acoustic moss walls, and brass accents create a serene botanical sanctuary.`,
-    author: 'Senior Commercial Interior Architect',
-    date: 'July 20, 2026',
-    category: 'Beauty Spa',
-    readTime: '7 min read',
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80'
+    id: 'blog-7',
+    title: 'The Anatomy of an Enduring Modular Kitchen: Ergonomics, Carcass Engineering & Hardware',
+    slug: 'modular-kitchen-cost-bangalore',
+    excerpt: 'An architect’s guide to selecting high-density core substrates, Blum and Hafele motion systems, seamless quartz worktops, and ventilation ducting for Indian culinary environments.',
+    content: `The modern kitchen is both a high-performance culinary workspace and the architectural hearth of the residence. In high-traffic Indian homes, kitchen design demands materials that easily withstand intense heat, daily turmeric stains, and heavy moisture.
+
+### Crucial Engineering Elements in Modular Kitchen Design
+
+- **Substrate Science (BWR vs. HDHMR vs. SS 304)**: For sink wet zones, marine-grade boiling-water-resistant plywood or 304 food-grade stainless steel carcasses prevent moisture swelling. For dry overhead cabinets, high-density moisture-resistant (HDHMR) core boards provide razor-sharp screw-holding strength.
+- **Hardware & Motion Systems**: Soft-close tandem drawers rated for 50kg loads from Blum and Hafele ensure silent, effortless operation over decades of daily use.
+- **Zero-Pore Countertops**: 20mm engineered quartz and Italian sintered stone deliver non-porous resistance against citrus acids and high-temperature cooking vessels.
+- **Exhaust & Fresh Air Balancing**: High-CFM baffle-filter chimneys paired with dedicated linear fresh-air intakes maintain clean indoor air quality during heavy spice tempering.`,
+    author: 'Senior Modular Systems Architect',
+    date: 'July 22, 2026',
+    category: 'Modular Kitchens',
+    readTime: '6 min read',
+    image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'blog-3',
-    title: 'Transformative Home Interior Decorating: Layering Elegance & Functionality',
+    title: 'Residential Harmony: Layering Texture, Natural Stone & Lighting in Modern Living Spaces',
     slug: 'home-interior-decorating-guide',
-    excerpt: 'Pro tips for modern home interior decorating—pairing Italian marble floorings, custom acoustic wall panelling, plush headboards, and warm ambient light layers.',
-    content: `Modern home interior decorating goes beyond selecting wall paint and furniture. It is the art of curating harmony across architectural elements, textures, lighting, and spatial movement.\n\n### Key Principles for Master Home Decorating:\n\n- **The Rule of Visual Focal Points**: Every living room or bedroom needs an anchor—be it an Italian marble TV console with fluted WPC backdrop panels or a velvet upholstered master headboard.\n- **Triple-Layer Lighting Architecture**: Blend ambient ceiling cove lighting, task reading sconces, and accent display lights inside tinted glass cabinetry.\n- **Space-Maximizing Custom Wardrobes**: Floor-to-ceiling sliding wardrobes with motion-sensor LED strips maximize storage while keeping bedrooms clutter-free.\n- **Texture Harmony**: Pair sleek metallic metallic PVD gold trimmings with soft boucle fabrics, natural teak wood veneers, and matte lacquer finishes.`,
+    excerpt: 'Exploring the subtle interplay of fluted wall panels, book-matched marble consoles, acoustic ceilings, and multi-tier lighting palettes to foster serene residential retreats.',
+    content: `Elevated residential interiors transcend transient decorative fads. They are shaped by spatial proportion, natural textures, and a deliberate rhythm of light and shadow.
+
+### Fundamental Principles of Refined Residential Architecture
+
+- **The Singular Visual Anchor**: Every master bedroom and formal salon requires an unambiguous focal point—such as a floor-to-ceiling book-matched Statuario marble media wall accented with recessed bronze channels or a bespoke fluted timber panel.
+- **Three-Tier Lighting Architecture**: Replacing single glaring ceiling lights with diffuse 2700K perimeter cove lighting, narrow-beam architectural spots for art display, and low-glare reading sconces creates an inviting evening atmosphere.
+- **Full-Height Custom Storage**: Floor-to-ceiling wardrobes featuring integrated vertical LED strips and acoustic soft-stop sliding tracks keep spaces uncluttered and tranquil.
+- **Material Restraint**: Limiting the core tactile palette to three authentic elements—such as natural oak veneer, brushed champagne metal, and textured bouclé fabric—creates visual calm throughout the home.`,
     author: 'Principal Residential Decorator',
     date: 'July 15, 2026',
-    category: 'Home Interior',
+    category: 'Residential Interior',
     readTime: '5 min read',
-    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: 'blog-4',
-    title: 'High-Impact Restaurant Interior Decorating & Dining Ambiance',
-    slug: 'restaurant-interior-design-trends',
-    excerpt: 'Creating memorable dining experiences through acoustic baffling, custom plush booth seating, ambient lighting zoning, and kitchen flow optimization.',
-    content: `A successful restaurant interior must balance two distinct worlds: an immersive, photogenic dining room for guests and an ultra-efficient, heavy-duty workflow for kitchen staff.\n\n### Essentials for Fine Dining & Restaurant Interiors:\n\n- **Zoned Dining & Booth Layouts**: High-density foam velvet booth seating provides privacy while maximizing floor cover ratio per square foot.\n- **Acoustic Atmosphere Control**: Fabric-upholstered ceiling panels, timber baffles, and carpeted walkways absorb dining noise, allowing clear conversations.\n- **Custom Bar & Service Counters**: Backlit marble bar setups with 304 Grade stainless steel speed rails for bartender efficiency.\n- **Heavy-Duty Commercial Kitchen Integration**: Seamless connection between the dining floor and commercial kitchen equipped with high CFM exhaust hoods and fire-safe stainless steel ranges.`,
-    author: 'Hospitality Interior Lead',
-    date: 'July 10, 2026',
-    category: 'Restaurant Interior',
-    readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'blog-5',
-    title: 'Corporate Office Workspace Planning & Modern Workplace Interiors',
+    title: 'Modern Workspace Architecture: Acoustic Privacy, Agile Pods & Frameless Glass Partitions',
     slug: 'corporate-office-workspace-planning',
-    excerpt: 'How spatial ergonomics, frameless glass partitions, collaborative breakout lounges, and acoustic pod planning elevate employee productivity and brand identity.',
-    content: `Post-2025 corporate offices require versatile layouts that blend focused deep-work zones with vibrant collaborative spaces. Workspace planning is directly tied to employee well-being, talent retention, and brand presentation.\n\n### Strategic Office Space Planning Principles:\n\n- **Frameless Glass Partitions (STC 42 Acoustic Rating)**: Maintain natural light penetration throughout the floorplate while keeping executive boardrooms completely confidential and soundproof.\n- **Modular Ergonomic Workstations**: Integrated cable management trunks, dual-monitor arms, and motorized sit-stand desk options.\n- **Biophilic & Lounging Breakout Hubs**: Relaxing break areas with modular sofas, coffee bars, indoor greenery, and acoustic phone booths for private calls.\n- **Brand Storytelling Facilities**: Receptions featuring corporate logo CNC metal cutouts, linear LED architectural channels, and custom acrylic display cases.`,
+    excerpt: 'How spatial zoning, STC-rated acoustic glass partitions, and ergonomic workstations foster collaborative vitality while preserving individual deep-work zones.',
+    content: `Contemporary commercial interiors must effortlessly accommodate two distinct workflows: energetic cross-team collaboration and distraction-free deep cognitive focus. 
+
+### Strategic Workspace Architecture Principles
+
+- **Acoustic Glass Partitions (STC 42 Rating)**: Frameless acoustic double-glazed glass enclosures flood interior floorplates with daylight while keeping executive boardrooms and HR suites completely soundproof.
+- **Ergonomic Workstation Engineering**: Modular desks equipped with concealed wire management raceways, adjustable monitor mounts, and synchronous tilt seating enhance employee well-being and productivity.
+- **Biophilic & Quiet Focus Pods**: Sound-dampened single-person phone booths and plant-lined breakout lounges provide quiet retreats for confidential conversations and micro-rests.
+- **Brand Storytelling in Reception Hubs**: CNC-machined architectural timber screens and indirect backlit metallic signage establish an immediate sense of enterprise solidity and purpose.`,
     author: 'Commercial Workplace Strategist',
     date: 'July 05, 2026',
-    category: 'Corporate Office',
-    readTime: '8 min read',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80'
+    category: 'Commercial Office',
+    readTime: '7 min read',
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    id: 'blog-4',
+    title: 'Sensory Hospitality Design: Spatial Cadence, Acoustic Comfort & Fine Dining Ambiance',
+    slug: 'restaurant-interior-design-trends',
+    excerpt: 'Balancing intimate guest atmosphere with rigorous back-of-house workflow through custom booth ergonomics, acoustic timber baffles, and commercial kitchen planning.',
+    content: `Hospitality interior design is an intricate choreography between guest sensory immersion and industrial kitchen efficiency. A truly successful venue looks effortless from the dining floor while functioning with military discipline behind the pass.
+
+### Key Tenets of High-Performance Restaurant Architecture
+
+- **Intimate Booth Seating & Spatial Cadence**: Custom banquette seating crafted with high-resilience foam and stain-resistant commercial textiles delivers privacy while optimizing dining seat capacity.
+- **Acoustic Ceiling Architecture**: Micro-perforated timber ceiling baffles and fabric-wrapped acoustic panels absorb clatter and reverberation, ensuring comfortable conversation across dining tables.
+- **Backlit Service & Bar Counters**: Solid onyx bar fronts illuminated with diffused LED panels paired with 304-grade stainless steel speed rails maximize bartender speed and hospitality theatre.
+- **Integrated Commercial Kitchen Layouts**: Clear division between the hot cooking line, preparation stations, and dishwashing zones prevents cross-contamination and ensures continuous guest service.`,
+    author: 'Hospitality Interior Lead',
+    date: 'July 10, 2026',
+    category: 'Hospitality & Dining',
+    readTime: '6 min read',
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'blog-6',
-    title: 'Top Interior Decorating & Material Trends for 2026',
+    title: 'Architectural Doorways & Millwork: 100% Waterproof WPC and Seasoned Teak Craftsmanship',
     slug: 'interior-design-trends-2026',
-    excerpt: 'Discover why fluted paneling, warm gold metal accents, translucent onyx stone, and smart sensor glass wardrobes are dominating luxury residences this year.',
-    content: 'Luxury interior design in 2026 is moving towards biophilic architectural warmth, integrated smart lighting, and high-precision engineered materials like WPC doors, boiling water resistant HDMR, and electrochromic glass partitions.',
+    excerpt: 'Evaluating solid seasoned teak wood entrance portals alongside virgin wood polymer composite (WPC) doors engineered for lifetime moisture and termite resistance.',
+    content: `Doorways are the defining architectural thresholds of any luxury structure. Modern residences require a thoughtful specification strategy that balances ceremonial grandeur at the main entrance with absolute moisture immunity in private utility spaces.
+
+### Material Selection for Enduring Architectural Doors
+
+- **Ceremonial Teak Main Portals**: Solid Burma and CP teak wood, kiln-seasoned to an optimal 10-12% moisture level, resists warping and provides centuries of structural grace when finished with high-solids PU clear coatings.
+- **100% Waterproof WPC Bathroom Doors**: In high-humidity bathrooms and utility areas, high-density virgin Wood Polymer Composite (WPC) core doors eliminate swelling, rot, and termite vulnerability forever.
+- **Concealed 3D Adjustable Hinges**: Architectural flush hinges recessed inside door leaves preserve clean vertical profiles without protruding barrel knuckles.
+- **Acoustic Drop-Down Seals**: Automated bottom drop seals actuate upon door closure, ensuring draft prevention, thermal insulation, and sound attenuation between rooms.`,
     author: 'Chief Architect, Royal Epic',
     date: 'June 28, 2026',
-    category: 'Interior Decorating',
+    category: 'Architectural Woodwork',
     readTime: '5 min read',
-    image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    id: 'blog-2',
+    title: 'Sanctuary Architecture: Designing High-End Wellness Spas & Holistic Salons',
+    slug: 'beauty-spa-interior-design',
+    excerpt: 'Creating restorative commercial sanctuaries through acoustic isolation, indirect 2700K lighting, waterproof cabinetry, and biophilic natural materials.',
+    content: `A luxury spa or aesthetic salon must immediately calm the nervous system upon entry. Achieving this requires meticulous sensory architecture: eliminating sharp reverberant sound, harsh glare, and visible utility clutter.
+
+### Core Architecture for Luxury Wellness Spaces
+
+- **Acoustic Decoupling**: Independent drywall partitions insulated with high-density rockwool ensure complete acoustic separation between private massage chambers and consultation suites.
+- **Concealed Low-Glare Lighting**: Soft indirect illumination recessed along floor coves and ceiling perimeter troughs gently illuminates paths without blinding guests resting on treatment beds.
+- **Non-Porous Moisture-Resistant Millwork**: Cabinets and treatment vanity counters built from moisture-impervious WPC cores and solid surfaces withstand therapeutic oils, hot steam, and continuous sanitization.
+- **Biophilic Natural Surfaces**: Unvarnished natural stone, fluted teak louvers, and living greenery evoke a soothing organic connection with the natural world.`,
+    author: 'Senior Commercial Interior Architect',
+    date: 'June 20, 2026',
+    category: 'Wellness & Spa',
+    readTime: '6 min read',
+    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80'
   }
 ];
 

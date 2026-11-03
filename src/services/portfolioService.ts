@@ -65,6 +65,20 @@ export async function getPortfolioProjects(): Promise<{ projects: PortfolioProje
       try {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          // If cached items contain outdated data or different length, refresh with clean 4-card Bengaluru projects
+          const hasOutdatedData = 
+            parsed.length !== DEFAULT_PORTFOLIO.length ||
+            parsed.some((p: any) => 
+              p.id === 'port-5' ||
+              p.location?.includes('Mumbai') || 
+              p.location?.includes('New Delhi') ||
+              p.location?.includes('Hyderabad') ||
+              p.afterImage?.includes('photo-1600210492486')
+            );
+          if (hasOutdatedData) {
+            localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(DEFAULT_PORTFOLIO));
+            return { projects: DEFAULT_PORTFOLIO, source: 'default' };
+          }
           return { projects: parsed, source: 'cache' };
         }
       } catch (e) {

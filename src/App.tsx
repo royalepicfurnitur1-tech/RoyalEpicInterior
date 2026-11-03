@@ -724,7 +724,7 @@ export default function App() {
                   onRequestQuote={(title) => handleOpenQuote(title)}
                 />
                 <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
-                <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} />
+                <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} onNavigate={navigateTo} />
                 <ContactSection />
               </>
             )}
@@ -756,7 +756,7 @@ export default function App() {
               <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
             )}
 
-            {activeTab === 'blog' && <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} />}
+            {activeTab === 'blog' && <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} onNavigate={navigateTo} />}
 
             {activeTab === 'contact' && <ContactSection />}
 

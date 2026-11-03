@@ -464,10 +464,12 @@ const LOCAL_STORAGE_REVIEWS_KEY = 'royalepic_manual_reviews';
 export const DEFAULT_DEMO_REVIEWS: CustomerReview[] = [
   {
     id: 'demo-slot-1',
-    customer_name: 'Residential Client',
-    name: 'Residential Client',
-    review_message: 'The turnkey transformation of our apartment exceeded all expectations. Flawless modular kitchen engineering, bespoke living room fittings, and timely handover by Royal Epic.',
-    profile_image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&h=256&q=80',
+    customer_name: 'Sanjay & Meera Hegde',
+    name: 'Sanjay & Meera Hegde',
+    city: 'Sobha City, Thanisandra',
+    project_type: 'Turnkey 4BHK Flat',
+    review_message: 'The turnkey transformation of our 4BHK flat at Sobha City exceeded our expectations. Flawless modular kitchen woodwork, custom TV unit in the living room, and timely handover by Royal Epic.',
+    profile_image_url: 'https://images.unsplash.com/photo-1589386417686-0d34b5903d23?auto=format&fit=crop&w=256&h=256&q=80',
     rating: 5,
     is_active: true,
     display_order: 1,
@@ -479,10 +481,12 @@ export const DEFAULT_DEMO_REVIEWS: CustomerReview[] = [
   },
   {
     id: 'demo-slot-2',
-    customer_name: 'Villa Homeowner',
-    name: 'Villa Homeowner',
-    review_message: 'Exceptional craftsmanship on our custom Italian marble dining table and veneer wall paneling. Professional site supervision throughout the entire project.',
-    profile_image_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&h=256&q=80',
+    customer_name: 'Priyanka Venkatesh',
+    name: 'Priyanka Venkatesh',
+    city: 'Prestige Golfshire, N. Bengaluru',
+    project_type: 'Luxury Villa Interiors',
+    review_message: 'Exceptional craftsmanship on our villa interiors at Prestige Golfshire. From Italian marble installation to false ceiling cove lighting, their site supervisors managed everything with meticulous attention.',
+    profile_image_url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=256&h=256&q=80',
     rating: 5,
     is_active: true,
     display_order: 2,
@@ -494,10 +498,12 @@ export const DEFAULT_DEMO_REVIEWS: CustomerReview[] = [
   },
   {
     id: 'demo-slot-3',
-    customer_name: 'Corporate Office Lead',
-    name: 'Corporate Office Lead',
-    review_message: 'Frameless acoustic glass partitions and modern executive workstations delivered on schedule with spotless manufacturing finish. Highly recommend their commercial team.',
-    profile_image_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&h=256&q=80',
+    customer_name: 'Arjun Nambiar',
+    name: 'Arjun Nambiar',
+    city: 'Manyata Tech Park, Nagawara',
+    project_type: 'Corporate Office Fit-out',
+    review_message: 'Royal Epic handled our 8,000 sq.ft tech office fit-out near Manyata. Acoustic glass partitions, modular workstations, and breakout zones were delivered 5 days ahead of schedule.',
+    profile_image_url: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=256&h=256&q=80',
     rating: 5,
     is_active: true,
     display_order: 3,
@@ -509,10 +515,12 @@ export const DEFAULT_DEMO_REVIEWS: CustomerReview[] = [
   },
   {
     id: 'demo-slot-4',
-    customer_name: 'Penthouse Owner',
-    name: 'Penthouse Owner',
+    customer_name: 'Kavitha & R. Sundaram',
+    name: 'Kavitha & R. Sundaram',
+    city: 'Brigade Gateway, Malleshwaram',
+    project_type: 'Apartment Renovation',
     review_message: 'From initial 3D visualization to final installation, the attention to detail in our master suite wardrobes and cove lighting channels was truly world-class.',
-    profile_image_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80',
+    profile_image_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=256&h=256&q=80',
     rating: 5,
     is_active: true,
     display_order: 4,
@@ -524,10 +532,12 @@ export const DEFAULT_DEMO_REVIEWS: CustomerReview[] = [
   },
   {
     id: 'demo-slot-5',
-    customer_name: 'Hospitality Partner',
-    name: 'Hospitality Partner',
+    customer_name: 'Dr. Anand Swaminathan',
+    name: 'Dr. Anand Swaminathan',
+    city: 'Salarpuria Sattva, Hebbal',
+    project_type: 'Turnkey Civil & Joinery',
     review_message: 'High-grade commercial kitchen stainless steel equipment and dining area woodwork executed seamlessly with robust build quality and dedicated customer service.',
-    profile_image_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=256&h=256&q=80',
+    profile_image_url: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=256&h=256&q=80',
     rating: 5,
     is_active: true,
     display_order: 5,
@@ -549,15 +559,33 @@ function getLocalStoredReviews(): CustomerReview[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Clean and upgrade any old dicebear illustrated URLs to professional human photography
+      // Clean and upgrade any old dicebear illustrated URLs or Caucasian stock photos to genuine Indian client photography
       let upgraded = false;
       const cleanList = parsed.map(item => {
-        if (item.profile_image_url && item.profile_image_url.includes('dicebear.com')) {
+        const match = DEFAULT_DEMO_REVIEWS.find(d => d.id === item.id);
+        const hasOldPhoto = 
+          item.profile_image_url?.includes('dicebear.com') ||
+          item.profile_image_url?.includes('photo-1507003211169') ||
+          item.profile_image_url?.includes('photo-1573496359142') ||
+          item.profile_image_url?.includes('photo-1500648767791') ||
+          item.profile_image_url?.includes('photo-1534528741775') ||
+          item.profile_image_url?.includes('photo-1506794778202') ||
+          item.customer_name === 'Residential Client' ||
+          item.customer_name === 'Villa Homeowner' ||
+          item.customer_name === 'Corporate Office Lead' ||
+          item.customer_name === 'Penthouse Owner' ||
+          item.customer_name === 'Hospitality Partner';
+
+        if (hasOldPhoto && match) {
           upgraded = true;
-          const match = DEFAULT_DEMO_REVIEWS.find(d => d.id === item.id);
           return {
             ...item,
-            profile_image_url: match ? match.profile_image_url : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&h=256&q=80'
+            customer_name: match.customer_name,
+            name: match.name,
+            city: match.city,
+            project_type: match.project_type,
+            profile_image_url: match.profile_image_url,
+            review_message: match.review_message
           };
         }
         return item;

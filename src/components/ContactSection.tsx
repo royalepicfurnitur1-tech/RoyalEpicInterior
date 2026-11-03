@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Phone, Mail, MapPin, Send, MessageSquare, Clock, CheckCircle2, Building,
-  Instagram, Facebook, Linkedin, Youtube, Star, ExternalLink, Globe
+  Phone, Mail, MapPin, Send, MessageSquare, Clock, CheckCircle2, ExternalLink
 } from 'lucide-react';
 import { submitLeadToSupabase } from '../lib/supabase';
 
@@ -75,13 +74,26 @@ export const ContactSection: React.FC = () => {
               </h3>
 
               <div className="space-y-4 text-xs text-stone-600">
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-stone-50 border border-stone-200/80">
-                  <MapPin className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold text-stone-900 block">Main Office Address</span>
-                    <span className="leading-relaxed">No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045</span>
+                <a
+                  href="https://maps.google.com/?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open Royal Epic Interiors location in Google Maps"
+                  className="flex items-start gap-3 p-3.5 rounded-2xl bg-stone-50 border border-stone-200/80 hover:border-amber-600/70 hover:bg-amber-50/50 transition-all cursor-pointer group"
+                >
+                  <MapPin className="w-5 h-5 text-amber-700 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-stone-900 block group-hover:text-amber-800 transition-colors">Main Office Address</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 opacity-90 group-hover:opacity-100 transition-opacity">
+                        Google Maps <ExternalLink className="w-3 h-3" />
+                      </span>
+                    </div>
+                    <span className="leading-relaxed block text-stone-600 group-hover:text-stone-800 transition-colors">
+                      No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045
+                    </span>
                   </div>
-                </div>
+                </a>
 
                 <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-stone-50 border border-stone-200/80">
                   <Phone className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
@@ -129,142 +141,8 @@ export const ContactSection: React.FC = () => {
               </div>
             </div>
 
-            {/* Google Maps Embed & Service Area Coverage */}
-            <div className="bg-white border border-stone-200/90 rounded-3xl p-5 sm:p-6 space-y-4 shadow-sm relative">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-100 pb-3 gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-amber-700" />
-                    <span className="text-xs font-bold text-stone-900 uppercase tracking-wider font-mono">Company Showroom Location</span>
-                  </div>
-                  <p className="text-[11px] text-stone-500 font-medium mt-1">
-                    📍 No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045
-                  </p>
-                </div>
-                <a
-                  href="https://maps.google.com/?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-1.5 rounded-xl bg-stone-900 text-white hover:bg-amber-600 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0"
-                >
-                  <Globe className="w-3.5 h-3.5" /> Directions
-                </a>
-              </div>
 
-              {/* Responsive Embedded Google Map Iframe */}
-              <div className="w-full h-60 rounded-2xl overflow-hidden border border-stone-200 relative bg-stone-100">
-                <iframe
-                  title="Royal Epic Commercial & Home Interiors - Thanisandra Nagawara Bengaluru"
-                  src="https://maps.google.com/maps?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045&t=&z=16&ie=UTF8&iwloc=&output=embed"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
 
-              {/* Location Keywords Grid */}
-              <div className="pt-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block mb-2 font-mono">
-                  📍 Active Interior Service Hubs Across North & Central Bengaluru
-                </span>
-                <div className="flex flex-wrap gap-1.5 text-[10px] font-medium text-stone-600">
-                  {['Thanisandra Main Rd', 'Rachenahalli Lake Rd', 'Manyata Tech Park', 'Hebbal', 'Hennur Road', 'Yelahanka', 'Sahakarnagar', 'HBR Layout', 'Kalyan Nagar', 'Jakkur', 'Devanahalli', 'Whitefield', 'Indiranagar', 'Koramangala'].map((loc) => (
-                    <span key={loc} className="px-2.5 py-1 rounded-lg bg-stone-50 border border-stone-200 text-stone-700">
-                      {loc}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Google My Business & Social Media Section */}
-            <div className="bg-white border border-stone-200/90 rounded-3xl p-5 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-amber-700" />
-                  <span className="text-xs font-bold text-stone-900 uppercase tracking-wider font-mono">Google Verified Business</span>
-                </div>
-                <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full text-amber-800 text-[10px] font-bold font-mono">
-                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  <span>4.9 ★ (480+ Reviews)</span>
-                </div>
-              </div>
-
-              <p className="text-xs text-stone-500 leading-relaxed">
-                Visit our official Google My Business listing for client reviews, verified project photos, studio location, and driving directions.
-              </p>
-
-              <a
-                href="https://maps.google.com/?q=Royal+Epic+Commercial+%26+Home+Interiors,+No.+10,+Royal+EPIC+Interiors,+2nd,+Thanisandra+Main+Road,+Near+Railway+Bridge,+Sinthan+Nagar,+Rachenahalli,+Nagawara,+Bengaluru,+Karnataka+560045"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-900 border border-stone-200 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <span>Open Google Maps & Reviews</span>
-                <ExternalLink className="w-3.5 h-3.5 text-stone-500" />
-              </a>
-
-              {/* Social Media Grid */}
-              <div className="pt-2 border-t border-stone-100">
-                <span className="text-[10px] font-bold uppercase text-stone-400 block mb-2 font-mono">Follow Royal Epic On Social Media</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <a
-                    href="https://www.instagram.com/royalepicinteriordesign/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 hover:border-stone-400 text-stone-700 flex items-center gap-2 transition-all"
-                  >
-                    <Instagram className="w-4 h-4 text-pink-600 shrink-0" />
-                    <div className="overflow-hidden">
-                      <span className="text-[11px] font-bold block truncate">Instagram</span>
-                      <span className="text-[9px] text-stone-400 block truncate">@royalepicinteriordesign</span>
-                    </div>
-                  </a>
-
-                  <a
-                    href="https://facebook.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 hover:border-stone-400 text-stone-700 flex items-center gap-2 transition-all"
-                  >
-                    <Facebook className="w-4 h-4 text-blue-600 shrink-0" />
-                    <div className="overflow-hidden">
-                      <span className="text-[11px] font-bold block truncate">Facebook</span>
-                      <span className="text-[9px] text-stone-400 block truncate">Royal Epic</span>
-                    </div>
-                  </a>
-
-                  <a
-                    href="https://linkedin.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 hover:border-stone-400 text-stone-700 flex items-center gap-2 transition-all"
-                  >
-                    <Linkedin className="w-4 h-4 text-blue-700 shrink-0" />
-                    <div className="overflow-hidden">
-                      <span className="text-[11px] font-bold block truncate">LinkedIn</span>
-                      <span className="text-[9px] text-stone-400 block truncate">Company Page</span>
-                    </div>
-                  </a>
-
-                  <a
-                    href="https://youtube.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 hover:border-stone-400 text-stone-700 flex items-center gap-2 transition-all"
-                  >
-                    <Youtube className="w-4 h-4 text-red-600 shrink-0" />
-                    <div className="overflow-hidden">
-                      <span className="text-[11px] font-bold block truncate">YouTube</span>
-                      <span className="text-[9px] text-stone-400 block truncate">Interior Tours</span>
-                    </div>
-                  </a>
-                </div>
-              </div>
-            </div>
 
           </div>
 
