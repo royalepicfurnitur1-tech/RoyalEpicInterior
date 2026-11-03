@@ -111,3 +111,23 @@ export async function uploadProductImage(
   }
 }
 
+/**
+ * Uploads a customer profile picture for testimonials.
+ * Supports JPG, JPEG, PNG, and WebP up to 5MB.
+ */
+export async function uploadReviewAvatar(
+  fileOrBase64: File | Blob | string
+): Promise<UploadResult> {
+  if (fileOrBase64 instanceof File) {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(fileOrBase64.type.toLowerCase())) {
+      return { success: false, error: 'Invalid file format. Please upload JPG, PNG, or WebP.' };
+    }
+    if (fileOrBase64.size > 5 * 1024 * 1024) {
+      return { success: false, error: 'File size exceeds 5MB limit. Please upload a smaller image.' };
+    }
+  }
+  return uploadProductImage(fileOrBase64, 'customer-review-avatar');
+}
+
+

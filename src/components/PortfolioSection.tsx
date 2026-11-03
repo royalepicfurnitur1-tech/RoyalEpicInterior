@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { PORTFOLIO_PROJECTS as DEFAULT_PROJECTS } from '../data/mockData';
 import { PortfolioProject, CustomerReview } from '../types';
 import { getPortfolioProjects } from '../services/portfolioService';
-import { fetchPublicReviews } from '../services/reviewService';
+import { getManualCustomerReviews } from '../services/reviewService';
 import { 
   Sparkles, MapPin, Calendar, Maximize2, Star, Quote, 
-  Rotate3d, ArrowLeftRight, Check, Eye, ExternalLink
+  Check, Eye, ExternalLink, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -37,6 +37,42 @@ const GoogleIcon: React.FC = () => (
   </svg>
 );
 
+const getInitials = (name?: string) => {
+  if (!name) return 'RE';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const ReviewAvatar: React.FC<{
+  src?: string | null;
+  name: string;
+  initials: string;
+}> = ({ src, name, initials }) => {
+  const [imgError, setImgError] = useState(false);
+
+  if (!src || imgError) {
+    return (
+      <div 
+        className="w-12 h-12 rounded-full bg-gradient-to-br from-[#EFEAE2] to-[#D8D2C6] border-2 border-white shadow-xs ring-1 ring-stone-300/80 flex items-center justify-center font-serif font-bold text-stone-700 text-xs shrink-0 tracking-wider"
+        title={name}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      onError={() => setImgError(true)}
+      loading="lazy"
+      className="w-12 h-12 rounded-full object-cover object-top border-2 border-white shadow-xs ring-1 ring-stone-300/80 shrink-0"
+    />
+  );
+};
+
 interface PortfolioSectionProps {
   onRequestQuote: (projectTitle: string) => void;
 }
@@ -44,10 +80,82 @@ interface PortfolioSectionProps {
 export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuote }) => {
   const [projectsList, setProjectsList] = useState<PortfolioProject[]>(DEFAULT_PROJECTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [sliderPosition, setSliderPosition] = useState<number>(50); // percentage 0 to 100
   const [activeProject, setActiveProject] = useState<PortfolioProject>(DEFAULT_PROJECTS[0]);
-  const [activeTab, setActiveTab] = useState<'before-after' | 'walkthrough' | 'gallery'>('before-after');
   const [approvedServiceReviews, setApprovedServiceReviews] = useState<CustomerReview[]>([]);
+
+  // Carousel state: exactly 4 cards on desktop, 2 on tablet, 1 on mobile
+  const [carouselIndex, setCarouselIndex] = useState<number>(0);
+  const [visibleCount, setVisibleCount] = useState<number>(() => {
+    if (typeof window === 'undefined') return 4;
+    if (window.innerWidth < 640) return 1;
+    if (window.innerWidth < 1024) return 2;
+    return 4;
+  });
+  const [isCarouselHovered, setIsCarouselHovered] = useState<boolean>(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  // Responsive visible cards listener: 4 on desktop, 2 on tablet, 1 on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window === 'undefined') return;
+      if (window.innerWidth < 640) {
+        setVisibleCount(1);
+      } else if (window.innerWidth < 1024) {
+        setVisibleCount(2);
+      } else {
+        setVisibleCount(4);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const totalReviews = approvedServiceReviews.length;
+  const maxIndex = Math.max(0, totalReviews - visibleCount);
+
+  // Keep carouselIndex bounded
+  useEffect(() => {
+    if (carouselIndex > maxIndex) {
+      setCarouselIndex(maxIndex);
+    }
+  }, [maxIndex, carouselIndex]);
+
+  const handlePrevReview = () => {
+    setCarouselIndex(prev => (prev <= 0 ? maxIndex : prev - 1));
+  };
+
+  const handleNextReview = () => {
+    setCarouselIndex(prev => (prev >= maxIndex ? 0 : prev + 1));
+  };
+
+  // Subtle slow autoplay (6s), pauses when user hovers or interacts
+  useEffect(() => {
+    if (isCarouselHovered || totalReviews <= visibleCount) return;
+    const timer = setInterval(() => {
+      setCarouselIndex(prev => (prev >= maxIndex ? 0 : prev + 1));
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [isCarouselHovered, totalReviews, visibleCount, maxIndex]);
+
+  // Touch / Swipe support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsCarouselHovered(true);
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    if (diff > 45) {
+      handleNextReview();
+    } else if (diff < -45) {
+      handlePrevReview();
+    }
+    setTouchStartX(null);
+    setTimeout(() => setIsCarouselHovered(false), 2000);
+  };
 
   useEffect(() => {
     getPortfolioProjects().then(res => {
@@ -59,10 +167,8 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
 
     const loadServiceReviews = async () => {
       try {
-        const res = await fetchPublicReviews();
-        if (res.reviews && res.reviews.length > 0) {
-          setApprovedServiceReviews(res.reviews);
-        }
+        const reviews = await getManualCustomerReviews({ activeOnly: true });
+        setApprovedServiceReviews(reviews || []);
       } catch (_) {}
     };
 
@@ -79,14 +185,6 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
     ? projectsList
     : projectsList.filter(p => p.category === selectedCategory);
 
-  const handleSliderMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const x = clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    setSliderPosition(percentage);
-  };
-
   return (
     <section className="py-20 sm:py-28 bg-[#121214] text-white relative overflow-hidden" id="portfolio">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -102,7 +200,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
             </h2>
           </div>
           <p className="text-sm text-stone-400 max-w-md leading-relaxed">
-            Drag the Before & After transformation slider below to witness how Royal Epic converts raw slab structures into bespoke architectural spaces.
+            Explore turnkey transformations and completed architectural projects delivered by Royal Epic across Bengaluru.
           </p>
         </div>
 
@@ -125,187 +223,6 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
               {cat}
             </button>
           ))}
-        </div>
-
-        {/* Featured Project Showcase Display with Before/After Slider */}
-        <div className="bg-stone-900/90 border border-white/10 rounded-3xl p-6 lg:p-8 mb-16 shadow-2xl">
-          
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 font-mono block">
-                Featured Case Study
-              </span>
-              <h3 className="text-2xl sm:text-3xl font-serif font-bold text-white mt-0.5">
-                {activeProject.title}
-              </h3>
-            </div>
-
-            {/* View Mode Switcher */}
-            <div className="flex items-center gap-1.5 bg-black/60 p-1.5 rounded-2xl border border-white/10">
-              <button
-                onClick={() => setActiveTab('before-after')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'before-after'
-                    ? 'bg-amber-500 text-black shadow-sm'
-                    : 'text-stone-400 hover:text-white'
-                }`}
-              >
-                <ArrowLeftRight className="w-3.5 h-3.5" /> Before & After Slider
-              </button>
-              <button
-                onClick={() => setActiveTab('walkthrough')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'walkthrough'
-                    ? 'bg-amber-500 text-black shadow-sm'
-                    : 'text-stone-400 hover:text-white'
-                }`}
-              >
-                <Rotate3d className="w-3.5 h-3.5" /> 360° Walkthrough
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            {/* Left/Center: Interactive Before & After Slider or 360° Walkthrough Canvas */}
-            <div className="lg:col-span-8">
-              {activeTab === 'before-after' && (
-                <div
-                  onMouseMove={handleSliderMove}
-                  onTouchMove={handleSliderMove}
-                  className="relative w-full h-[380px] sm:h-[460px] rounded-2xl overflow-hidden border border-white/10 select-none cursor-ew-resize group shadow-2xl"
-                >
-                  {/* Before Image (Underneath) */}
-                  <img
-                    src={activeProject.beforeImage}
-                    alt="Before Construction"
-                    referrerPolicy="no-referrer"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute top-4 left-4 bg-black/85 backdrop-blur-md px-3 py-1 rounded-full border border-stone-700 text-stone-300 text-[11px] font-mono font-bold uppercase tracking-wider z-10">
-                    Raw Site Before
-                  </div>
-
-                  {/* After Image (Clipped Overlay) */}
-                  <div
-                    className="absolute inset-0 overflow-hidden"
-                    style={{ width: `${sliderPosition}%` }}
-                  >
-                    <img
-                      src={activeProject.afterImage}
-                      alt="After Royal Interior Finish"
-                      referrerPolicy="no-referrer"
-                      className="absolute inset-0 w-full h-full object-cover max-w-none"
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                    <div className="absolute top-4 left-4 bg-amber-500 text-black px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider whitespace-nowrap z-10 shadow-md">
-                      Executed Handover
-                    </div>
-                  </div>
-
-                  {/* Drag Handle Bar */}
-                  <div
-                    className="absolute top-0 bottom-0 w-1 bg-amber-400 shadow-[0_0_15px_#f59e0b] cursor-ew-resize z-20 flex items-center justify-center"
-                    style={{ left: `${sliderPosition}%` }}
-                  >
-                    <div className="w-9 h-9 rounded-full bg-amber-400 text-black font-bold flex items-center justify-center shadow-2xl border-2 border-black group-hover:scale-110 transition-transform">
-                      <ArrowLeftRight className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'walkthrough' && (
-                <div className="relative w-full h-[380px] sm:h-[460px] rounded-2xl overflow-hidden border border-white/10 bg-black flex items-center justify-center p-4">
-                  <img
-                    src={activeProject.afterImage}
-                    alt="360 View"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover opacity-80"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-center text-center p-6">
-                    <div className="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 mb-3">
-                      <Rotate3d className="w-8 h-8" />
-                    </div>
-                    <h4 className="text-xl font-serif font-bold text-white mb-2">
-                      Interactive 360° Virtual Room Tour
-                    </h4>
-                    <p className="text-xs text-stone-300 max-w-md mb-4 leading-relaxed">
-                      Explore floor-to-ceiling material textures, cove lighting channels, and custom furniture fittings in 3D walkthrough mode.
-                    </p>
-                    <button
-                      onClick={() => onRequestQuote(activeProject.title)}
-                      className="px-5 py-2.5 rounded-xl bg-amber-500 text-black text-xs font-bold uppercase tracking-wider hover:bg-amber-400 transition-colors cursor-pointer"
-                    >
-                      Book 3D Room Consultation
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right: Project Execution Specifications */}
-            <div className="lg:col-span-4 flex flex-col justify-between h-full">
-              <div>
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-                    <span className="text-[10px] text-stone-400 font-bold uppercase block flex items-center gap-1 font-mono">
-                      <MapPin className="w-3 h-3 text-amber-400" /> Location
-                    </span>
-                    <span className="text-xs font-semibold text-white truncate block mt-0.5">
-                      {activeProject.location}
-                    </span>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-                    <span className="text-[10px] text-stone-400 font-bold uppercase block flex items-center gap-1 font-mono">
-                      <Maximize2 className="w-3 h-3 text-amber-400" /> Area
-                    </span>
-                    <span className="text-xs font-semibold text-white truncate block mt-0.5 font-mono">
-                      {activeProject.areaSqFt.toLocaleString()} sq. ft.
-                    </span>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-                    <span className="text-[10px] text-stone-400 font-bold uppercase block flex items-center gap-1 font-mono">
-                      <Calendar className="w-3 h-3 text-amber-400" /> Completion
-                    </span>
-                    <span className="text-xs font-semibold text-white truncate block mt-0.5">
-                      {activeProject.completionTime}
-                    </span>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-                    <span className="text-[10px] text-stone-400 font-bold uppercase block flex items-center gap-1 font-mono">
-                      <Sparkles className="w-3 h-3 text-amber-400" /> Scope
-                    </span>
-                    <span className="text-xs font-semibold text-white truncate block mt-0.5">
-                      Turnkey Execution
-                    </span>
-                  </div>
-                </div>
-
-                {/* Project Overview Note */}
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 mb-6">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block mb-1">
-                    Design & Build Overview
-                  </span>
-                  <p className="text-xs text-stone-300 leading-relaxed">
-                    Custom manufacturing, factory-engineered finishes, and dedicated site supervision delivered for {activeProject.title}.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => onRequestQuote(activeProject.title)}
-                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer"
-              >
-                Request Similar Design
-              </button>
-            </div>
-
-          </div>
-
         </div>
 
         {/* Other Portfolio Project Cards */}
@@ -344,88 +261,189 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
         </div>
 
         {/* ========================================================================= */}
-        {/* CUSTOMER REVIEW SECTION: "What our customers say"                         */}
-        {/* Minimal, natural, elegant, premium design with Google Reviews attribution */}
+        {/* CUSTOMER REVIEW SECTION: Compact Warm Taupe Background with 5 White Cards  */}
+        {/* 3 cards top row, 2 cards centred bottom row on desktop, vertical on mobile */}
         {/* ========================================================================= */}
-        <div className="bg-white rounded-3xl border border-stone-200/90 p-6 sm:p-8 lg:p-10 shadow-sm text-stone-900">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-stone-100">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <GoogleIcon />
-                <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-stone-500">
-                  Google Business Profile
-                </span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 tracking-tight">
-                What our customers say
-              </h3>
-              <p className="text-xs sm:text-sm text-stone-600 mt-1 max-w-xl leading-relaxed">
-                Authentic client feedback, project photos, and ratings from residential and commercial clients across Bengaluru are hosted on our official Google Maps profile.
+        {/* ========================================================================= */}
+        {/* CUSTOMER REVIEW SECTION: Compact Warm Taupe Background with White Cards     */}
+        {/* Manually managed from Admin Dashboard. Clean luxury aesthetic without       */}
+        {/* live Google sync dependencies or preview slot placeholders.                 */}
+        {/* ========================================================================= */}
+        {/* ========================================================================= */}
+        {/* CUSTOMER REVIEW SECTION: Exactly 4 Cards Simultaneously on Desktop        */}
+        {/* Responsive: 4 desktop / 2 tablet / 1 mobile. Constant fixed height.       */}
+        {/* Unlimited reviews slide horizontally without expanding page length.       */}
+        {/* ========================================================================= */}
+        <div 
+          className="bg-[#A8A492] rounded-3xl p-5 sm:p-7 lg:p-8 border border-stone-300/40 shadow-xs text-stone-900"
+          onMouseEnter={() => setIsCarouselHovered(true)}
+          onMouseLeave={() => setIsCarouselHovered(false)}
+        >
+          {/* Centred Heading */}
+          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
+            <div className="inline-flex items-center gap-1.5 mb-2 px-2.5 py-0.5 rounded-full bg-black/10 border border-black/5 text-stone-900 text-[10px] font-mono uppercase tracking-widest font-semibold">
+              <Sparkles className="w-3.5 h-3.5 text-stone-900" />
+              <span>Client Testimonials</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl lg:text-3xl font-serif font-bold text-stone-900 tracking-tight">
+              What Our Customers Say About Royal Epic Interiors
+            </h3>
+            <p className="text-xs text-stone-800/80 mt-1 max-w-lg mx-auto leading-relaxed">
+              Authentic design journeys and client experiences from residential, commercial, and turnkey projects across Bengaluru.
+            </p>
+          </div>
+
+          {/* Carousel Track with Previous Arrow on the Left & Next Arrow on the Right */}
+          {approvedServiceReviews.length === 0 ? (
+            <div className="bg-white/90 backdrop-blur-xs rounded-2xl p-8 text-center border border-stone-200/80 max-w-lg mx-auto my-4 shadow-xs">
+              <Quote className="w-8 h-8 text-stone-400 mx-auto mb-2" />
+              <p className="font-serif font-bold text-stone-900 text-sm">
+                Verified Customer Reviews
+              </p>
+              <p className="text-xs text-stone-600 mt-1">
+                Customer reviews curated from recent turnkey handovers in Bengaluru are currently being updated.
               </p>
             </div>
+          ) : (
+            <div className="relative flex items-center">
+              {/* Previous Arrow on the Left */}
+              {totalReviews > visibleCount && (
+                <button
+                  onClick={handlePrevReview}
+                  aria-label="Previous customer reviews"
+                  className="shrink-0 -ml-2 sm:-ml-3 mr-2 sm:mr-3 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white text-stone-900 shadow-md border border-stone-300/80 flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+                >
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                </button>
+              )}
 
-            {/* Direct Google Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+              {/* Overflow Hidden Sliding Window */}
+              <div 
+                className="overflow-hidden w-full relative pb-2"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                <div 
+                  className="flex transition-transform duration-500 ease-out"
+                  style={{ 
+                    transform: `translateX(-${carouselIndex * (100 / visibleCount)}%)`,
+                  }}
+                >
+                  {approvedServiceReviews.map((card, cardIdx) => {
+                    const name = card.customer_name || card.name || 'Valued Client';
+                    const rating = Math.min(5, Math.max(1, Math.round(card.rating || 5)));
+                    const initials = getInitials(name);
+
+                    return (
+                      <div 
+                        key={card.id || `carousel-card-${cardIdx}`}
+                        className="w-full sm:w-1/2 lg:w-1/4 shrink-0 px-2 py-3"
+                      >
+                        <div className="bg-white rounded-[20px] p-5 sm:p-5.5 shadow-[0_10px_25px_-5px_rgba(30,25,20,0.08),0_8px_10px_-6px_rgba(30,25,20,0.04)] hover:shadow-[0_20px_35px_-5px_rgba(30,25,20,0.14),0_10px_15px_-5px_rgba(30,25,20,0.06)] hover:-translate-y-1.5 transition-all duration-300 ease-out border border-[#E7E2DA]/90 flex flex-col justify-between h-[275px]">
+                          {/* TOP AREA: Quotation Mark & Gold Star Rating */}
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <Quote className="w-5 h-5 text-[#C49746] fill-[#C49746]/20" />
+                              <div className="flex items-center gap-0.5 text-[#E5A93C]">
+                                {Array.from({ length: rating }).map((_, i) => (
+                                  <Star key={i} className="w-3.5 h-3.5 fill-current text-[#E5A93C]" />
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* MIDDLE AREA: Review Message */}
+                            <p className="text-[12px] sm:text-[12.5px] text-[#3D3A37] leading-relaxed italic line-clamp-4 font-normal">
+                              "{card.review_message}"
+                            </p>
+                          </div>
+
+                          {/* BOTTOM AREA: Divider, Profile Photo, Customer Name */}
+                          <div>
+                            <hr className="border-t border-[#F0EBE3] mb-3" />
+
+                            <div className="flex items-center gap-3">
+                              <ReviewAvatar
+                                src={card.profile_image_url}
+                                name={name}
+                                initials={initials}
+                              />
+                              <div className="truncate min-w-0">
+                                <span className="font-serif font-bold text-stone-900 text-[13px] sm:text-sm tracking-tight block truncate">
+                                  {name}
+                                </span>
+                                <span className="text-[10px] font-mono text-stone-500 uppercase tracking-wider block">
+                                  Interior Client
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Next Arrow on the Right */}
+              {totalReviews > visibleCount && (
+                <button
+                  onClick={handleNextReview}
+                  aria-label="Next customer reviews"
+                  className="shrink-0 -mr-2 sm:-mr-4 ml-2 sm:ml-3 z-10 w-10 h-10 rounded-full bg-white/95 hover:bg-white text-stone-900 shadow-[0_4px_12px_rgba(0,0,0,0.12)] border border-stone-200/80 flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+                >
+                  <ChevronRight className="w-5 h-5 stroke-[2.5]" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Carousel Pagination Dots */}
+          {totalReviews > visibleCount && (
+            <div className="flex items-center justify-center gap-1.5 my-3">
+              {Array.from({ length: maxIndex + 1 }).map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  onClick={() => setCarouselIndex(dotIdx)}
+                  aria-label={`Go to slide ${dotIdx + 1}`}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    carouselIndex === dotIdx 
+                      ? 'w-6 bg-stone-900' 
+                      : 'w-1.5 bg-stone-900/30 hover:bg-stone-900/60'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Action Buttons & Google Links - Compact */}
+          <div className="pt-4 border-t border-stone-300/40 flex flex-col sm:flex-row items-center justify-between gap-3 mt-2">
+            <p className="text-[11px] text-stone-800/80 text-center sm:text-left">
+              ⭐ Genuine reviews and curated design showcases managed via Royal Epic Admin Dashboard.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
               <a
                 href={GOOGLE_REVIEWS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold uppercase tracking-wider shadow-xs transition-all"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold uppercase tracking-wider shadow-xs transition-all"
               >
-                <span>Read All Google Reviews</span>
-                <ExternalLink className="w-3.5 h-3.5 text-stone-400" />
+                <span>View Business on Google Maps</span>
+                <ExternalLink className="w-3 h-3 text-stone-400" />
               </a>
 
               <a
                 href={GOOGLE_WRITE_REVIEW_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-800 border border-stone-200 hover:border-stone-300 text-xs font-semibold uppercase tracking-wider transition-all"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-stone-300 hover:border-stone-400 text-xs font-semibold uppercase tracking-wider shadow-xs transition-all"
               >
-                <Star className="w-3.5 h-3.5 text-amber-500" />
+                <Star className="w-3 h-3 text-amber-500" />
                 <span>Write a Google Review</span>
               </a>
             </div>
           </div>
 
-          {/* Dynamic Review Render: Genuine Verified Reviews only if available */}
-          {approvedServiceReviews && approvedServiceReviews.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-              {approvedServiceReviews.slice(0, 3).map((review) => (
-                <div key={review.id} className="p-5 rounded-2xl bg-[#FCFAF7] border border-stone-200/80 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-1 text-amber-500 mb-2.5">
-                      {Array.from({ length: Math.min(5, Math.max(1, Math.round(review.rating || 5))) }).map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                      ))}
-                    </div>
-                    {review.review_title && (
-                      <h4 className="text-xs font-bold text-stone-900 mb-1.5">{review.review_title}</h4>
-                    )}
-                    <p className="text-xs text-stone-600 leading-relaxed italic mb-4">
-                      "{review.review_message}"
-                    </p>
-                  </div>
-                  <div className="pt-3 border-t border-stone-200/60 flex items-center justify-between text-[11px] text-stone-500 font-medium">
-                    <span className="font-semibold text-stone-800">{review.name}</span>
-                    <span className="font-mono text-[10px] text-stone-400">
-                      {review.created_at ? new Date(review.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Verified Client'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-stone-500">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>Verified Studio Location: Thanisandra Main Road, Nagawara, Bengaluru</span>
-              </div>
-              <span className="text-[11px] font-mono text-stone-400">
-                Official Google Maps Destination
-              </span>
-            </div>
-          )}
         </div>
 
       </div>

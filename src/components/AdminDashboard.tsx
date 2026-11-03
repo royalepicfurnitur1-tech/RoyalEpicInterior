@@ -18,6 +18,7 @@ import { AdminActivityLogger } from './AdminActivityLogger';
 import { SeoManager } from './SeoManager';
 import { AccessControlPanel } from './AccessControlPanel';
 import { ProductManagementModule } from './ProductManagementModule';
+import { AdminCustomerReviewsManager } from './AdminCustomerReviewsManager';
 import { HeritageHomesManager } from './HeritageHomesManager';
 import { TurnkeyManager } from './TurnkeyManager';
 import { isSupabaseConfigured, checkSupabaseLiveConnection, fetchWebsiteFeedback } from '../lib/supabase';
@@ -117,6 +118,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     | 'turnkey'
     | 'security'
     | 'feedback'
+    | 'reviews'
   >('overview');
 
   // Website Feedback State
@@ -685,6 +687,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: "product-management", label: "🛍️ Product Management (Variations/SKUs)", icon: Package },
     { id: 'overview', label: '📊 Dashboard Overview', icon: LayoutDashboard },
     { id: 'cms', label: '🌐 Website CMS', icon: Globe },
+    { id: 'reviews', label: '⭐ Customer Reviews', icon: Star },
     { id: 'feedback', label: `💬 Website Feedback (${feedbackList.length})`, icon: MessageSquare },
     { id: 'ai-manager', label: '🤖 AI Voice Manager', icon: Bot },
     { id: 'crm', label: '📈 CRM Lead Pipeline', icon: Users },
@@ -835,6 +838,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* 0.1 PRODUCT MANAGEMENT WITH VARIATIONS & SKUS */}
           {activeTab === 'product-management' && (
             <ProductManagementModule />
+          )}
+
+          {/* 0.2 CUSTOMER REVIEWS MANAGEMENT */}
+          {activeTab === 'reviews' && (
+            <AdminCustomerReviewsManager />
           )}
 
           {/* 1. DASHBOARD OVERVIEW */}

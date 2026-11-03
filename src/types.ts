@@ -210,6 +210,7 @@ export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export interface CustomerReview {
   id: string;
+  customer_name?: string;
   name: string;
   email?: string | null;
   phone?: string | null;
@@ -219,6 +220,11 @@ export interface CustomerReview {
   title?: string | null;
   review_message: string;
   message?: string | null;
+  profile_image_url?: string | null;
+  is_active?: boolean;
+  display_order?: number;
+  is_demo?: boolean;
+  review_type?: 'demo' | 'customer';
   project_type?: string | null;
   service_type?: string | null;
   product_id?: string | null;

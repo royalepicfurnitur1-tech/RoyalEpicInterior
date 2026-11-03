@@ -455,3 +455,363 @@ export function subscribeToReviews(callback: (review: any) => void): () => void 
   };
 }
 
+// -----------------------------------------------------------------------------
+// MANUAL CUSTOMER REVIEWS MANAGEMENT (Admin Dashboard & Homepage Integration)
+// -----------------------------------------------------------------------------
+
+const LOCAL_STORAGE_REVIEWS_KEY = 'royalepic_manual_reviews';
+
+export const DEFAULT_DEMO_REVIEWS: CustomerReview[] = [
+  {
+    id: 'demo-slot-1',
+    customer_name: 'Residential Client',
+    name: 'Residential Client',
+    review_message: 'The turnkey transformation of our apartment exceeded all expectations. Flawless modular kitchen engineering, bespoke living room fittings, and timely handover by Royal Epic.',
+    profile_image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&h=256&q=80',
+    rating: 5,
+    is_active: true,
+    display_order: 1,
+    is_demo: true,
+    review_type: 'demo',
+    status: 'approved',
+    created_at: '2025-01-10T10:00:00.000Z',
+    updated_at: '2025-01-10T10:00:00.000Z'
+  },
+  {
+    id: 'demo-slot-2',
+    customer_name: 'Villa Homeowner',
+    name: 'Villa Homeowner',
+    review_message: 'Exceptional craftsmanship on our custom Italian marble dining table and veneer wall paneling. Professional site supervision throughout the entire project.',
+    profile_image_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&h=256&q=80',
+    rating: 5,
+    is_active: true,
+    display_order: 2,
+    is_demo: true,
+    review_type: 'demo',
+    status: 'approved',
+    created_at: '2025-01-15T11:00:00.000Z',
+    updated_at: '2025-01-15T11:00:00.000Z'
+  },
+  {
+    id: 'demo-slot-3',
+    customer_name: 'Corporate Office Lead',
+    name: 'Corporate Office Lead',
+    review_message: 'Frameless acoustic glass partitions and modern executive workstations delivered on schedule with spotless manufacturing finish. Highly recommend their commercial team.',
+    profile_image_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&h=256&q=80',
+    rating: 5,
+    is_active: true,
+    display_order: 3,
+    is_demo: true,
+    review_type: 'demo',
+    status: 'approved',
+    created_at: '2025-01-20T14:30:00.000Z',
+    updated_at: '2025-01-20T14:30:00.000Z'
+  },
+  {
+    id: 'demo-slot-4',
+    customer_name: 'Penthouse Owner',
+    name: 'Penthouse Owner',
+    review_message: 'From initial 3D visualization to final installation, the attention to detail in our master suite wardrobes and cove lighting channels was truly world-class.',
+    profile_image_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80',
+    rating: 5,
+    is_active: true,
+    display_order: 4,
+    is_demo: true,
+    review_type: 'demo',
+    status: 'approved',
+    created_at: '2025-02-01T09:15:00.000Z',
+    updated_at: '2025-02-01T09:15:00.000Z'
+  },
+  {
+    id: 'demo-slot-5',
+    customer_name: 'Hospitality Partner',
+    name: 'Hospitality Partner',
+    review_message: 'High-grade commercial kitchen stainless steel equipment and dining area woodwork executed seamlessly with robust build quality and dedicated customer service.',
+    profile_image_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=256&h=256&q=80',
+    rating: 5,
+    is_active: true,
+    display_order: 5,
+    is_demo: true,
+    review_type: 'demo',
+    status: 'approved',
+    created_at: '2025-02-10T16:00:00.000Z',
+    updated_at: '2025-02-10T16:00:00.000Z'
+  }
+];
+
+function getLocalStoredReviews(): CustomerReview[] {
+  if (typeof window === 'undefined') return DEFAULT_DEMO_REVIEWS;
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_REVIEWS_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_STORAGE_REVIEWS_KEY, JSON.stringify(DEFAULT_DEMO_REVIEWS));
+      return DEFAULT_DEMO_REVIEWS;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Clean and upgrade any old dicebear illustrated URLs to professional human photography
+      let upgraded = false;
+      const cleanList = parsed.map(item => {
+        if (item.profile_image_url && item.profile_image_url.includes('dicebear.com')) {
+          upgraded = true;
+          const match = DEFAULT_DEMO_REVIEWS.find(d => d.id === item.id);
+          return {
+            ...item,
+            profile_image_url: match ? match.profile_image_url : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&h=256&q=80'
+          };
+        }
+        return item;
+      });
+      if (upgraded) {
+        localStorage.setItem(LOCAL_STORAGE_REVIEWS_KEY, JSON.stringify(cleanList));
+      }
+      return cleanList;
+    }
+    localStorage.setItem(LOCAL_STORAGE_REVIEWS_KEY, JSON.stringify(DEFAULT_DEMO_REVIEWS));
+    return DEFAULT_DEMO_REVIEWS;
+  } catch (_) {
+    return DEFAULT_DEMO_REVIEWS;
+  }
+}
+
+function setLocalStoredReviews(reviews: CustomerReview[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_STORAGE_REVIEWS_KEY, JSON.stringify(reviews));
+  } catch (_) {}
+}
+
+/**
+ * Fetch customer reviews for admin list or public homepage.
+ */
+export async function getManualCustomerReviews(options?: {
+  activeOnly?: boolean;
+  search?: string;
+  filterType?: 'all' | 'customer' | 'demo';
+}): Promise<CustomerReview[]> {
+  const { activeOnly, search, filterType } = options || {};
+  let list: CustomerReview[] = [];
+
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      let query = supabase
+        .from('customer_reviews')
+        .select('*');
+
+      if (activeOnly) {
+        query = query.or('is_active.eq.true,status.eq.approved');
+      }
+
+      const { data, error } = await query;
+      if (!error && data && Array.isArray(data) && data.length > 0) {
+        list = data.map((item: any) => ({
+          id: String(item.id),
+          customer_name: item.customer_name || item.name || 'Valued Client',
+          name: item.customer_name || item.name || 'Valued Client',
+          review_message: item.review_message || item.message || '',
+          profile_image_url: item.profile_image_url || null,
+          rating: Number(item.rating) || 5,
+          is_active: item.is_active !== undefined ? Boolean(item.is_active) : item.status === 'approved',
+          display_order: Number(item.display_order) || 0,
+          is_demo: item.is_demo !== undefined ? Boolean(item.is_demo) : (String(item.id).startsWith('demo-') || item.review_type === 'demo'),
+          review_type: item.review_type || (item.is_demo || String(item.id).startsWith('demo-') ? 'demo' : 'customer'),
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at || item.created_at || new Date().toISOString(),
+          status: (item.is_active || item.status === 'approved') ? 'approved' : 'rejected'
+        }));
+        setLocalStoredReviews(list);
+      }
+    } catch (_) {}
+  }
+
+  // Fallback to local storage
+  if (list.length === 0) {
+    list = getLocalStoredReviews();
+  } else {
+    // If Supabase returned reviews, check if any demo reviews from local storage exist that aren't in Supabase
+    const local = getLocalStoredReviews();
+    const demoItems = local.filter(l => l.is_demo || l.id.startsWith('demo-'));
+    for (const d of demoItems) {
+      if (!list.some(r => r.id === d.id)) {
+        list.push(d);
+      }
+    }
+  }
+
+  // Filter active if requested
+  if (activeOnly) {
+    list = list.filter(r => r.is_active !== false && r.status !== 'rejected');
+  }
+
+  // Filter by review type (Customer vs Demo)
+  if (filterType === 'demo') {
+    list = list.filter(r => r.is_demo === true || r.review_type === 'demo');
+  } else if (filterType === 'customer') {
+    list = list.filter(r => !r.is_demo && r.review_type !== 'demo');
+  }
+
+  // Filter search query if present
+  if (search && search.trim()) {
+    const q = search.toLowerCase().trim();
+    list = list.filter(r => 
+      (r.customer_name || r.name || '').toLowerCase().includes(q) ||
+      (r.review_message || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort by display_order ASC, then created_at DESC
+  list.sort((a, b) => {
+    const orderA = a.display_order ?? 0;
+    const orderB = b.display_order ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  return list;
+}
+
+/**
+ * Add or Edit a customer review.
+ */
+export async function saveManualCustomerReview(payload: {
+  id?: string;
+  customer_name: string;
+  review_message: string;
+  profile_image_url?: string | null;
+  rating: number;
+  is_active?: boolean;
+  display_order?: number;
+  is_demo?: boolean;
+  review_type?: 'demo' | 'customer';
+}): Promise<{ success: boolean; review?: CustomerReview; error?: string }> {
+  if (!payload.customer_name || !payload.customer_name.trim()) {
+    return { success: false, error: 'Customer Name is required.' };
+  }
+  if (!payload.review_message || !payload.review_message.trim()) {
+    return { success: false, error: 'Review Message is required.' };
+  }
+  if (!payload.rating || payload.rating < 1 || payload.rating > 5) {
+    return { success: false, error: 'Star rating must be between 1 and 5.' };
+  }
+
+  const isEdit = Boolean(payload.id);
+  const isDemo = payload.is_demo !== undefined ? payload.is_demo : (payload.review_type === 'demo');
+  const reviewType = payload.review_type || (isDemo ? 'demo' : 'customer');
+  const reviewId = payload.id || (isDemo ? `demo-${Date.now()}` : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `rev-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`));
+  const now = new Date().toISOString();
+
+  const record: CustomerReview = {
+    id: reviewId,
+    customer_name: payload.customer_name.trim(),
+    name: payload.customer_name.trim(),
+    review_message: payload.review_message.trim(),
+    profile_image_url: payload.profile_image_url || null,
+    rating: Math.min(5, Math.max(1, Math.round(payload.rating))),
+    is_active: payload.is_active !== undefined ? payload.is_active : true,
+    display_order: Number(payload.display_order) || 0,
+    is_demo: isDemo,
+    review_type: reviewType,
+    status: (payload.is_active ?? true) ? 'approved' : 'rejected',
+    created_at: now,
+    updated_at: now
+  };
+
+  // 1. Try Supabase write
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const dbPayload = {
+        id: reviewId,
+        customer_name: record.customer_name,
+        name: record.customer_name,
+        review_message: record.review_message,
+        profile_image_url: record.profile_image_url,
+        rating: record.rating,
+        is_active: record.is_active,
+        display_order: record.display_order,
+        is_demo: record.is_demo,
+        status: record.status,
+        updated_at: now
+      };
+
+      if (isEdit) {
+        await supabase.from('customer_reviews').update(dbPayload).eq('id', reviewId);
+      } else {
+        await supabase.from('customer_reviews').insert([{ ...dbPayload, created_at: now }]);
+      }
+    } catch (_) {}
+  }
+
+  // 2. Always update local storage
+  const currentList = getLocalStoredReviews();
+  let updatedList: CustomerReview[];
+  if (isEdit) {
+    updatedList = currentList.map(r => r.id === reviewId ? { ...r, ...record, updated_at: now } : r);
+  } else {
+    updatedList = [record, ...currentList];
+  }
+  setLocalStoredReviews(updatedList);
+
+  // 3. Broadcast update event
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('royalepic-reviews-updated', { detail: record }));
+  }
+
+  return { success: true, review: record };
+}
+
+/**
+ * Delete a customer review.
+ */
+export async function deleteManualCustomerReview(id: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      await supabase.from('customer_reviews').delete().eq('id', id);
+    } catch (_) {}
+  }
+
+  const currentList = getLocalStoredReviews();
+  const updatedList = currentList.filter(r => r.id !== id);
+  setLocalStoredReviews(updatedList);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('royalepic-reviews-updated', { detail: { id, deleted: true } }));
+  }
+
+  return { success: true };
+}
+
+/**
+ * Quick toggle active status.
+ */
+export async function toggleManualReviewActive(id: string, is_active: boolean): Promise<{ success: boolean; error?: string }> {
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      await supabase.from('customer_reviews').update({ 
+        is_active, 
+        status: is_active ? 'approved' : 'rejected',
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+    } catch (_) {}
+  }
+
+  const currentList = getLocalStoredReviews();
+  const updatedList = currentList.map(r => r.id === id ? { 
+    ...r, 
+    is_active, 
+    status: is_active ? 'approved' : 'rejected' as any,
+    updated_at: new Date().toISOString() 
+  } : r);
+  setLocalStoredReviews(updatedList);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('royalepic-reviews-updated', { detail: { id, is_active } }));
+  }
+
+  return { success: true };
+}
+
+
