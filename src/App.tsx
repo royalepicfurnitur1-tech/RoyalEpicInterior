@@ -10,6 +10,7 @@ import { HeritageHomes } from './pages/HeritageHomes';
 import { TurnkeyInteriorsPage } from './pages/TurnkeyInteriorsPage';
 import { OurServicesPage } from './pages/OurServicesPage';
 import { HeroSection } from './components/HeroSection';
+import { ArchitectVisionSection } from './components/ArchitectVisionSection';
 import { ThreeHeroRing } from './components/ThreeHeroRing';
 import { ServicesSection } from './components/ServicesSection';
 import { ArchitecturalCollectionsShowcase } from './components/ArchitecturalCollectionsShowcase';
@@ -704,6 +705,9 @@ export default function App() {
             {activeTab === 'home' && (
               <>
                 <HeroSection 
+                  onRequestQuote={(title) => handleOpenQuote(title)} 
+                />
+                <ArchitectVisionSection 
                   onRequestQuote={(title) => handleOpenQuote(title)} 
                 />
                 <ServicesSection 
