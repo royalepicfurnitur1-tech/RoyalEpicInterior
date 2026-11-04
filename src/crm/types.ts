@@ -1,10 +1,16 @@
-export type CrmRole = 'admin' | 'telecaller';
+// Re-exports CRM types from the shared tele-crm package.
+// Syncs CRM data models between the website (RoyalEpicInterior)
+// and the Telecaller CRM app (teleapp).
 
-export interface CrmUser {
+export { CrmRole, CrmUser, LeadSource, LeadTemperature, LeadStatus, CallOutcome, CrmLead, CrmCallLog, CrmAuditLog, CrmDashboardStats, CrmFilterParams, CrmDashboardMetrics } from '../../../packages/tele-crm-shared/src/types';
+export { LEAD_SOURCES, LEAD_STATUSES, CALL_OUTCOMES, POPULAR_SERVICES } from '../../../packages/tele-crm-shared/src/crmConstants';
+
+// App-specific re-exports for compatibility (not in shared package)
+export type CrmFilterState = CrmFilterParams;
+export interface CrmUserProfile {
   id: string;
   email: string;
   name: string;
-  phone?: string;
   role: CrmRole;
   status: 'active' | 'suspended';
   createdAt?: string;
