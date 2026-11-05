@@ -42,6 +42,9 @@ export interface ServerCrmLead {
   notes?: string;
   last_contact_at?: string;
   next_followup_at?: string;
+  external_lead_id?: string;
+  alternate_phone?: string;
+  raw_payload?: Record<string, any>;
   created_by?: string;
   created_by_name?: string;
   last_updated_by?: string;
@@ -64,7 +67,7 @@ export interface ServerCrmCallLog {
 }
 
 // Phone normalization helper
-function normalizePhone(p: string): string {
+export function normalizePhone(p: string): string {
   if (!p) return '';
   const cleaned = p.replace(/[\s\-\(\)\.]/g, '');
   if (/^[6-9]\d{9}$/.test(cleaned)) return `+91${cleaned}`;
@@ -74,10 +77,10 @@ function normalizePhone(p: string): string {
 }
 
 // In-Memory state loaded from disk
-let dbCrmUsers: Record<string, ServerCrmUser> = {};
-let dbCrmLeads: Record<string, ServerCrmLead> = {};
-let dbCrmCalls: ServerCrmCallLog[] = [];
-let dbCrmAudit: any[] = [];
+export let dbCrmUsers: Record<string, ServerCrmUser> = {};
+export let dbCrmLeads: Record<string, ServerCrmLead> = {};
+export let dbCrmCalls: ServerCrmCallLog[] = [];
+export let dbCrmAudit: any[] = [];
 
 // Load initial state
 try {
@@ -242,32 +245,32 @@ if (Object.keys(dbCrmLeads).length === 0) {
   saveLeads();
 }
 
-function saveUsers() {
+export function saveUsers() {
   try {
     fs.writeFileSync(CRM_USERS_FILE, JSON.stringify(dbCrmUsers, null, 2));
   } catch (_) {}
 }
 
-function saveLeads() {
+export function saveLeads() {
   try {
     fs.writeFileSync(CRM_LEADS_FILE, JSON.stringify(dbCrmLeads, null, 2));
   } catch (_) {}
 }
 
-function saveCalls() {
+export function saveCalls() {
   try {
     fs.writeFileSync(CRM_CALLS_FILE, JSON.stringify(dbCrmCalls, null, 2));
   } catch (_) {}
 }
 
-function saveAudit() {
+export function saveAudit() {
   try {
     fs.writeFileSync(CRM_AUDIT_FILE, JSON.stringify(dbCrmAudit, null, 2));
   } catch (_) {}
 }
 
 // Authentication & Session Extraction Middleware
-function extractUserFromReq(req: Request): ServerCrmUser | null {
+export function extractUserFromReq(req: Request): ServerCrmUser | null {
   const authHeader = req.headers['authorization'];
   const userIdHeader = req.headers['x-crm-user-id'] as string;
 
@@ -881,6 +884,8 @@ crmRouter.post('/import-csv', (req: Request, res: Response) => {
         temperature: row.temperature || 'Warm',
         status: row.status || 'New',
         notes: row.notes || undefined,
+        external_lead_id: row.external_lead_id ? String(row.external_lead_id).trim() : undefined,
+        alternate_phone: row.alternate_phone ? normalizePhone(String(row.alternate_phone)) : undefined,
         created_by: user.id,
         created_by_name: user.name,
         created_at: now,

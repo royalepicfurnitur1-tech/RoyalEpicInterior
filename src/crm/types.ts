@@ -58,12 +58,46 @@ export interface CrmLead {
   notes?: string;
   last_contact_at?: string;
   next_followup_at?: string;
+  external_lead_id?: string;
+  alternate_phone?: string;
+  raw_payload?: Record<string, any>;
   created_by?: string;
   created_by_name?: string;
   last_updated_by?: string;
   last_updated_by_name?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface JustdialConfig {
+  webhookSecret: string;
+  isActive: boolean;
+  autoAssignTelecallerId?: string;
+  lastTestedAt?: string;
+  lastReceivedAt?: string;
+  status: 'NOT_CONNECTED' | 'PENDING_SETUP' | 'CONNECTED' | 'ERROR';
+}
+
+export interface JustdialLog {
+  id: string;
+  timestamp: string;
+  ip?: string;
+  externalLeadId?: string;
+  customerName?: string;
+  phone?: string;
+  status: 'SUCCESS' | 'DUPLICATE' | 'AUTH_ERROR' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR';
+  httpStatus: number;
+  message: string;
+  rawPayload?: any;
+}
+
+export interface JustdialStats {
+  totalReceived: number;
+  totalSuccess: number;
+  totalDuplicates: number;
+  totalErrors: number;
+  lastReceivedAt?: string;
+  status: 'NOT_CONNECTED' | 'PENDING_SETUP' | 'CONNECTED' | 'ERROR';
 }
 
 export interface CrmCallLog {

@@ -209,6 +209,11 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
               <span className="text-[10px] font-mono text-neutral-400 bg-neutral-800 px-2 py-0.5 rounded">
                 {status}
               </span>
+              {lead.external_lead_id && (
+                <span className="text-[10px] font-mono text-orange-300 bg-orange-950/80 px-2 py-0.5 rounded border border-orange-800">
+                  Justdial Ref: #{lead.external_lead_id}
+                </span>
+              )}
             </div>
             <h2 className="text-xl font-serif font-bold text-white mt-1.5">
               {isEditing ? 'Editing Lead Profile' : lead.customer_name}
@@ -258,14 +263,21 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
                 <Phone className="w-5 h-5" />
               </div>
               <div>
-                <div className="font-mono text-sm font-bold text-white">{lead.phone}</div>
+                <div className="font-mono text-sm font-bold text-white flex flex-wrap items-center gap-2">
+                  <span>{lead.phone}</span>
+                  {lead.alternate_phone && (
+                    <span className="text-[10px] text-amber-300 font-mono bg-neutral-800 px-1.5 py-0.5 rounded">
+                      Alt: {lead.alternate_phone}
+                    </span>
+                  )}
+                </div>
                 <div className="text-[11px] text-neutral-400 font-mono">
                   Last outreach: {lead.last_contact_at ? new Date(lead.last_contact_at).toLocaleString('en-IN') : 'No calls logged yet'}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <a
                 href={`tel:${lead.phone}`}
                 onClick={() => onOpenLogCall(lead)}
@@ -274,6 +286,18 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
                 <Phone className="w-3.5 h-3.5" />
                 <span>Call Now</span>
               </a>
+
+              {lead.alternate_phone && (
+                <a
+                  href={`tel:${lead.alternate_phone}`}
+                  onClick={() => onOpenLogCall(lead)}
+                  className="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-mono text-xs transition flex items-center gap-1.5"
+                  title={`Call Alternate: ${lead.alternate_phone}`}
+                >
+                  <Phone className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Call Alt</span>
+                </a>
+              )}
 
               <button
                 onClick={() => onOpenLogCall(lead)}
@@ -466,6 +490,24 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
                   {new Date(lead.created_at).toLocaleString('en-IN')}
                 </div>
               </div>
+
+              {lead.external_lead_id && (
+                <div>
+                  <div className="text-[10px] font-mono uppercase text-neutral-400">Justdial External ID</div>
+                  <div className="text-orange-300 font-mono text-[11px] mt-0.5">
+                    #{lead.external_lead_id}
+                  </div>
+                </div>
+              )}
+
+              {lead.alternate_phone && (
+                <div>
+                  <div className="text-[10px] font-mono uppercase text-neutral-400">Alternate Phone</div>
+                  <div className="text-amber-300 font-mono text-[11px] mt-0.5">
+                    {lead.alternate_phone}
+                  </div>
+                </div>
+              )}
 
               {lead.notes && (
                 <div className="sm:col-span-2 pt-2 border-t border-neutral-800/80">

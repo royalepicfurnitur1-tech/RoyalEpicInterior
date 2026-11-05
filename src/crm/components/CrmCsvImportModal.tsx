@@ -26,6 +26,7 @@ interface ParsedRow {
   rowIndex: number;
   customer_name: string;
   phone: string;
+  alternate_phone?: string;
   email?: string;
   source: LeadSource;
   interested_service: string;
@@ -33,6 +34,7 @@ interface ParsedRow {
   budget?: string;
   temperature: LeadTemperature;
   notes?: string;
+  external_lead_id?: string;
   isValid: boolean;
   validationError?: string;
 }
@@ -60,12 +62,28 @@ Priya Sharma,9845011223,priya.s@gmail.com,Justdial,Modular Kitchen,Bengaluru (He
 Karthik Rao,+91 99001 22334,karthik.rao@yahoo.com,IndiaMART,Turnkey 3BHK,Bengaluru (Thanisandra),28 Lakhs,Burma teak pooja door
 Manjunath B,97311 99887,,Website,WPC Bathroom Doors,Bengaluru,4 Lakhs,Termite proof warranty inquiry`;
 
+  const justdialCsv = `Lead ID,Caller Name,Mobile Number,Alternate Mobile,Email,Category,City,Area,Budget,Requirement,Date
+JD-91021,Rajesh Gowda,9880199887,+918023456789,rajesh.g@example.com,Turnkey 4BHK Villa Interior,Bengaluru,Hebbal,35 Lakhs,Italian marble flooring and teak pooja room,2026-11-05
+JD-91022,Deepa Nambiar,9916644221,,deepa.n@yahoo.com,Modular Kitchen & Wardrobes,Bengaluru,Thanisandra,18 Lakhs,Acrylic kitchen with island counter,2026-11-05
+JD-91023,Arjun Murthy,9741288334,,arjun.m@techcorp.in,Commercial Office Fit-Out,Bengaluru,Whitefield,45 Lakhs,Glass partitions and director cabin,2026-11-05`;
+
   const downloadSampleTemplate = () => {
     const blob = new Blob([sampleCsv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', 'royal_epic_leads_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadJustdialTemplate = () => {
+    const blob = new Blob([justdialCsv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'justdial_leads_export_template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -84,15 +102,17 @@ Manjunath B,97311 99887,,Website,WPC Bathroom Doors,Bengaluru,4 Lakhs,Termite pr
 
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
     
-    // Find column indexes
-    const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('customer') || h.includes('client'));
-    const phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact') || h.includes('number'));
+    // Find column indexes with support for standard CRM and Justdial exports
+    const extIdIdx = headers.findIndex(h => h.includes('leadid') || h.includes('leadno') || h.includes('extid') || h.includes('enquiryid') || h === 'id');
+    const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('customer') || h.includes('client') || h.includes('caller') || h.includes('contactperson'));
+    const phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact') || h.includes('number') || h.includes('cell'));
+    const altPhoneIdx = headers.findIndex(h => h.includes('alt') || h.includes('second'));
     const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('mail'));
     const sourceIdx = headers.findIndex(h => h.includes('source') || h.includes('channel') || h.includes('platform'));
-    const serviceIdx = headers.findIndex(h => h.includes('service') || h.includes('requirement') || h.includes('product'));
-    const cityIdx = headers.findIndex(h => h.includes('city') || h.includes('location') || h.includes('area'));
-    const budgetIdx = headers.findIndex(h => h.includes('budget') || h.includes('quote') || h.includes('cost'));
-    const notesIdx = headers.findIndex(h => h.includes('note') || h.includes('remark') || h.includes('comment'));
+    const serviceIdx = headers.findIndex(h => h.includes('service') || h.includes('requirement') || h.includes('product') || h.includes('category'));
+    const cityIdx = headers.findIndex(h => h.includes('city') || h.includes('location') || h.includes('area') || h.includes('branch'));
+    const budgetIdx = headers.findIndex(h => h.includes('budget') || h.includes('quote') || h.includes('cost') || h.includes('value'));
+    const notesIdx = headers.findIndex(h => h.includes('note') || h.includes('remark') || h.includes('comment') || h.includes('requirement'));
 
     if (nameIdx === -1 || phoneIdx === -1) {
       setGeneralError('Could not identify required columns: "Customer Name" and "Phone Number" are required in the header row.');
@@ -122,8 +142,10 @@ Manjunath B,97311 99887,,Website,WPC Bathroom Doors,Bengaluru,4 Lakhs,Termite pr
       }
       cells.push(currentCell.trim());
 
+      const rawExtId = extIdIdx !== -1 ? cells[extIdIdx] : '';
       const rawName = cells[nameIdx] || '';
       const rawPhone = cells[phoneIdx] || '';
+      const rawAltPhone = altPhoneIdx !== -1 ? cells[altPhoneIdx] : '';
       const rawEmail = emailIdx !== -1 ? cells[emailIdx] : '';
       const rawSource = sourceIdx !== -1 ? cells[sourceIdx] : 'Justdial';
       const rawService = serviceIdx !== -1 ? cells[serviceIdx] : 'Turnkey Interior';
@@ -166,6 +188,7 @@ Manjunath B,97311 99887,,Website,WPC Bathroom Doors,Bengaluru,4 Lakhs,Termite pr
         rowIndex: i + 1,
         customer_name: rawName.trim(),
         phone: normalizePhoneNumber(rawPhone.trim()),
+        alternate_phone: rawAltPhone?.trim() ? normalizePhoneNumber(rawAltPhone.trim()) : undefined,
         email: rawEmail?.trim() || undefined,
         source: cleanSource,
         interested_service: rawService?.trim() || 'Turnkey Interior Design',
@@ -173,6 +196,7 @@ Manjunath B,97311 99887,,Website,WPC Bathroom Doors,Bengaluru,4 Lakhs,Termite pr
         budget: rawBudget?.trim() || undefined,
         temperature: 'Warm',
         notes: rawNotes?.trim() || undefined,
+        external_lead_id: rawExtId?.trim() || undefined,
         isValid,
         validationError
       });
@@ -253,16 +277,25 @@ Manjunath B,97311 99887,,Website,WPC Bathroom Doors,Bengaluru,4 Lakhs,Termite pr
           <div className="flex items-center gap-3">
             <button
               onClick={downloadSampleTemplate}
-              className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 transition"
-              title="Download Template"
+              className="text-xs font-mono text-neutral-300 hover:text-white flex items-center gap-1 transition cursor-pointer"
+              title="Download Generic CSV Template"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Sample CSV</span>
+              <span>Generic CSV</span>
+            </button>
+
+            <button
+              onClick={downloadJustdialTemplate}
+              className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 transition cursor-pointer bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20"
+              title="Download Justdial Specific Export Template"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Justdial Preset CSV</span>
             </button>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>

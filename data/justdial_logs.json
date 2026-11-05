@@ -1,0 +1,107 @@
+[
+  {
+    "id": "JD-LOG-1793857042064-6249",
+    "timestamp": "2026-11-05T05:37:22.064Z",
+    "ip": "127.0.0.1 (Internal Simulation)",
+    "externalLeadId": "JD-TEST-042063",
+    "customerName": "Sunita Hegde",
+    "phone": "+919741288334",
+    "status": "SUCCESS",
+    "httpStatus": 201,
+    "message": "Justdial lead successfully ingested and created as \"Sunita Hegde\" (ID: CRM-2611-22888).",
+    "rawPayload": {
+      "leadid": "JD-TEST-042063",
+      "name": "Sunita Hegde",
+      "mobile": "9741288334",
+      "alternate_mobile": "+91 80 2345 6789",
+      "email": "sunita.hegde@example.com",
+      "category": "Turnkey Architectural Interior",
+      "city": "Bengaluru (Whitefield)",
+      "budget": "₹28 - 45 Lakhs",
+      "requirement": "Corporate office fit-out with acoustic glass partitions and executive director cabins.",
+      "date": "2026-11-05T05:37:22.063Z",
+      "is_simulated_test": true
+    }
+  },
+  {
+    "id": "JD-LOG-1793857022131-8924",
+    "timestamp": "2026-11-05T05:37:02.131Z",
+    "ip": "127.0.0.1",
+    "externalLeadId": "JD-BLR-88302",
+    "customerName": "Naveen Chandrasekhar",
+    "phone": "+919900223344",
+    "status": "DUPLICATE",
+    "httpStatus": 200,
+    "message": "Existing client recognized by mobile: Re-inquiry appended to CRM ID CRM-2611-11319.",
+    "rawPayload": {
+      "leadid": "JD-BLR-88302",
+      "name": "Naveen Chandrasekhar",
+      "mobile": "+91 99002-23344",
+      "category": "Pooja Unit & Crockery",
+      "city": "Bengaluru",
+      "requirement": "Also need quotation for custom teak pooja unit."
+    }
+  },
+  {
+    "id": "JD-LOG-1793857016125-7257",
+    "timestamp": "2026-11-05T05:36:56.125Z",
+    "ip": "127.0.0.1",
+    "externalLeadId": "JD-BLR-88301",
+    "customerName": "Naveen Chandrasekhar",
+    "phone": "+919900223344",
+    "status": "DUPLICATE",
+    "httpStatus": 200,
+    "message": "Idempotent duplicate: Lead with external Justdial ID \"JD-BLR-88301\" already recorded (CRM ID: CRM-2611-11319).",
+    "rawPayload": {
+      "leadid": "JD-BLR-88301",
+      "name": "Naveen Chandrasekhar",
+      "mobile": "9900223344"
+    }
+  },
+  {
+    "id": "JD-LOG-1793857005397-7384",
+    "timestamp": "2026-11-05T05:36:45.397Z",
+    "ip": "127.0.0.1",
+    "externalLeadId": "JD-BLR-88301",
+    "customerName": "Naveen Chandrasekhar",
+    "phone": "+919900223344",
+    "status": "SUCCESS",
+    "httpStatus": 201,
+    "message": "Justdial lead successfully ingested and created as \"Naveen Chandrasekhar\" (ID: CRM-2611-11319).",
+    "rawPayload": {
+      "leadid": "JD-BLR-88301",
+      "name": "Naveen Chandrasekhar",
+      "mobile": "9900223344",
+      "alternate_mobile": "+91 80 2345 9999",
+      "email": "naveen.c@gmail.com",
+      "category": "3BHK Luxury Interior Execution",
+      "city": "Bengaluru (Thanisandra Main Road)",
+      "budget": "₹32 Lakhs",
+      "requirement": "Looking for turnkey modular kitchen, Italian marble living and Burma teak pooja door."
+    }
+  },
+  {
+    "id": "JD-LOG-1793856997145-7678",
+    "timestamp": "2026-11-05T05:36:37.145Z",
+    "ip": "127.0.0.1",
+    "status": "AUTH_ERROR",
+    "httpStatus": 401,
+    "message": "Unauthorized: Invalid or missing secret token in header, query, or payload.",
+    "rawPayload": {
+      "name": "Test User",
+      "mobile": "9845011223"
+    }
+  },
+  {
+    "id": "JD-LOG-1793856988550-6400",
+    "timestamp": "2026-11-05T05:36:28.550Z",
+    "ip": "127.0.0.1",
+    "status": "AUTH_ERROR",
+    "httpStatus": 401,
+    "message": "Unauthorized: Invalid or missing secret token in header, query, or payload.",
+    "rawPayload": {
+      "name": "Test User",
+      "mobile": "9845011223"
+    }
+  }
+]

@@ -7,7 +7,10 @@ import {
   LeadSource, 
   LeadStatus, 
   LeadTemperature, 
-  CallOutcome 
+  CallOutcome,
+  JustdialConfig,
+  JustdialLog,
+  JustdialStats
 } from './types';
 
 // Helper to normalize phone numbers (e.g. "+91 98450-12345" -> "+919845012345" or "9845012345")
@@ -359,5 +362,123 @@ export async function updateCrmUserRole(userId: string, role: 'admin' | 'telecal
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || 'Network error updating user role' };
+  }
+}
+
+// =========================================================================
+// JUSTDIAL INTEGRATION API CALLS (Admin Only)
+// =========================================================================
+
+export async function fetchJustdialIntegrationStatus(): Promise<{
+  success: boolean;
+  config?: JustdialConfig;
+  stats?: JustdialStats;
+  recentLogs?: JustdialLog[];
+  webhookUrl?: string;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/crm/integrations/justdial/status', {
+      headers: getCrmAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data.error || 'Failed to fetch Justdial integration status' };
+    }
+    return {
+      success: true,
+      config: data.config,
+      stats: data.stats,
+      recentLogs: data.recentLogs || [],
+      webhookUrl: data.webhookUrl
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error fetching Justdial status' };
+  }
+}
+
+export async function saveJustdialConfig(payload: {
+  webhookSecret?: string;
+  isActive?: boolean;
+  autoAssignTelecallerId?: string;
+}): Promise<{
+  success: boolean;
+  config?: JustdialConfig;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/crm/integrations/justdial/config', {
+      method: 'POST',
+      headers: getCrmAuthHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data.error || 'Failed to update Justdial configuration' };
+    }
+    return { success: true, config: data.config };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error saving Justdial configuration' };
+  }
+}
+
+export async function triggerJustdialTest(): Promise<{
+  success: boolean;
+  testResult?: any;
+  stats?: JustdialStats;
+  config?: JustdialConfig;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/crm/integrations/justdial/test', {
+      method: 'POST',
+      headers: getCrmAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data.error || data.testResult?.error || 'Test simulated lead failed' };
+    }
+    return {
+      success: true,
+      testResult: data.testResult,
+      stats: data.stats,
+      config: data.config
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error triggering Justdial test' };
+  }
+}
+
+export async function fetchJustdialLogs(limit = 50): Promise<{
+  logs: JustdialLog[];
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`/api/crm/integrations/justdial/logs?limit=${limit}`, {
+      headers: getCrmAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { logs: [], error: data.error || 'Failed to fetch logs' };
+    }
+    return { logs: data.logs || [] };
+  } catch (err: any) {
+    return { logs: [], error: err.message || 'Network error fetching Justdial logs' };
+  }
+}
+
+export async function clearJustdialLogsApi(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch('/api/crm/integrations/justdial/logs/clear', {
+      method: 'POST',
+      headers: getCrmAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data.error || 'Failed to clear logs' };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error clearing Justdial logs' };
   }
 }

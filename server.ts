@@ -25,6 +25,7 @@ import {
   OrderEmailItem 
 } from "./src/server/emailNotificationService";
 import { crmRouter } from "./src/server/crmRoutes";
+import { justdialRouter } from "./src/server/justdialRoutes";
 
 dotenv.config();
 
@@ -2960,6 +2961,10 @@ Provide a JSON response with the following keys:
 
   // Mount Telecaller CRM API Routes
   app.use("/api/crm", crmRouter);
+
+  // Mount Dedicated Justdial Webhook Integration Endpoints
+  app.use("/api/integrations/justdial", justdialRouter);
+  app.use("/api/crm/integrations/justdial", justdialRouter);
 
   // =========================================================================
   // STORAGE & ASSET MANAGEMENT API

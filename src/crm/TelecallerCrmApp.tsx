@@ -10,6 +10,7 @@ import { CrmLeadModal } from './components/CrmLeadModal';
 import { CrmLogCallModal } from './components/CrmLogCallModal';
 import { CrmCreateLeadModal } from './components/CrmCreateLeadModal';
 import { CrmCsvImportModal } from './components/CrmCsvImportModal';
+import { CrmIntegrationsView } from './components/CrmIntegrationsView';
 import { CrmLead } from './types';
 import { 
   Phone, 
@@ -23,7 +24,8 @@ import {
   Plus, 
   ExternalLink,
   Menu,
-  X
+  X,
+  Zap
 } from 'lucide-react';
 
 interface TelecallerCrmAppProps {
@@ -32,7 +34,7 @@ interface TelecallerCrmAppProps {
 
 const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
   const { user, isAuthenticated, loading, isAdmin, logout } = useCrmAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'followups' | 'reports' | 'import' | 'users'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'followups' | 'reports' | 'import' | 'users' | 'integrations'>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Modal states
@@ -166,6 +168,18 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Users</span>
                 </button>
+
+                <button
+                  onClick={() => setActiveTab('integrations')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'integrations'
+                      ? 'bg-amber-500/15 text-amber-400 font-bold border border-amber-500/30'
+                      : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Integrations</span>
+                </button>
               </>
             )}
           </nav>
@@ -255,6 +269,13 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 >
                   Access Control (Users)
                 </button>
+                <button
+                  onClick={() => { setActiveTab('integrations'); setMobileMenuOpen(false); }}
+                  className="w-full text-left py-2 px-3 rounded-lg text-xs font-mono text-amber-300 hover:bg-neutral-800 flex items-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Lead Integrations</span>
+                </button>
               </>
             )}
             <button
@@ -299,6 +320,10 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
 
         {activeTab === 'users' && isAdmin && (
           <CrmUserManagement />
+        )}
+
+        {activeTab === 'integrations' && isAdmin && (
+          <CrmIntegrationsView />
         )}
       </main>
 
