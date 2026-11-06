@@ -21,6 +21,7 @@ import { ProductManagementModule } from './ProductManagementModule';
 import { AdminCustomerReviewsManager } from './AdminCustomerReviewsManager';
 import { HeritageHomesManager } from './HeritageHomesManager';
 import { TurnkeyManager } from './TurnkeyManager';
+import { AdminTelecallerUserManagement } from './AdminTelecallerUserManagement';
 import { isSupabaseConfigured, checkSupabaseLiveConnection, fetchWebsiteFeedback } from '../lib/supabase';
 import { getProducts, saveProduct, deleteProductById, seedProductsToSupabase } from '../services/productService';
 import { getPortfolioProjects, savePortfolioProject, deletePortfolioProject, seedPortfolioToSupabase } from '../services/portfolioService';
@@ -102,6 +103,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     | 'cms' 
     | 'ai-manager' 
     | 'crm' 
+    | 'telecaller-access'
     | 'quotation' 
     | 'projects' 
     | 'products' 
@@ -691,6 +693,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'feedback', label: `💬 Website Feedback (${feedbackList.length})`, icon: MessageSquare },
     { id: 'ai-manager', label: '🤖 AI Voice Manager', icon: Bot },
     { id: 'crm', label: '📈 CRM Lead Pipeline', icon: Users },
+    { id: 'telecaller-access', label: '📞 Telecaller CRM & Staff Access', icon: Phone },
     { id: 'quotation', label: '📄 Quotation Generator', icon: FileText },
     { id: 'projects', label: '🏗️ Project Management', icon: Briefcase },
     { id: 'products', label: `📦 Products CMS (${cmsProducts.length})`, icon: Package },
@@ -1334,7 +1337,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {activeTab === 'crm' && (
-            <CrmKanbanBoard />
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900 border border-white/10 p-4 rounded-2xl">
+                <div>
+                  <h3 className="font-serif font-bold text-white text-sm flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-amber-400" />
+                    Telecaller Subdomain: <code className="text-amber-300 font-mono">tele.royalepicinteriors.com</code>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    Authorized telecallers log into the dedicated calling engine directly.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => setActiveTab('telecaller-access')}
+                    className="px-3.5 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-amber-300 border border-amber-500/30 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Manage Staff & Logins</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const isProd = window.location.hostname.includes('royalepicinterior');
+                      if (isProd) window.open('https://tele.royalepicinteriors.com', '_blank');
+                      else window.open(`${window.location.origin}/?subdomain=tele`, '_blank');
+                    }}
+                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                  >
+                    <span>Launch Telecaller CRM ↗</span>
+                  </button>
+                </div>
+              </div>
+              <CrmKanbanBoard />
+            </div>
+          )}
+
+          {activeTab === 'telecaller-access' && (
+            <AdminTelecallerUserManagement />
           )}
 
           {/* 5. QUOTATION GENERATOR */}

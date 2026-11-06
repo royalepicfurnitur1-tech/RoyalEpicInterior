@@ -79,7 +79,7 @@ export const CrmCreateLeadModal: React.FC<CrmCreateLeadModalProps> = ({
 
   const [usersList, setUsersList] = useState<TelecallerUserOption[]>([
     { id: 'crm_admin_primary', name: 'Royal Epic Admin', role: 'admin' },
-    { id: 'crm_telecaller_1', name: 'Pooja (Senior Telecaller)', role: 'telecaller' }
+    { id: 'crm_telecaller_1', name: 'Telecaller 1', role: 'telecaller' }
   ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
