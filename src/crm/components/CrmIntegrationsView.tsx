@@ -31,7 +31,8 @@ import {
   Server,
   Layers,
   PhoneCall,
-  Sliders
+  Sliders,
+  X
 } from 'lucide-react';
 
 export const CrmIntegrationsView: React.FC = () => {
@@ -125,7 +126,6 @@ export const CrmIntegrationsView: React.FC = () => {
       setTestResult(res.testResult);
       if (res.stats) setStats(res.stats);
       if (res.config) setConfig(res.config);
-      // Reload logs to show new test record
       const logsRes = await fetchJustdialLogs(25);
       setLogs(logsRes.logs);
     } else {
@@ -167,66 +167,66 @@ export const CrmIntegrationsView: React.FC = () => {
     const s = stats?.status || config?.status || 'PENDING_SETUP';
     if (!config?.isActive) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-neutral-800 text-neutral-400 border border-neutral-700">
-          <span className="w-2 h-2 rounded-full bg-neutral-500" />
-          PAUSED (INACTIVE)
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+          Paused (Inactive)
         </span>
       );
     }
     if (s === 'CONNECTED') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-600/50 shadow-sm shadow-emerald-900/30">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-          CONNECTED & VERIFIED
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          Connected & Verified
         </span>
       );
     }
     if (s === 'ERROR') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-red-950/80 text-red-400 border border-red-600/50">
-          <XCircle className="w-3.5 h-3.5 text-red-400" />
-          ERROR (DELIVERY ISSUE)
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
+          <XCircle className="w-3.5 h-3.5 text-rose-600" />
+          Delivery Error
         </span>
       );
     }
     if (s === 'NOT_CONNECTED') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-neutral-800 text-neutral-300 border border-neutral-700">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-          NOT CONFIGURED
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+          Not Configured
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-950/80 text-amber-400 border border-amber-600/50">
-        <Clock className="w-3.5 h-3.5 text-amber-400" />
-        PENDING SETUP (AWAITING LEADS)
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+        <Clock className="w-3.5 h-3.5 text-amber-600" />
+        Pending Leads Delivery
       </span>
     );
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto text-xs text-[#172033]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800">
+      <div className="bg-white border border-[#E2E8F0] p-4 sm:p-5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              <Zap className="w-4 h-4" />
-            </span>
-            <h1 className="text-xl font-bold font-serif text-white tracking-wide">
-              Lead Source Integrations
+          <div className="flex items-center gap-2 mb-0.5">
+            <h1 className="text-xl font-bold text-[#172033] tracking-tight">
+              Settings & Integrations
             </h1>
+            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              Admin Only
+            </span>
           </div>
-          <p className="text-xs text-neutral-400 mt-1">
-            Automated webhook pipelines feeding enquiries into Royal Epic Telecaller CRM and mobile application.
+          <p className="text-xs text-slate-500">
+            Pipeline configurations, webhook endpoints, and system synchronization.
           </p>
         </div>
 
         <button
           onClick={loadStatus}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-xs font-mono text-neutral-300 transition cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-[#E2E8F0] text-xs font-medium text-slate-600 transition cursor-pointer self-start sm:self-auto disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh Status</span>
@@ -234,20 +234,20 @@ export const CrmIntegrationsView: React.FC = () => {
       </div>
 
       {/* Main Justdial Integration Card */}
-      <div className="bg-neutral-900/90 rounded-2xl border border-neutral-800 overflow-hidden shadow-xl">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden shadow-xs">
         {/* Card Header */}
-        <div className="p-5 sm:p-6 bg-gradient-to-r from-neutral-900 via-neutral-900 to-neutral-850 border-b border-neutral-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-700 flex items-center justify-center text-white font-bold text-lg shadow-md border border-orange-400/40 shrink-0">
+        <div className="p-5 border-b border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/60">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#356AE6] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
               JD
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="text-base font-bold text-white">Justdial Lead Ingestion Webhook</h2>
+                <h2 className="text-sm font-bold text-[#172033]">Justdial Webhook Integration</h2>
                 {getStatusBadge()}
               </div>
-              <p className="text-xs text-neutral-400 mt-1">
-                Real-time automated webhook receiver for Justdial verified Bengaluru home & commercial interior inquiries.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Automated webhook ingestion pipeline for verified Bengaluru interior enquiries.
               </p>
             </div>
           </div>
@@ -256,51 +256,47 @@ export const CrmIntegrationsView: React.FC = () => {
             <button
               onClick={handleToggleActive}
               disabled={isSavingConfig}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium border transition cursor-pointer flex items-center gap-1.5 ${
-                config?.isActive
-                  ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-              }`}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer flex items-center gap-1.5"
             >
-              <Sliders className="w-3.5 h-3.5" />
+              <Sliders className="w-3.5 h-3.5 text-slate-500" />
               <span>{config?.isActive ? 'Pause Webhook' : 'Activate Webhook'}</span>
             </button>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-neutral-800 border-b border-neutral-800 text-center">
-          <div className="bg-neutral-950 p-4">
-            <div className="text-[10px] font-mono uppercase text-neutral-400">Total Received</div>
-            <div className="text-xl font-bold font-mono text-white mt-0.5">{stats?.totalReceived ?? 0}</div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#E2E8F0] border-b border-[#E2E8F0] text-center">
+          <div className="bg-white p-4">
+            <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Received</div>
+            <div className="text-xl font-bold font-mono text-[#172033] mt-0.5 tabular-nums">{stats?.totalReceived ?? 0}</div>
           </div>
 
-          <div className="bg-neutral-950 p-4">
-            <div className="text-[10px] font-mono uppercase text-emerald-400">Successfully Ingested</div>
-            <div className="text-xl font-bold font-mono text-emerald-400 mt-0.5">{stats?.totalSuccess ?? 0}</div>
+          <div className="bg-white p-4">
+            <div className="text-[11px] font-medium text-emerald-600 uppercase tracking-wider">Ingested Leads</div>
+            <div className="text-xl font-bold font-mono text-emerald-600 mt-0.5 tabular-nums">{stats?.totalSuccess ?? 0}</div>
           </div>
 
-          <div className="bg-neutral-950 p-4">
-            <div className="text-[10px] font-mono uppercase text-blue-400">Duplicate Inquiries Merged</div>
-            <div className="text-xl font-bold font-mono text-blue-400 mt-0.5">{stats?.totalDuplicates ?? 0}</div>
+          <div className="bg-white p-4">
+            <div className="text-[11px] font-medium text-blue-600 uppercase tracking-wider">Duplicate Inquiries</div>
+            <div className="text-xl font-bold font-mono text-blue-600 mt-0.5 tabular-nums">{stats?.totalDuplicates ?? 0}</div>
           </div>
 
-          <div className="bg-neutral-950 p-4">
-            <div className="text-[10px] font-mono uppercase text-red-400">Validation / Auth Errors</div>
-            <div className="text-xl font-bold font-mono text-red-400 mt-0.5">{stats?.totalErrors ?? 0}</div>
+          <div className="bg-white p-4">
+            <div className="text-[11px] font-medium text-rose-600 uppercase tracking-wider">Errors / Blocked</div>
+            <div className="text-xl font-bold font-mono text-rose-600 mt-0.5 tabular-nums">{stats?.totalErrors ?? 0}</div>
           </div>
         </div>
 
         {/* Card Body */}
-        <div className="p-5 sm:p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Section 1: Endpoint URL */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-mono uppercase text-neutral-300 font-bold flex items-center gap-1.5">
-                <Server className="w-3.5 h-3.5 text-amber-400" />
-                <span>Production Webhook URL (Provide this to Justdial)</span>
+              <label className="text-xs font-bold uppercase text-[#172033] flex items-center gap-1.5">
+                <Server className="w-3.5 h-3.5 text-[#356AE6]" />
+                <span>Production Webhook URL (For Justdial Team)</span>
               </label>
-              <span className="text-[10px] font-mono text-neutral-400">HTTP Method: POST</span>
+              <span className="text-[11px] text-slate-400 font-mono">Method: POST</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -308,37 +304,30 @@ export const CrmIntegrationsView: React.FC = () => {
                 type="text"
                 readOnly
                 value={webhookUrl}
-                className="flex-1 bg-neutral-950 border border-neutral-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-amber-300 focus:outline-none select-all"
+                className="flex-1 bg-slate-50 border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs font-mono text-[#172033] focus:outline-none select-all"
               />
               <button
                 type="button"
                 onClick={handleCopyWebhookUrl}
-                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold font-mono text-xs rounded-xl transition shadow-md flex items-center gap-1.5 shrink-0 cursor-pointer"
+                className="px-3.5 py-2 bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs rounded-lg transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
               >
                 {copiedUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedUrl ? 'Copied!' : 'Copy URL'}</span>
+                <span>{copiedUrl ? 'Copied' : 'Copy URL'}</span>
               </button>
             </div>
-            <p className="text-[11px] text-neutral-400 font-mono">
-              Accepts JSON or x-www-form-urlencoded POST requests from Justdial's lead delivery servers.
-            </p>
           </div>
 
           {/* Section 2: Secret Token Configuration */}
-          <div className="p-4 bg-neutral-950/60 rounded-xl border border-neutral-800 space-y-3">
+          <div className="p-4 bg-slate-50 rounded-xl border border-[#E2E8F0] space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold font-mono uppercase text-white">Webhook Secret Token Authentication</span>
+                <Key className="w-4 h-4 text-[#356AE6]" />
+                <span className="text-xs font-bold text-[#172033]">Webhook Secret Authentication</span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">
                 Active Protection
               </span>
             </div>
-
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Justdial must include this token in their request header (<code className="text-amber-300 font-mono">x-justdial-token: &lt;token&gt;</code>) or as query parameter (<code className="text-amber-300 font-mono">?token=&lt;token&gt;</code>).
-            </p>
 
             <form onSubmit={handleSaveConfig} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <div className="relative flex-1">
@@ -347,12 +336,12 @@ export const CrmIntegrationsView: React.FC = () => {
                   value={secretInput}
                   onChange={(e) => setSecretInput(e.target.value)}
                   placeholder="Enter secret token..."
-                  className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3.5 py-2 text-xs font-mono text-white focus:border-amber-400 focus:outline-none pr-10"
+                  className="w-full bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg px-3 py-2 text-xs font-mono text-[#172033] focus:outline-none pr-9"
                 />
                 <button
                   type="button"
                   onClick={() => setShowSecret(!showSecret)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
                 >
                   {showSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -361,36 +350,36 @@ export const CrmIntegrationsView: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSavingConfig}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white font-mono text-xs rounded-lg border border-neutral-600 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-white border border-[#E2E8F0] hover:bg-slate-100 text-slate-700 font-medium text-xs rounded-lg transition cursor-pointer"
               >
                 <span>{isSavingConfig ? 'Saving...' : 'Update Secret'}</span>
               </button>
             </form>
 
             {configSuccessMsg && (
-              <div className="text-xs font-mono text-emerald-400 flex items-center gap-1.5 pt-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="text-xs text-emerald-700 flex items-center gap-1.5 pt-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{configSuccessMsg}</span>
               </div>
             )}
 
             {configErrorMsg && (
-              <div className="text-xs font-mono text-red-400 flex items-center gap-1.5 pt-1">
-                <XCircle className="w-3.5 h-3.5" />
+              <div className="text-xs text-rose-700 flex items-center gap-1.5 pt-1">
+                <XCircle className="w-3.5 h-3.5 text-rose-600" />
                 <span>{configErrorMsg}</span>
               </div>
             )}
           </div>
 
           {/* Section 3: Diagnostic Test Trigger */}
-          <div className="p-4 bg-amber-950/20 rounded-xl border border-amber-900/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-4 bg-slate-50 rounded-xl border border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <Play className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-bold font-mono uppercase text-white">Simulate Inbound Justdial Lead</h3>
+                <Play className="w-4 h-4 text-[#356AE6]" />
+                <h3 className="text-xs font-bold text-[#172033]">Simulate Inbound Justdial Lead</h3>
               </div>
-              <p className="text-xs text-neutral-400 mt-1">
-                Sends a synthetic Justdial payload with a Bengaluru customer inquiry to test end-to-end ingestion, duplicate filtering, and database synchronization.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Sends a synthetic Justdial payload to verify ingestion and duplicate detection without calling third-party APIs.
               </p>
             </div>
 
@@ -398,7 +387,7 @@ export const CrmIntegrationsView: React.FC = () => {
               type="button"
               onClick={handleRunTest}
               disabled={isTesting}
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold font-mono text-xs rounded-xl shadow-lg shadow-amber-500/10 transition flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              className="px-4 py-2 bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs rounded-lg shadow-xs transition flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
             >
               {isTesting ? (
                 <>
@@ -414,28 +403,24 @@ export const CrmIntegrationsView: React.FC = () => {
             </button>
           </div>
 
-          {/* Test Result Banner */}
           {testResult && (
-            <div className="p-4 bg-emerald-950/40 rounded-xl border border-emerald-800 text-xs font-mono space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-xs font-mono space-y-1 text-emerald-800">
+              <div className="flex items-center justify-between font-bold text-emerald-700">
+                <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
                   Webhook Test Succeeded (HTTP 201 Created)
                 </span>
-                <span className="text-[10px] text-neutral-400">{new Date().toLocaleTimeString('en-IN')}</span>
+                <span className="text-[10px] text-emerald-600">{new Date().toLocaleTimeString('en-IN')}</span>
               </div>
-              <p className="text-neutral-300">
-                Created Lead: <span className="text-white font-bold">{testResult.lead?.customer_name}</span> ({testResult.lead?.phone}) • CRM ID: <span className="text-amber-400 font-bold">{testResult.lead_id}</span>
+              <p>
+                Created Lead: <span className="font-bold">{testResult.lead?.customer_name}</span> ({testResult.lead?.phone})
               </p>
-              <div className="text-[11px] text-neutral-400">
-                Service: {testResult.lead?.interested_service} • Locality: {testResult.lead?.city}
-              </div>
             </div>
           )}
 
           {testError && (
-            <div className="p-4 bg-red-950/40 rounded-xl border border-red-800 text-xs font-mono space-y-1">
-              <span className="text-red-400 font-bold flex items-center gap-1.5">
+            <div className="p-4 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-700 space-y-1">
+              <span className="font-bold flex items-center gap-1.5">
                 <XCircle className="w-4 h-4" />
                 Test Failed: {testError}
               </span>
@@ -444,10 +429,10 @@ export const CrmIntegrationsView: React.FC = () => {
 
           {/* Section 4: Activity & Ingestion Logs */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                <FileText className="w-4 h-4 text-slate-500" />
+                <h3 className="text-xs font-bold text-[#172033]">
                   Recent Inbound Webhook Activity Logs ({logs.length})
                 </h3>
               </div>
@@ -458,33 +443,31 @@ export const CrmIntegrationsView: React.FC = () => {
                     const l = await fetchJustdialLogs(30);
                     setLogs(l.logs);
                   }}
-                  className="text-neutral-400 hover:text-white p-1 rounded text-xs font-mono flex items-center gap-1"
-                  title="Refresh activity logs"
+                  className="text-slate-600 hover:text-[#172033] p-1 rounded text-xs flex items-center gap-1"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Refresh</span>
+                  <span>Refresh</span>
                 </button>
                 {logs.length > 0 && (
                   <button
                     onClick={handleClearLogs}
-                    className="text-neutral-500 hover:text-red-400 p-1 rounded text-xs font-mono flex items-center gap-1 cursor-pointer"
-                    title="Clear logs"
+                    className="text-slate-400 hover:text-rose-600 p-1 rounded text-xs flex items-center gap-1 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Clear</span>
+                    <span>Clear</span>
                   </button>
                 )}
               </div>
             </div>
 
             {logs.length === 0 ? (
-              <div className="py-8 text-center text-xs font-mono text-neutral-400 bg-neutral-950/40 rounded-xl border border-neutral-800/60">
-                No webhook payloads received yet. Run a simulated test lead above or provide the webhook URL to Justdial.
+              <div className="py-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-[#E2E8F0]">
+                No webhook payloads received yet.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-neutral-800">
+              <div className="overflow-x-auto rounded-xl border border-[#E2E8F0]">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-neutral-950 text-neutral-400 uppercase text-[10px] border-b border-neutral-800">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-[11px] border-b border-[#E2E8F0]">
                     <tr>
                       <th className="px-3.5 py-2.5">Time</th>
                       <th className="px-3.5 py-2.5">Status</th>
@@ -495,47 +478,43 @@ export const CrmIntegrationsView: React.FC = () => {
                       <th className="px-3.5 py-2.5 text-right">Raw Data</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-800/60 bg-neutral-950/60">
+                  <tbody className="divide-y divide-[#E2E8F0]">
                     {logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-neutral-900/60 transition">
-                        <td className="px-3.5 py-2 text-neutral-400 whitespace-nowrap text-[11px]">
+                      <tr key={log.id} className="hover:bg-slate-50/80 transition">
+                        <td className="px-3.5 py-2 text-slate-500 whitespace-nowrap text-[11px]">
                           {new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </td>
                         <td className="px-3.5 py-2 whitespace-nowrap">
                           {log.status === 'SUCCESS' ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
                               SUCCESS (201)
                             </span>
                           ) : log.status === 'DUPLICATE' ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-blue-950 text-blue-300 border border-blue-800 font-bold">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
                               DUPLICATE (200)
                             </span>
-                          ) : log.status === 'AUTH_ERROR' ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-red-950 text-red-400 border border-red-800 font-bold">
-                              AUTH FAILED (401)
-                            </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-400 border border-amber-800 font-bold">
-                              {log.status} ({log.httpStatus})
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-rose-50 text-rose-700 border border-rose-200 font-semibold">
+                              {log.status} ({log.httpStatus || 400})
                             </span>
                           )}
                         </td>
-                        <td className="px-3.5 py-2 text-white font-medium whitespace-nowrap">
+                        <td className="px-3.5 py-2 text-[#172033] font-medium whitespace-nowrap font-sans">
                           {log.customerName || '—'}
                         </td>
-                        <td className="px-3.5 py-2 text-amber-300 whitespace-nowrap">
+                        <td className="px-3.5 py-2 text-slate-700 whitespace-nowrap">
                           {log.phone || '—'}
                         </td>
-                        <td className="px-3.5 py-2 text-neutral-400 text-[11px] whitespace-nowrap">
+                        <td className="px-3.5 py-2 text-slate-500 text-[11px] whitespace-nowrap">
                           {log.externalLeadId ? `#${log.externalLeadId}` : '—'}
                         </td>
-                        <td className="px-3.5 py-2 text-neutral-300 text-[11px] max-w-xs truncate" title={log.message}>
+                        <td className="px-3.5 py-2 text-slate-600 text-[11px] max-w-xs truncate" title={log.message}>
                           {log.message}
                         </td>
                         <td className="px-3.5 py-2 text-right whitespace-nowrap">
                           <button
                             onClick={() => setSelectedRawLog(log)}
-                            className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[10px] transition cursor-pointer"
+                            className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] transition cursor-pointer"
                           >
                             View JSON
                           </button>
@@ -547,71 +526,40 @@ export const CrmIntegrationsView: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Section 5: Integration Reference for Justdial Technical Onboarding */}
-          <div className="p-4 bg-neutral-950/80 rounded-xl border border-neutral-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold uppercase text-white flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-amber-400" />
-                <span>Justdial Webhook Technical Specifications & Onboarding Copy</span>
-              </span>
-              <button
-                type="button"
-                onClick={handleCopySample}
-                className="text-[11px] font-mono text-amber-400 hover:text-amber-300 transition flex items-center gap-1 cursor-pointer"
-              >
-                {copiedSample ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedSample ? 'Sample Copied!' : 'Copy Sample Payload'}</span>
-              </button>
-            </div>
-
-            <div className="text-xs text-neutral-400 space-y-2">
-              <p>
-                Provide the following details to your Justdial Account Executive / Campaign Technical Team to start instant lead delivery:
-              </p>
-              <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800 text-[11px] font-mono space-y-1 text-neutral-300">
-                <div><strong className="text-white">Webhook URL:</strong> {webhookUrl}</div>
-                <div><strong className="text-white">Method:</strong> POST</div>
-                <div><strong className="text-white">Header:</strong> x-justdial-token: {config?.webhookSecret || 're_jd_live_sec_2026'}</div>
-                <div><strong className="text-white">Payload Format:</strong> application/json or application/x-www-form-urlencoded</div>
-                <div><strong className="text-white">Expected Responses:</strong> 200 OK / 201 Created</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Raw Payload Modal */}
       {selectedRawLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
-            <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white border border-[#E2E8F0] rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-xl">
+            <div className="p-4 border-b border-[#E2E8F0] flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-mono font-bold text-white">
+                <h3 className="text-sm font-bold text-[#172033]">
                   Raw Webhook Payload • {selectedRawLog.id}
                 </h3>
-                <p className="text-[10px] font-mono text-neutral-400">
-                  Received at {new Date(selectedRawLog.timestamp).toLocaleString('en-IN')} from {selectedRawLog.ip || 'Remote IP'}
+                <p className="text-[11px] text-slate-500">
+                  Received at {new Date(selectedRawLog.timestamp).toLocaleString('en-IN')}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedRawLog(null)}
-                className="p-1 rounded text-neutral-400 hover:text-white"
+                className="p-1 rounded text-slate-400 hover:text-[#172033]"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-4 overflow-y-auto flex-1 font-mono text-xs">
-              <pre className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 text-amber-300 overflow-x-auto whitespace-pre-wrap">
+              <pre className="bg-slate-50 p-4 rounded-lg border border-[#E2E8F0] text-slate-800 overflow-x-auto whitespace-pre-wrap">
                 {JSON.stringify(selectedRawLog.rawPayload || { note: 'No payload captured' }, null, 2)}
               </pre>
             </div>
 
-            <div className="p-4 border-t border-neutral-800 flex justify-end">
+            <div className="p-4 border-t border-[#E2E8F0] flex justify-end">
               <button
                 onClick={() => setSelectedRawLog(null)}
-                className="px-4 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-mono text-neutral-200 cursor-pointer"
+                className="px-4 py-1.5 rounded-lg border border-[#E2E8F0] bg-white hover:bg-slate-50 text-xs text-slate-700 font-medium cursor-pointer"
               >
                 Close
               </button>

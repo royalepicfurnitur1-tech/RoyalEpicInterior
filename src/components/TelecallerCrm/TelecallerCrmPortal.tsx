@@ -630,7 +630,8 @@ export const TelecallerCrmPortal: React.FC<TelecallerCrmPortalProps> = ({
                 <input
                   type="email"
                   required
-                  placeholder="admin@royalepicinterior.com"
+                  placeholder="Enter your registered email"
+                  autoComplete="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-[#141B2D] border border-[#232D42] rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-colors"
@@ -647,7 +648,8 @@ export const TelecallerCrmPortal: React.FC<TelecallerCrmPortalProps> = ({
                 <input
                   type="password"
                   required
-                  placeholder="••••••••"
+                  placeholder="••••••••••••"
+                  autoComplete="current-password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-[#141B2D] border border-[#232D42] rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-colors"
@@ -673,35 +675,6 @@ export const TelecallerCrmPortal: React.FC<TelecallerCrmPortalProps> = ({
               )}
             </button>
           </form>
-
-          {/* Quick preset credentials helper */}
-          <div className="mt-8 pt-6 border-t border-[#232D42]/60 text-xs">
-            <p className="text-neutral-400 font-semibold mb-2">Pre-Configured System Accounts:</p>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('royalepicfurnitur1@gmail.com');
-                  setLoginPassword('Admin@123');
-                }}
-                className="p-2 bg-[#141B2D] hover:bg-[#1C263F] border border-[#232D42] rounded-lg text-left transition-colors cursor-pointer"
-              >
-                <div className="font-semibold text-[#D4AF37]">Primary Admin</div>
-                <div className="text-neutral-400 truncate">royalepicfurnitur1@...</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('telecaller@royalepicinterior.com');
-                  setLoginPassword('Caller@2026');
-                }}
-                className="p-2 bg-[#141B2D] hover:bg-[#1C263F] border border-[#232D42] rounded-lg text-left transition-colors cursor-pointer"
-              >
-                <div className="font-semibold text-cyan-400">Telecaller Agent</div>
-                <div className="text-neutral-400 truncate">telecaller@royalepic...</div>
-              </button>
-            </div>
-          </div>
 
           {onBackToWebsite && (
             <div className="mt-6 text-center">

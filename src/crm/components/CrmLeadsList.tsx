@@ -4,12 +4,12 @@ import {
   CrmFilterState, 
   LeadStatus, 
   LeadSource, 
-  ServiceRequired,
+  ServiceRequired, 
   BudgetRange,
-  LEAD_SOURCES,
-  SERVICES_REQUIRED,
-  LEAD_STATUSES,
-  BUDGET_RANGES
+  LEAD_SOURCES, 
+  SERVICES_REQUIRED, 
+  LEAD_STATUSES, 
+  BUDGET_RANGES 
 } from '../types';
 import { 
   fetchCrmLeads, 
@@ -28,17 +28,19 @@ import {
   Clock, 
   Calendar, 
   MapPin, 
-  ArrowUpDown,
-  RefreshCw,
-  PhoneCall,
-  Download,
-  Trash2,
-  Eye,
-  RotateCcw,
-  Copy,
-  Check,
-  AlertTriangle,
-  User
+  ArrowUpDown, 
+  RefreshCw, 
+  PhoneCall, 
+  Download, 
+  Trash2, 
+  Eye, 
+  RotateCcw, 
+  Copy, 
+  Check, 
+  AlertCircle, 
+  User,
+  X,
+  Edit2
 } from 'lucide-react';
 
 interface CrmLeadsListProps {
@@ -63,6 +65,7 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [usersList, setUsersList] = useState<Array<{ id: string; name: string }>>([]);
+  const [showFiltersBar, setShowFiltersBar] = useState(true);
 
   const [filters, setFilters] = useState<CrmFilterState>({
     search: initialFilters?.search || '',
@@ -80,7 +83,7 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     pageSize: 15
   });
 
-  // Sync if initialFilters changes (e.g. from Dashboard KPI click)
+  // Sync if initialFilters changes
   useEffect(() => {
     if (initialFilters) {
       setFilters(prev => ({
@@ -91,7 +94,7 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     }
   }, [initialFilters]);
 
-  // Fetch users for assignment filter dropdown
+  // Fetch users for assignment dropdown
   useEffect(() => {
     fetch('/api/crm/users', { headers: getCrmAuthHeaders() })
       .then(r => r.json())
@@ -124,31 +127,49 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
   useEffect(() => {
     loadLeads();
   }, [
-    filters.page, 
-    filters.pageSize, 
-    filters.status, 
-    filters.source, 
-    filters.service, 
-    filters.budget, 
-    filters.assigned_to, 
-    filters.followup_filter, 
-    filters.followup_date, 
-    filters.created_date, 
-    filters.sortBy
+    filters.search,
+    filters.source,
+    filters.service,
+    filters.status,
+    filters.budget,
+    filters.location,
+    filters.assigned_to,
+    filters.followup_filter,
+    filters.followup_date,
+    filters.created_date,
+    filters.sortBy,
+    filters.page,
+    filters.pageSize
   ]);
 
-  // Debounced search & location filter
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilters(prev => ({ ...prev, page: 1 }));
+  const handleCopyPhone = (phoneNum: string, id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(phoneNum);
+    setCopiedPhone(id);
+    setTimeout(() => setCopiedPhone(null), 2000);
+  };
+
+  const handleExportCsv = async () => {
+    setExportingCsv(true);
+    await downloadCrmLeadsCsv();
+    setExportingCsv(false);
+  };
+
+  const handleDeleteLead = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAdmin) return;
+    if (!window.confirm(`Are you sure you want to permanently delete lead for "${name}"?`)) {
+      return;
+    }
+    const res = await deleteCrmLead(id);
+    if (res.success) {
       loadLeads();
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [filters.search, filters.location]);
+    } else {
+      alert(res.error || 'Failed to delete lead');
+    }
+  };
 
-  const totalPages = Math.ceil(totalLeads / filters.pageSize) || 1;
-
-  const handleResetFilters = () => {
+  const clearAllFilters = () => {
     setFilters({
       search: '',
       source: 'All',
@@ -166,120 +187,122 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     });
   };
 
-  const handleCopyPhone = (phone: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(phone);
-    setCopiedPhone(phone);
-    setTimeout(() => setCopiedPhone(null), 2000);
+  // Check which filters are active
+  const activeFilterChips: Array<{ key: keyof CrmFilterState; label: string; value: string }> = [];
+  if (filters.search) activeFilterChips.push({ key: 'search', label: 'Search', value: filters.search });
+  if (filters.source !== 'All') activeFilterChips.push({ key: 'source', label: 'Source', value: filters.source });
+  if (filters.service !== 'All') activeFilterChips.push({ key: 'service', label: 'Service', value: filters.service });
+  if (filters.status !== 'All') activeFilterChips.push({ key: 'status', label: 'Status', value: filters.status });
+  if (filters.budget !== 'All') activeFilterChips.push({ key: 'budget', label: 'Budget', value: filters.budget });
+  if (filters.location) activeFilterChips.push({ key: 'location', label: 'Location', value: filters.location });
+  if (filters.assigned_to !== 'All') {
+    const u = usersList.find(x => x.id === filters.assigned_to);
+    activeFilterChips.push({ key: 'assigned_to', label: 'Assigned', value: u ? u.name : filters.assigned_to });
+  }
+  if (filters.followup_filter !== 'All') activeFilterChips.push({ key: 'followup_filter', label: 'Follow-up', value: filters.followup_filter });
+  if (filters.created_date !== 'All') activeFilterChips.push({ key: 'created_date', label: 'Created', value: filters.created_date });
+
+  const removeFilterChip = (key: keyof CrmFilterState) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: key === 'search' || key === 'location' || key === 'followup_date' ? '' : 'All',
+      page: 1
+    }));
   };
 
-  const handleDeleteLead = async (id: string, name: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAdmin) return;
-    if (window.confirm(`Are you sure you want to permanently delete lead "${name}"? This action cannot be undone.`)) {
-      const res = await deleteCrmLead(id);
-      if (res.success) {
-        loadLeads();
-      } else {
-        alert(res.error || 'Failed to delete lead');
-      }
-    }
-  };
+  const totalPages = Math.ceil(totalLeads / filters.pageSize) || 1;
 
-  const handleExportCsv = async () => {
-    setExportingCsv(true);
-    await downloadCrmLeadsCsv();
-    setExportingCsv(false);
-  };
-
-  const getStatusBadge = (status: string) => {
+  const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'New Lead':
-      case 'New':
-        return 'bg-cyan-950/80 text-cyan-400 border border-cyan-800/80';
-      case 'Contacted':
-        return 'bg-blue-950/80 text-blue-400 border border-blue-800/80';
-      case 'Follow-up Required':
-      case 'Follow-up':
-        return 'bg-amber-950/80 text-amber-400 border border-amber-800/80';
+        return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'Interested':
-        return 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 font-semibold';
-      case 'Site Visit Scheduled':
-        return 'bg-purple-950/80 text-purple-300 border border-purple-800/80';
-      case 'Quotation Sent':
-        return 'bg-indigo-950/80 text-indigo-300 border border-indigo-800/80';
-      case 'Negotiation':
-        return 'bg-yellow-950/80 text-yellow-300 border border-yellow-800/80';
       case 'Converted':
-        return 'bg-amber-400/20 text-amber-300 border border-amber-400 font-bold';
-      case 'Not Interested':
-      case 'Not Reachable':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Site Visit Scheduled':
+      case 'Quotation Sent':
+      case 'Negotiation':
+      case 'Follow-up Required':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'Lost':
-        return 'bg-red-950/80 text-red-400 border border-red-800/80';
+      case 'Not Interested':
+        return 'bg-slate-100 text-slate-600 border-slate-200';
       default:
-        return 'bg-neutral-800 text-neutral-300 border border-neutral-700';
+        return 'bg-slate-100 text-slate-600 border-slate-200';
     }
   };
-
-  // Check if follow-up is overdue or today
-  const getFollowupHighlight = (dateStr?: string, status?: string) => {
-    if (!dateStr || status === 'Converted' || status === 'Lost') return null;
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const todayEnd = todayStart + 86400000;
-    const target = new Date(dateStr).getTime();
-
-    if (target < todayStart) {
-      return { isOverdue: true, label: 'OVERDUE', color: 'text-red-400 bg-red-950/60 border border-red-800' };
-    }
-    if (target >= todayStart && target < todayEnd) {
-      return { isToday: true, label: 'DUE TODAY', color: 'text-amber-300 bg-amber-950/60 border border-amber-700' };
-    }
-    return null;
-  };
-
-  const isFiltered = Boolean(
-    filters.search || 
-    filters.source !== 'All' || 
-    filters.service !== 'All' || 
-    filters.status !== 'All' || 
-    filters.budget !== 'All' || 
-    filters.location || 
-    filters.assigned_to !== 'All' || 
-    filters.followup_filter !== 'All' || 
-    filters.created_date !== 'All'
-  );
 
   return (
     <div className="space-y-4">
-      {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/80 p-4 rounded-2xl border border-neutral-800 shadow-md">
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER & PRIMARY ACTIONS */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-[#E2E8F0] p-4 sm:p-5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
         <div>
-          <h1 className="text-lg font-serif font-bold text-white tracking-wide flex items-center gap-2">
-            <span>Customer Leads</span>
-            <span className="text-xs font-mono font-normal text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Showing {leads.length} of {totalLeads}
+          <div className="flex items-center gap-2 mb-0.5">
+            <h1 className="text-xl font-bold text-[#172033] tracking-tight">
+              All Leads
+            </h1>
+            <span className="text-xs text-slate-500 font-mono">
+              ({totalLeads} total)
             </span>
-          </h1>
-          <p className="text-xs text-neutral-400 font-mono mt-0.5">
-            Manual lead records with quick dial and follow-up tracking
+          </div>
+          <p className="text-xs text-slate-500">
+            Search, filter, assign and review customer inquiries across all sales channels.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {/* Quick Search Field in Toolbar */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+              placeholder="Search name or phone..."
+              className="w-full pl-9 pr-7 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs text-[#172033] placeholder-slate-400 focus:outline-none transition-colors"
+            />
+            {filters.search && (
+              <button 
+                onClick={() => setFilters(prev => ({ ...prev, search: '', page: 1 }))}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowFiltersBar(!showFiltersBar)}
+            className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer ${
+              showFiltersBar || activeFilterChips.length > 0
+                ? 'bg-slate-100 text-[#172033] border-slate-300'
+                : 'bg-white text-slate-600 border-[#E2E8F0] hover:bg-slate-50'
+            }`}
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filters</span>
+            {activeFilterChips.length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-[#356AE6] text-white text-[10px] flex items-center justify-center font-bold">
+                {activeFilterChips.length}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={handleExportCsv}
             disabled={exportingCsv}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-mono font-medium transition cursor-pointer border border-neutral-700"
-            title="Download CSV of current leads"
+            className="px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+            title="Download full CSV export"
           >
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{exportingCsv ? 'Exporting...' : 'Export to CSV'}</span>
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>{exportingCsv ? 'Exporting...' : 'Export CSV'}</span>
           </button>
 
           <button
             onClick={onOpenCreateLead}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs font-mono transition shadow-md shadow-amber-500/20 cursor-pointer"
+            className="px-3.5 py-2 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add New Lead</span>
@@ -287,387 +310,354 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
         </div>
       </div>
 
-      {/* Comprehensive Filter Bar Card */}
-      <div className="bg-neutral-900/90 border border-neutral-800 p-4 rounded-2xl space-y-3 shadow-md">
-        {/* Row 1: Search, Source, Service, Status */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Search */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              placeholder="Search name or mobile..."
-              className="w-full pl-8 pr-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 transition"
-            />
-          </div>
+      {/* ========================================================================= */}
+      {/* 2. ORGANISED FILTER TOOLBAR (Multiple Filters Supported) */}
+      {/* ========================================================================= */}
+      {showFiltersBar && (
+        <div className="bg-white border border-[#E2E8F0] p-4 rounded-xl shadow-xs space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+            {/* Filter 1: Lead Source */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Source
+              </label>
+              <select
+                value={filters.source}
+                onChange={(e) => setFilters(prev => ({ ...prev, source: e.target.value, page: 1 }))}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] focus:border-[#356AE6] focus:outline-none"
+              >
+                <option value="All">All Sources</option>
+                {LEAD_SOURCES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Lead Source */}
-          <div>
-            <select
-              value={filters.source}
-              onChange={(e) => setFilters(prev => ({ ...prev, source: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value="All">All Sources ({LEAD_SOURCES.length})</option>
-              {LEAD_SOURCES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+            {/* Filter 2: Service Required */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Service
+              </label>
+              <select
+                value={filters.service}
+                onChange={(e) => setFilters(prev => ({ ...prev, service: e.target.value, page: 1 }))}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] focus:border-[#356AE6] focus:outline-none"
+              >
+                <option value="All">All Services</option>
+                {SERVICES_REQUIRED.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Service Required */}
-          <div>
-            <select
-              value={filters.service}
-              onChange={(e) => setFilters(prev => ({ ...prev, service: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value="All">All Services ({SERVICES_REQUIRED.length})</option>
-              {SERVICES_REQUIRED.map((srv) => (
-                <option key={srv} value={srv}>{srv}</option>
-              ))}
-            </select>
-          </div>
+            {/* Filter 3: Lead Status */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Status
+              </label>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] focus:border-[#356AE6] focus:outline-none"
+              >
+                <option value="All">All Statuses</option>
+                {LEAD_STATUSES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Lead Status */}
-          <div>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value="All">All Statuses ({LEAD_STATUSES.length})</option>
-              {LEAD_STATUSES.map((st) => (
-                <option key={st} value={st}>{st}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+            {/* Filter 4: Budget */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Budget
+              </label>
+              <select
+                value={filters.budget}
+                onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value, page: 1 }))}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] focus:border-[#356AE6] focus:outline-none"
+              >
+                <option value="All">All Budgets</option>
+                {BUDGET_RANGES.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
 
-        {/* Row 2: Budget, Location, Assigned Telecaller, Follow-up Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Budget Range */}
-          <div>
-            <select
-              value={filters.budget}
-              onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value="All">All Budgets ({BUDGET_RANGES.length})</option>
-              {BUDGET_RANGES.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </div>
+            {/* Filter 5: Location */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Location
+              </label>
+              <input
+                type="text"
+                value={filters.location}
+                onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value, page: 1 }))}
+                placeholder="Area (e.g. HSR)"
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] placeholder-slate-400 focus:border-[#356AE6] focus:outline-none"
+              />
+            </div>
 
-          {/* Location Area Text */}
-          <div className="relative">
-            <MapPin className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              value={filters.location}
-              onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
-              placeholder="Filter by location/area..."
-              className="w-full pl-8 pr-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 transition"
-            />
-          </div>
+            {/* Filter 6: Assigned Telecaller */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Telecaller
+              </label>
+              <select
+                value={filters.assigned_to}
+                onChange={(e) => setFilters(prev => ({ ...prev, assigned_to: e.target.value, page: 1 }))}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] focus:border-[#356AE6] focus:outline-none"
+              >
+                <option value="All">All Telecallers</option>
+                {usersList.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Assigned Telecaller */}
-          <div>
-            <select
-              value={filters.assigned_to}
-              onChange={(e) => setFilters(prev => ({ ...prev, assigned_to: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value="All">All Telecallers</option>
-              <option value="unassigned">Unassigned</option>
-              {usersList.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
-          </div>
+            {/* Filter 7: Follow-up Date */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Follow-up
+              </label>
+              <select
+                value={filters.followup_filter}
+                onChange={(e) => setFilters(prev => ({ ...prev, followup_filter: e.target.value, page: 1 }))}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] focus:border-[#356AE6] focus:outline-none"
+              >
+                <option value="All">All Timings</option>
+                <option value="today">Today Due</option>
+                <option value="overdue">Overdue</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
 
-          {/* Follow-up Date Filter */}
-          <div>
-            <select
-              value={filters.followup_filter}
-              onChange={(e) => setFilters(prev => ({ ...prev, followup_filter: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value="All">All Follow-ups</option>
-              <option value="today">Today's Follow-ups</option>
-              <option value="overdue">Overdue Follow-ups</option>
-              <option value="upcoming">Upcoming Follow-ups</option>
-              <option value="completed">Completed / Milestones</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Row 3: Created Date, Sort By, Page Size, Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-neutral-800/80 text-xs font-mono">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Created Date */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-neutral-400">Created:</span>
+            {/* Filter 8: Created Date */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Created
+              </label>
               <select
                 value={filters.created_date}
                 onChange={(e) => setFilters(prev => ({ ...prev, created_date: e.target.value, page: 1 }))}
-                className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-700 rounded-lg text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#172033] focus:border-[#356AE6] focus:outline-none"
               >
-                <option value="All">Any Time</option>
+                <option value="All">Any Date</option>
                 <option value="today">Today</option>
                 <option value="7days">Last 7 Days</option>
                 <option value="30days">Last 30 Days</option>
               </select>
             </div>
-
-            {/* Sorting */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-neutral-400">Sort:</span>
-              <select
-                value={filters.sortBy}
-                onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as any, page: 1 }))}
-                className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-700 rounded-lg text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-              >
-                <option value="created_desc">Created: Newest First</option>
-                <option value="created_asc">Created: Oldest First</option>
-                <option value="followup_asc">Follow-up: Earliest First</option>
-                <option value="followup_desc">Follow-up: Latest First</option>
-                <option value="name_asc">Name: A to Z</option>
-              </select>
-            </div>
-
-            {/* Page Size */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-neutral-400">Per page:</span>
-              <select
-                value={filters.pageSize}
-                onChange={(e) => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}
-                className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-700 rounded-lg text-xs text-neutral-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-              >
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
           </div>
 
-          {/* Reset Filters Button */}
-          {isFiltered && (
-            <button
-              onClick={handleResetFilters}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-xs font-mono transition cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Clear Filters</span>
-            </button>
-          )}
-        </div>
-      </div>
+          {/* Active Filter Chips & Clear All */}
+          {activeFilterChips.length > 0 && (
+            <div className="pt-2 border-t border-[#E2E8F0] flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] text-slate-400 font-medium">Active filters:</span>
+                {activeFilterChips.map(chip => (
+                  <span
+                    key={chip.key}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs border border-slate-200"
+                  >
+                    <span className="font-semibold">{chip.label}:</span>
+                    <span>{chip.value}</span>
+                    <button
+                      onClick={() => removeFilterChip(chip.key)}
+                      className="text-slate-400 hover:text-slate-700 ml-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
 
-      {/* Error alert */}
-      {error && (
-        <div className="bg-red-950/50 border border-red-800 p-3.5 rounded-xl text-xs text-red-200">
-          {error}
+              <button
+                onClick={clearAllFilters}
+                className="text-xs text-[#356AE6] hover:text-[#2D5AC2] font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Clear All Filters</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Leads Table Card */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="py-20 text-center">
-            <div className="w-8 h-8 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-xs font-mono text-neutral-400">Loading prospects from CRM database...</p>
-          </div>
-        ) : leads.length === 0 ? (
-          <div className="py-20 text-center px-4">
-            <p className="text-neutral-300 text-sm font-medium">No leads match your current criteria.</p>
-            <p className="text-neutral-500 text-xs mt-1">Try adjusting the search query or reset the filters.</p>
-            <button
-              onClick={handleResetFilters}
-              className="mt-4 px-3.5 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-xs font-mono text-neutral-200 transition cursor-pointer"
-            >
-              Clear All Filters
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[980px]">
-              <thead>
-                <tr className="bg-neutral-950/90 border-b border-neutral-800 text-[10px] font-mono uppercase tracking-wider text-neutral-400">
-                  <th className="py-3 px-4">Customer Name</th>
-                  <th className="py-3 px-4">Mobile Number</th>
-                  <th className="py-3 px-4">Source</th>
-                  <th className="py-3 px-4">Service Required</th>
-                  <th className="py-3 px-4">Location</th>
-                  <th className="py-3 px-4">Budget Range</th>
-                  <th className="py-3 px-4">Lead Status</th>
-                  <th className="py-3 px-4">Next Follow-up</th>
-                  <th className="py-3 px-4">Telecaller</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/60 text-xs">
-                {leads.map((lead) => {
-                  const followupHighlight = getFollowupHighlight(lead.next_followup_at, lead.status);
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl text-xs text-rose-700 flex items-center justify-between">
+          <span>Failed to load leads: {error}</span>
+          <button onClick={loadLeads} className="underline text-rose-700 font-medium cursor-pointer">
+            Retry
+          </button>
+        </div>
+      )}
 
+      {/* ========================================================================= */}
+      {/* 3. PROFESSIONAL COMPACT DATA TABLE */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-[#E2E8F0] text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                <th className="py-3 px-4 font-semibold">Customer Name</th>
+                <th className="py-3 px-4 font-semibold">Mobile Number</th>
+                <th className="py-3 px-3 font-semibold">Source</th>
+                <th className="py-3 px-3 font-semibold">Service</th>
+                <th className="py-3 px-3 font-semibold">Location</th>
+                <th className="py-3 px-3 font-semibold">Budget</th>
+                <th className="py-3 px-3 font-semibold">Status</th>
+                <th className="py-3 px-4 font-semibold">Next Follow-up</th>
+                <th className="py-3 px-3 font-semibold">Assigned</th>
+                <th className="py-3 px-4 text-right font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E8F0]">
+              {loading ? (
+                <tr>
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="w-5 h-5 animate-spin text-[#356AE6]" />
+                      <span className="text-xs">Loading leads database...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : leads.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                    <div className="max-w-xs mx-auto text-center space-y-2">
+                      <p className="text-sm font-medium text-slate-600">No leads found</p>
+                      <p className="text-xs text-slate-400">No records match your active search and filter criteria.</p>
+                      {activeFilterChips.length > 0 && (
+                        <button
+                          onClick={clearAllFilters}
+                          className="mt-2 text-xs font-semibold text-[#356AE6] hover:underline"
+                        >
+                          Reset filters
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                leads.map((lead) => {
+                  const isCopied = copiedPhone === lead.id;
                   return (
-                    <tr
+                    <tr 
                       key={lead.id}
                       onClick={() => onSelectLead(lead)}
-                      className="hover:bg-neutral-800/40 transition cursor-pointer group"
+                      className="hover:bg-slate-50/80 transition cursor-pointer group"
                     >
                       {/* 1. Customer Name */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-white group-hover:text-amber-400 transition flex items-center gap-1.5">
-                          <span>{lead.customer_name}</span>
+                      <td className="py-3 px-4 font-medium text-[#172033] whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-[#172033] group-hover:text-[#356AE6] transition-colors">
+                            {lead.customer_name}
+                          </span>
                         </div>
-                        {lead.email && (
-                          <div className="text-[10px] text-neutral-400 truncate max-w-[140px] font-mono">
-                            {lead.email}
-                          </div>
-                        )}
                       </td>
 
-                      {/* 2. Mobile Number (with Click to Call + Copy) */}
-                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                      {/* 2. Mobile Number */}
+                      <td className="py-3 px-4 font-mono text-slate-700 whitespace-nowrap tabular-nums">
                         <div className="flex items-center gap-1.5">
-                          <a
-                            href={`tel:${lead.phone}`}
-                            className="font-mono text-xs text-amber-400 hover:underline hover:text-amber-300 font-medium"
-                            title="Click to dial"
-                          >
-                            {lead.phone}
-                          </a>
+                          <span>{lead.phone}</span>
                           <button
-                            onClick={(e) => handleCopyPhone(lead.phone, e)}
-                            className="p-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-neutral-200 transition cursor-pointer"
-                            title="Copy phone"
+                            onClick={(e) => handleCopyPhone(lead.phone, lead.id, e)}
+                            className="p-1 text-slate-400 hover:text-[#172033] rounded hover:bg-slate-100 transition"
+                            title="Copy number"
                           >
-                            {copiedPhone === lead.phone ? (
-                              <Check className="w-3 h-3 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
+                            {isCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                           </button>
                         </div>
-                        {lead.alternate_phone && (
-                          <div className="text-[10px] text-neutral-400 font-mono mt-0.5">
-                            Alt: {lead.alternate_phone}
-                          </div>
-                        )}
                       </td>
 
-                      {/* 3. Lead Source */}
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-neutral-300">
-                        <span className="bg-neutral-800/80 px-2 py-0.5 rounded border border-neutral-700/60 text-neutral-300">
+                      {/* 3. Source */}
+                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                        <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
                           {lead.source}
                         </span>
                       </td>
 
-                      {/* 4. Service Required */}
-                      <td className="py-3.5 px-4">
-                        <div className="text-neutral-200 font-medium max-w-[170px] truncate" title={lead.interested_service}>
-                          {lead.interested_service}
-                        </div>
+                      {/* 4. Service */}
+                      <td className="py-3 px-3 text-slate-700 whitespace-nowrap max-w-[150px] truncate" title={lead.interested_service}>
+                        {lead.interested_service}
                       </td>
 
-                      {/* 5. Customer Location */}
-                      <td className="py-3.5 px-4 text-neutral-300 text-[11px]">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
-                          <span className="truncate max-w-[110px]" title={lead.city || lead.project_address || 'Bengaluru'}>
-                            {lead.city || 'Bengaluru'}
-                          </span>
-                        </div>
+                      {/* 5. Location */}
+                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                        {lead.city || <span className="text-slate-300">-</span>}
                       </td>
 
-                      {/* 6. Budget Range */}
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-neutral-300">
-                        {lead.budget ? (
-                          <span className="text-amber-300/90">{lead.budget}</span>
-                        ) : (
-                          <span className="text-neutral-400">Not Disclosed</span>
-                        )}
+                      {/* 6. Budget */}
+                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-medium">
+                        {lead.budget || <span className="text-slate-300">-</span>}
                       </td>
 
-                      {/* 7. Lead Status */}
-                      <td className="py-3.5 px-4">
-                        <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-mono uppercase whitespace-nowrap ${getStatusBadge(lead.status)}`}>
+                      {/* 7. Status */}
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${getStatusBadgeClass(lead.status)}`}>
                           {lead.status}
                         </span>
                       </td>
 
-                      {/* 8. Next Follow-up (Highlighted if today or overdue) */}
-                      <td className="py-3.5 px-4 font-mono text-[11px]">
-                        {lead.next_followup_at ? (
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-1 text-neutral-200">
-                              <Clock className="w-3 h-3 text-amber-400 shrink-0" />
-                              <span>
-                                {new Date(lead.next_followup_at).toLocaleDateString('en-IN', {
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                                {', '}
-                                {new Date(lead.next_followup_at).toLocaleTimeString('en-IN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
-                            </div>
-                            {followupHighlight && (
-                              <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-bold ${followupHighlight.color}`}>
-                                {followupHighlight.label}
-                              </span>
+                      {/* 8. Next Follow-up */}
+                      <td className="py-3 px-4 whitespace-nowrap text-slate-600 font-mono text-[11px]">
+                        {lead.next_followup_date ? (
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>{lead.next_followup_date}</span>
+                            {lead.next_followup_time && (
+                              <span className="text-slate-400">({lead.next_followup_time})</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-neutral-400">None set</span>
+                          <span className="text-slate-300">Not scheduled</span>
                         )}
                       </td>
 
                       {/* 9. Assigned Telecaller */}
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-neutral-300">
-                        <div className="flex items-center gap-1">
-                          <User className="w-3 h-3 text-neutral-400 shrink-0" />
-                          <span className="truncate max-w-[110px]" title={lead.assigned_to_name || lead.assigned_to || 'Unassigned'}>
-                            {lead.assigned_to_name || lead.assigned_to || 'Unassigned'}
-                          </span>
-                        </div>
+                      <td className="py-3 px-3 whitespace-nowrap text-slate-600">
+                        {lead.assigned_to_name || <span className="text-slate-400 italic">Unassigned</span>}
                       </td>
 
-                      {/* 10. Actions (View / Edit, Log Call, Delete [admin]) */}
-                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="inline-flex items-center gap-1.5">
-                          {/* Log Call */}
+                      {/* 10. Actions */}
+                      <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {/* One-click Phone Dialing */}
+                          <a
+                            href={`tel:${lead.phone}`}
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition"
+                            title="Call customer"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                          </a>
+
+                          {/* Quick Log Call */}
                           <button
                             onClick={() => onQuickCall(lead)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-mono transition cursor-pointer"
-                            title="Log Call"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-[#356AE6] hover:bg-blue-50 transition cursor-pointer"
+                            title="Log Call Interaction"
                           >
-                            <PhoneCall className="w-3 h-3" />
-                            <span>Log</span>
+                            <PhoneCall className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* View / Edit */}
+                          {/* View/Edit Lead */}
                           <button
                             onClick={() => onSelectLead(lead)}
-                            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-[#172033] hover:bg-slate-100 transition cursor-pointer"
                             title="View / Edit Lead"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Admin Only Delete */}
+                          {/* Delete Lead (Admin Only) */}
                           {isAdmin && (
                             <button
                               onClick={(e) => handleDeleteLead(lead.id, lead.customer_name, e)}
-                              className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-800/40 transition cursor-pointer"
-                              title="Delete Lead (Admin Only)"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                              title="Delete Lead"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -676,42 +666,45 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Table Pagination Bar */}
+        <div className="p-3.5 border-t border-[#E2E8F0] bg-slate-50/60 flex items-center justify-between text-xs text-slate-500">
+          <div>
+            Showing <strong className="text-[#172033]">{leads.length}</strong> of{' '}
+            <strong className="text-[#172033]">{totalLeads}</strong> leads
           </div>
-        )}
 
-        {/* Pagination Footer */}
-        {totalLeads > 0 && (
-          <div className="py-3.5 px-4 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between text-xs font-mono text-neutral-400 flex-wrap gap-2">
-            <div>
-              Showing {Math.min((filters.page - 1) * filters.pageSize + 1, totalLeads)} - {Math.min(filters.page * filters.pageSize, totalLeads)} of {totalLeads} leads
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500">
+              Page {filters.page} of {totalPages}
+            </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
+                onClick={() => setFilters(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
                 disabled={filters.page <= 1}
-                onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
-                className="p-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-40 disabled:pointer-events-none transition cursor-pointer"
+                className="p-1 rounded bg-white border border-[#E2E8F0] hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer"
+                title="Previous Page"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <span className="text-white px-2">
-                Page {filters.page} of {totalPages}
-              </span>
-
               <button
+                onClick={() => setFilters(prev => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))}
                 disabled={filters.page >= totalPages}
-                onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
-                className="p-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-40 disabled:pointer-events-none transition cursor-pointer"
+                className="p-1 rounded bg-white border border-[#E2E8F0] hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer"
+                title="Next Page"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

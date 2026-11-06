@@ -306,17 +306,17 @@ export const AdminTelecallerUserManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Credentials Info Box */}
+        {/* Portal Telemetry & Access Box */}
         <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
           <div className="bg-neutral-950/80 border border-amber-500/30 rounded-xl p-3">
             <span className="text-[10px] font-mono uppercase text-amber-400 font-bold block mb-1">
-              Active Telecaller 1 Login
+              Portal Access Control
             </span>
             <div className="font-mono text-white text-xs">
-              <strong>Email:</strong> telecaller1@gmail.com
+              <span className="text-amber-400 font-semibold">{users.filter(u => u.status === 'active' && u.role === 'telecaller').length} Active Telecallers</span>
             </div>
-            <div className="font-mono text-white text-xs mt-0.5">
-              <strong>Password:</strong> telecaller1@123
+            <div className="text-neutral-400 text-[11px] mt-0.5">
+              Role-based manual credentials only
             </div>
           </div>
 
@@ -552,7 +552,7 @@ export const AdminTelecallerUserManagement: React.FC = () => {
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="e.g. telecaller1@123"
+                    placeholder="Enter secure password"
                     className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-white focus:border-amber-400 focus:outline-none pr-9 font-mono"
                   />
                   <button

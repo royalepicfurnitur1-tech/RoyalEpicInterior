@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { 
   CrmLead, 
   CallOutcome, 
-  LeadStatus,
-  CALL_OUTCOMES,
-  LEAD_STATUSES
+  LeadStatus, 
+  CALL_OUTCOMES, 
+  LEAD_STATUSES 
 } from '../types';
 import { recordCrmCall } from '../crmService';
 import { 
@@ -15,7 +15,8 @@ import {
   X, 
   Calendar,
   PhoneCall,
-  FileText
+  FileText,
+  User
 } from 'lucide-react';
 
 interface CrmLogCallModalProps {
@@ -100,18 +101,20 @@ export const CrmLogCallModal: React.FC<CrmLogCallModalProps> = ({
     }
   };
 
+  const cfg = OUTCOME_CONFIG[outcome];
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-lg text-white shadow-2xl overflow-hidden my-4 max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white border border-[#E2E8F0] rounded-xl w-full max-w-lg text-[#172033] shadow-xl overflow-hidden my-4 max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-neutral-800 bg-neutral-950/80 flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-b border-[#E2E8F0] bg-slate-50/70 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
-              <PhoneCall className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-[#356AE6] text-white flex items-center justify-center shadow-xs">
+              <PhoneCall className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-serif font-bold text-white">Log Call Interaction</h2>
-              <div className="text-xs text-neutral-400 font-mono">
+              <h2 className="text-sm font-bold text-[#172033]">Log Call Interaction</h2>
+              <div className="text-xs text-slate-500 font-mono">
                 {lead.customer_name} • {lead.phone}
               </div>
             </div>
@@ -119,143 +122,128 @@ export const CrmLogCallModal: React.FC<CrmLogCallModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+            className="p-1 rounded-md text-slate-400 hover:text-[#172033] hover:bg-slate-100 transition"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
           {error && (
-            <div className="bg-red-950/70 border border-red-700 p-3 rounded-xl text-red-200 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <div className="bg-rose-50 border border-rose-200 p-3 rounded-lg text-rose-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Quick Dial Reminder Bar */}
-          <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800 flex items-center justify-between">
+          {/* Direct Dial Reminder Bar */}
+          <div className="bg-slate-50 p-3 rounded-lg border border-[#E2E8F0] flex items-center justify-between">
             <div>
-              <div className="text-[10px] font-mono uppercase text-neutral-400">Current Lead Phone:</div>
-              <div className="font-mono text-sm text-amber-400 font-bold">{lead.phone}</div>
+              <div className="text-[11px] text-slate-500 font-medium">Customer Mobile:</div>
+              <div className="font-mono text-sm font-bold text-[#172033]">{lead.phone}</div>
             </div>
             <a
               href={`tel:${lead.phone}`}
-              className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono text-xs flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-xs transition"
             >
               <Phone className="w-3.5 h-3.5" />
-              <span>Open Dialer</span>
+              <span>Dial Now</span>
             </a>
           </div>
 
-          {/* Call Date & Time Display */}
-          <div className="bg-neutral-950/60 p-2.5 rounded-xl border border-neutral-800 flex items-center justify-between text-neutral-300">
-            <span className="text-[11px] font-mono uppercase text-neutral-400">Call Timestamp:</span>
-            <span className="font-mono text-xs font-semibold text-white">{callDateTime}</span>
-          </div>
-
-          {/* Call Outcome Dropdown (Exact 9 options) */}
+          {/* Outcome Dropdown */}
           <div>
-            <label className="block text-[11px] font-medium text-neutral-300 mb-1">
-              Call Outcome <span className="text-amber-400">*</span>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Call Outcome *
             </label>
             <select
               value={outcome}
-              onChange={(e) => handleOutcomeChange(e.target.value as CallOutcome)}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-white text-xs focus:border-amber-400 focus:outline-none cursor-pointer"
+              onChange={(e) => handleOutcomeChange(e.target.value as any)}
+              className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs text-[#172033] focus:outline-none"
             >
-              {CALL_OUTCOMES.map((o) => (
+              {CALL_OUTCOMES.map(o => (
                 <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Updated Status Dropdown */}
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Update Lead Status
+            </label>
+            <select
+              value={updateStatus}
+              onChange={(e) => setUpdateStatus(e.target.value as any)}
+              className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs text-[#172033] focus:outline-none"
+            >
+              {LEAD_STATUSES.map(st => (
+                <option key={st} value={st}>{st}</option>
               ))}
             </select>
           </div>
 
           {/* Discussion Notes */}
           <div>
-            <label className="block text-[11px] font-medium text-neutral-300 mb-1">
-              Discussion Notes / Customer Feedback
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Discussion Notes
             </label>
             <textarea
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Summary of discussion, budget discussed, site location confirmed, quotation timeline..."
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-white text-xs focus:border-amber-400 focus:outline-none"
+              placeholder="What did the client say? Specific interior requirements, floor plan discussed, site visit schedule, quotation details..."
+              className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs text-[#172033] placeholder-slate-400 focus:outline-none resize-none"
             />
           </div>
 
-          {/* Next Follow-up Date and Time */}
-          <div className="bg-neutral-950/60 p-3.5 rounded-xl border border-neutral-800 space-y-3">
-            <div className="text-[11px] font-mono uppercase text-amber-400 font-semibold flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Next Follow-up Schedule</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] text-neutral-400 mb-1">Date</label>
-                <input
-                  type="date"
-                  value={followupDate}
-                  onChange={(e) => setFollowupDate(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-700 rounded-xl text-white text-xs focus:border-amber-400 focus:outline-none cursor-pointer"
-                />
+          {/* Next Follow-up Section (Shown if outcome warrants followup) */}
+          {cfg?.needsFollowup && (
+            <div className="p-3.5 rounded-lg bg-amber-50/50 border border-amber-200/80 space-y-2.5">
+              <div className="flex items-center gap-1.5 text-amber-800 font-semibold text-xs">
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Next Follow-up Scheduling</span>
               </div>
 
-              <div>
-                <label className="block text-[10px] text-neutral-400 mb-1">Time</label>
-                <input
-                  type="time"
-                  value={followupTime}
-                  onChange={(e) => setFollowupTime(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-700 rounded-xl text-white text-xs focus:border-amber-400 focus:outline-none cursor-pointer"
-                />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={followupDate}
+                    onChange={(e) => setFollowupDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-[#E2E8F0] rounded-lg text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">Time</label>
+                  <input
+                    type="time"
+                    value={followupTime}
+                    onChange={(e) => setFollowupTime(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-[#E2E8F0] rounded-lg text-xs font-mono"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Update Lead Status */}
-          <div>
-            <label className="block text-[11px] font-medium text-neutral-300 mb-1">
-              Update Lead Pipeline Status
-            </label>
-            <select
-              value={updateStatus}
-              onChange={(e) => setUpdateStatus(e.target.value as LeadStatus)}
-              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-xl text-white text-xs focus:border-amber-400 focus:outline-none cursor-pointer"
-            >
-              {LEAD_STATUSES.map((st) => (
-                <option key={st} value={st}>{st}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Buttons */}
-          <div className="pt-3 border-t border-neutral-800 flex items-center justify-end gap-3 shrink-0">
+          {/* Actions */}
+          <div className="pt-3 border-t border-[#E2E8F0] flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-mono font-medium transition cursor-pointer"
+              className="px-4 py-2 rounded-lg border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-600 font-medium text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-neutral-950 text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-500/20"
+              className="px-5 py-2 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
-              {isSubmitting ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-neutral-950/30 border-t-neutral-950 rounded-full animate-spin" />
-                  <span>Saving Call Log...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Save Call Log</span>
-                </>
-              )}
+              {isSubmitting ? 'Saving...' : 'Save Call Log'}
             </button>
           </div>
         </form>
