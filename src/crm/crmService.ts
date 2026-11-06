@@ -89,8 +89,14 @@ export async function fetchCrmLeads(filters?: Partial<CrmFilterState>): Promise<
     const params = new URLSearchParams();
     if (filters?.search) params.set('search', filters.search);
     if (filters?.status && filters.status !== 'All') params.set('status', filters.status);
-    if (filters?.temperature && filters.temperature !== 'All') params.set('temperature', filters.temperature);
     if (filters?.source && filters.source !== 'All') params.set('source', filters.source);
+    if (filters?.service && filters.service !== 'All') params.set('service', filters.service);
+    if (filters?.budget && filters.budget !== 'All') params.set('budget', filters.budget);
+    if (filters?.location) params.set('location', filters.location);
+    if (filters?.assigned_to && filters.assigned_to !== 'All') params.set('assigned_to', filters.assigned_to);
+    if (filters?.followup_filter && filters.followup_filter !== 'All') params.set('followup_filter', filters.followup_filter);
+    if (filters?.followup_date) params.set('followup_date', filters.followup_date);
+    if (filters?.created_date && filters.created_date !== 'All') params.set('created_date', filters.created_date);
     if (filters?.sortBy) params.set('sortBy', filters.sortBy);
     if (filters?.page) params.set('page', String(filters.page));
     if (filters?.pageSize) params.set('pageSize', String(filters.pageSize));
@@ -226,6 +232,7 @@ export async function fetchCrmFollowups(): Promise<{
   dueToday: CrmLead[];
   overdue: CrmLead[];
   upcoming: CrmLead[];
+  completed: CrmLead[];
   error?: string;
 }> {
   try {
@@ -234,16 +241,41 @@ export async function fetchCrmFollowups(): Promise<{
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return { dueToday: [], overdue: [], upcoming: [], error: err.error || 'Failed to fetch followups' };
+      return { dueToday: [], overdue: [], upcoming: [], completed: [], error: err.error || 'Failed to fetch followups' };
     }
     const data = await res.json();
     return {
       dueToday: data.dueToday || [],
       overdue: data.overdue || [],
-      upcoming: data.upcoming || []
+      upcoming: data.upcoming || [],
+      completed: data.completed || []
     };
   } catch (err: any) {
-    return { dueToday: [], overdue: [], upcoming: [], error: err.message || 'Network error fetching followups' };
+    return { dueToday: [], overdue: [], upcoming: [], completed: [], error: err.message || 'Network error fetching followups' };
+  }
+}
+
+// 1-Click CSV Export Download Helper
+export async function downloadCrmLeadsCsv(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch('/api/crm/export-csv', {
+      headers: getCrmAuthHeaders()
+    });
+    if (!res.ok) {
+      return { success: false, error: 'Failed to generate CSV export' };
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Royal_Epic_CRM_Leads_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error downloading CSV' };
   }
 }
 

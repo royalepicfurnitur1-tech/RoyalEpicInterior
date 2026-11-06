@@ -10,8 +10,7 @@ import { CrmLeadModal } from './components/CrmLeadModal';
 import { CrmLogCallModal } from './components/CrmLogCallModal';
 import { CrmCreateLeadModal } from './components/CrmCreateLeadModal';
 import { CrmCsvImportModal } from './components/CrmCsvImportModal';
-import { CrmIntegrationsView } from './components/CrmIntegrationsView';
-import { CrmLead } from './types';
+import { CrmLead, CrmFilterState } from './types';
 import { 
   Phone, 
   LayoutDashboard, 
@@ -24,8 +23,7 @@ import {
   Plus, 
   ExternalLink,
   Menu,
-  X,
-  Zap
+  X
 } from 'lucide-react';
 
 interface TelecallerCrmAppProps {
@@ -34,8 +32,10 @@ interface TelecallerCrmAppProps {
 
 const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
   const { user, isAuthenticated, loading, isAdmin, logout } = useCrmAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'followups' | 'reports' | 'import' | 'users' | 'integrations'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'followups' | 'reports' | 'users'>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [leadFilters, setLeadFilters] = useState<Partial<CrmFilterState>>({});
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Modal states
   const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
@@ -72,6 +72,17 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
     setIsLogCallModalOpen(true);
   };
 
+  const handleNavigateTabWithFilter = (tab: string, filters?: Partial<CrmFilterState>) => {
+    if (filters) {
+      setLeadFilters(filters);
+    }
+    setActiveTab(tab as any);
+  };
+
+  const triggerRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-neutral-950">
       {/* Top Navigation Bar */}
@@ -92,7 +103,7 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 </span>
               </div>
               <div className="text-[10px] text-neutral-400 font-mono hidden sm:block">
-                Subdomain: tele.royalepicinteriors.com
+                Host: tele.royalepicinteriors.com
               </div>
             </div>
           </div>
@@ -112,7 +123,10 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
             </button>
 
             <button
-              onClick={() => setActiveTab('leads')}
+              onClick={() => {
+                setLeadFilters({});
+                setActiveTab('leads');
+              }}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono transition flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'leads'
                   ? 'bg-amber-500/15 text-amber-400 font-bold border border-amber-500/30'
@@ -167,18 +181,6 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Users</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('integrations')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition flex items-center gap-1.5 cursor-pointer ${
-                    activeTab === 'integrations'
-                      ? 'bg-amber-500/15 text-amber-400 font-bold border border-amber-500/30'
-                      : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
-                  }`}
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Integrations</span>
                 </button>
               </>
             )}
@@ -238,7 +240,7 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               Dashboard
             </button>
             <button
-              onClick={() => { setActiveTab('leads'); setMobileMenuOpen(false); }}
+              onClick={() => { setLeadFilters({}); setActiveTab('leads'); setMobileMenuOpen(false); }}
               className="w-full text-left py-2 px-3 rounded-lg text-xs font-mono text-neutral-200 hover:bg-neutral-800"
             >
               All Leads
@@ -267,14 +269,7 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                   onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
                   className="w-full text-left py-2 px-3 rounded-lg text-xs font-mono text-neutral-200 hover:bg-neutral-800"
                 >
-                  Access Control (Users)
-                </button>
-                <button
-                  onClick={() => { setActiveTab('integrations'); setMobileMenuOpen(false); }}
-                  className="w-full text-left py-2 px-3 rounded-lg text-xs font-mono text-amber-300 hover:bg-neutral-800 flex items-center gap-1.5"
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Lead Integrations</span>
+                  User Roles & Access
                 </button>
               </>
             )}
@@ -282,7 +277,7 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               onClick={() => { setIsCreateModalOpen(true); setMobileMenuOpen(false); }}
               className="w-full text-left py-2 px-3 rounded-lg text-xs font-mono bg-amber-500 text-neutral-950 font-bold"
             >
-              + Create Lead
+              + Add Lead
             </button>
           </div>
         )}
@@ -292,7 +287,8 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'dashboard' && (
           <CrmDashboard
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
+            key={`dash-${refreshKey}`}
+            onNavigateTab={handleNavigateTabWithFilter}
             onOpenCreateLead={() => setIsCreateModalOpen(true)}
             onSelectLead={handleOpenLead}
             onQuickCall={handleQuickCall}
@@ -301,6 +297,8 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
 
         {activeTab === 'leads' && (
           <CrmLeadsList
+            key={`leads-${refreshKey}`}
+            initialFilters={leadFilters}
             onSelectLead={handleOpenLead}
             onOpenCreateLead={() => setIsCreateModalOpen(true)}
             onQuickCall={handleQuickCall}
@@ -309,6 +307,7 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
 
         {activeTab === 'followups' && (
           <CrmFollowupsView
+            key={`follow-${refreshKey}`}
             onSelectLead={handleOpenLead}
             onQuickCall={handleQuickCall}
           />
@@ -321,15 +320,11 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
         {activeTab === 'users' && isAdmin && (
           <CrmUserManagement />
         )}
-
-        {activeTab === 'integrations' && isAdmin && (
-          <CrmIntegrationsView />
-        )}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-neutral-900 py-4 bg-neutral-950 text-center text-[10px] font-mono text-neutral-400">
-        Royal Epic Interiors Telecaller CRM • ISO 9001:2025 Certified Production Execution • Host: tele.royalepicinteriors.com
+        Royal Epic Commercial & Home Interiors • Telecaller CRM Management Suite • tele.royalepicinteriors.com
       </footer>
 
       {/* Modals */}
@@ -337,7 +332,9 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
         lead={selectedLead}
         isOpen={isLeadModalOpen}
         onClose={() => setIsLeadModalOpen(false)}
-        onLeadUpdated={() => {}}
+        onLeadUpdated={() => {
+          triggerRefresh();
+        }}
         onOpenLogCall={(lead) => {
           setIsLeadModalOpen(false);
           handleQuickCall(lead);
@@ -348,13 +345,16 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
         lead={callLead}
         isOpen={isLogCallModalOpen}
         onClose={() => setIsLogCallModalOpen(false)}
-        onCallLogged={() => {}}
+        onCallLogged={() => {
+          triggerRefresh();
+        }}
       />
 
       <CrmCreateLeadModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onLeadCreated={(newLead) => {
+          triggerRefresh();
           setSelectedLead(newLead);
           setIsLeadModalOpen(true);
         }}
@@ -364,7 +364,9 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
         <CrmCsvImportModal
           isOpen={isCsvModalOpen}
           onClose={() => setIsCsvModalOpen(false)}
-          onImportComplete={() => {}}
+          onImportComplete={() => {
+            triggerRefresh();
+          }}
         />
       )}
     </div>
@@ -378,5 +380,3 @@ export const TelecallerCrmApp: React.FC<TelecallerCrmAppProps> = (props) => {
     </CrmAuthProvider>
   );
 };
-
-export default TelecallerCrmApp;

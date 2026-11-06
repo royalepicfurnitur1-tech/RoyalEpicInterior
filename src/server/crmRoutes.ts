@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { sendLeadNotificationEmail, LeadEmailPayload } from './emailNotificationService';
 
 export const crmRouter = express.Router();
 
@@ -31,25 +32,37 @@ export interface ServerCrmUser {
 export interface ServerCrmLead {
   id: string;
   customer_name: string;
+  name?: string; // alias for backward compatibility
   phone: string;
+  normalized_phone?: string;
+  alternate_phone?: string;
   email?: string;
   source: string;
+  custom_source?: string;
   interested_service: string;
+  projectType?: string; // alias
+  custom_service?: string;
   city?: string;
+  location?: string; // alias
+  project_address?: string;
   budget?: string;
-  temperature: 'Hot' | 'Warm' | 'Cold';
+  temperature?: 'Hot' | 'Warm' | 'Cold';
   status: string;
   notes?: string;
+  assigned_to?: string;
+  assigned_to_name?: string;
   last_contact_at?: string;
   next_followup_at?: string;
+  next_followup_date?: string;
+  next_followup_time?: string;
   external_lead_id?: string;
-  alternate_phone?: string;
   raw_payload?: Record<string, any>;
   created_by?: string;
   created_by_name?: string;
   last_updated_by?: string;
   last_updated_by_name?: string;
   created_at: string;
+  createdAt?: string; // alias
   updated_at: string;
 }
 
@@ -66,7 +79,9 @@ export interface ServerCrmCallLog {
   created_at: string;
 }
 
-// Phone normalization helper
+// -----------------------------------------------------------------------------
+// PHONE NORMALIZATION
+// -----------------------------------------------------------------------------
 export function normalizePhone(p: string): string {
   if (!p) return '';
   const cleaned = p.replace(/[\s\-\(\)\.]/g, '');
@@ -76,13 +91,213 @@ export function normalizePhone(p: string): string {
   return cleaned;
 }
 
-// In-Memory state loaded from disk
+// -----------------------------------------------------------------------------
+// ASIA/KOLKATA (IST) DATE & TIME HELPERS
+// Ensures all midnight / day boundaries are calculated strictly in IST (UTC+5:30)
+// -----------------------------------------------------------------------------
+export function getIstDateString(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+}
+
+export function getIstDayBoundaries(d: Date = new Date()): { startEpoch: number; endEpoch: number; dateStr: string } {
+  const dateStr = getIstDateString(d); // YYYY-MM-DD
+  const startEpoch = new Date(`${dateStr}T00:00:00+05:30`).getTime();
+  const endEpoch = new Date(`${dateStr}T23:59:59.999+05:30`).getTime();
+  return { startEpoch, endEpoch, dateStr };
+}
+
+// -----------------------------------------------------------------------------
+// SUPABASE CLIENT & DUAL PERSISTENCE
+// -----------------------------------------------------------------------------
+const getSupabaseCredentials = () => {
+  const url = 
+    process.env.VITE_SUPABASE_URL || 
+    process.env.SUPABASE_URL || 
+    'https://lwrfoztfsyffgtybesia.supabase.co';
+  const key = 
+    process.env.VITE_SUPABASE_ANON_KEY || 
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+    process.env.SUPABASE_ANON_KEY || 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
+  return { url: url.replace(/\/+$/, ''), key };
+};
+
+// Check if a specific table exists in Supabase
+async function testSupabaseTable(tableName: string): Promise<boolean> {
+  const { url, key } = getSupabaseCredentials();
+  try {
+    const res = await fetch(`${url}/rest/v1/${tableName}?select=*&limit=1`, {
+      method: 'GET',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`
+      }
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Non-destructive synchronization with Supabase
+async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boolean; table: string; error?: string }> {
+  const { url, key } = getSupabaseCredentials();
+  const normPhone = normalizePhone(lead.phone);
+
+  // 1. Try to persist directly to dedicated crm_leads table
+  try {
+    const res = await fetch(`${url}/rest/v1/crm_leads`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        id: lead.id,
+        customer_name: lead.customer_name,
+        phone: lead.phone,
+        normalized_phone: normPhone,
+        alternate_phone: lead.alternate_phone || null,
+        email: lead.email || null,
+        source: lead.source || 'Website Enquiry',
+        custom_source: lead.custom_source || null,
+        interested_service: lead.interested_service || 'Residential Interior',
+        custom_service: lead.custom_service || null,
+        city: lead.city || 'Bengaluru',
+        project_address: lead.project_address || null,
+        budget: lead.budget || null,
+        temperature: lead.temperature || 'Warm',
+        status: lead.status || 'New Lead',
+        notes: lead.notes || null,
+        assigned_to: lead.assigned_to || null,
+        assigned_to_name: lead.assigned_to_name || null,
+        last_contact_at: lead.last_contact_at || null,
+        next_followup_at: lead.next_followup_at || null,
+        next_followup_date: lead.next_followup_date || null,
+        next_followup_time: lead.next_followup_time || null,
+        created_by: lead.created_by || null,
+        created_by_name: lead.created_by_name || null,
+        last_updated_by: lead.last_updated_by || null,
+        last_updated_by_name: lead.last_updated_by_name || null,
+        created_at: lead.created_at,
+        updated_at: lead.updated_at
+      })
+    });
+
+    if (res.ok || res.status === 201 || res.status === 200) {
+      return { success: true, table: 'crm_leads' };
+    }
+  } catch (err: any) {
+    console.warn('Sync to crm_leads note:', err?.message || err);
+  }
+
+  // 2. Also mirror to public.leads_and_inquiries (existing active production table)
+  try {
+    let dbStatus = 'new';
+    const st = (lead.status || '').toLowerCase();
+    if (st.includes('converted')) dbStatus = 'converted';
+    else if (st.includes('site visit')) dbStatus = 'site_visit_scheduled';
+    else if (st.includes('quotation') || st.includes('boq')) dbStatus = 'boq_sent';
+    else if (st.includes('contact')) dbStatus = 'contacted';
+
+    const res2 = await fetch(`${url}/rest/v1/leads_and_inquiries`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        id: lead.id,
+        full_name: lead.customer_name,
+        phone: lead.phone,
+        email: lead.email || null,
+        city: lead.city || 'Bengaluru',
+        service_type: lead.interested_service || 'Turnkey Interior',
+        estimated_budget: lead.budget || null,
+        project_scope: lead.notes || null,
+        source: lead.source || 'CRM Lead',
+        status: dbStatus,
+        preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
+        created_at: lead.created_at
+      })
+    });
+
+    if (res2.ok || res2.status === 201 || res2.status === 200) {
+      return { success: true, table: 'leads_and_inquiries' };
+    }
+  } catch (err2: any) {
+    console.warn('Mirror to leads_and_inquiries note:', err2?.message || err2);
+  }
+
+  return { success: false, table: 'none' };
+}
+
+async function deleteLeadFromSupabase(id: string): Promise<boolean> {
+  const { url, key } = getSupabaseCredentials();
+  try {
+    // Delete from crm_leads
+    await fetch(`${url}/rest/v1/crm_leads?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { apikey: key, Authorization: `Bearer ${key}` }
+    });
+    // Also delete from leads_and_inquiries if exists
+    await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { apikey: key, Authorization: `Bearer ${key}` }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<boolean> {
+  const { url, key } = getSupabaseCredentials();
+  try {
+    const res = await fetch(`${url}/rest/v1/crm_call_logs`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: call.id,
+        lead_id: call.lead_id,
+        call_date: call.call_date,
+        outcome: call.outcome,
+        notes: call.notes || null,
+        followup_date: call.followup_date || null,
+        logged_by: call.logged_by || null,
+        logged_by_name: call.logged_by_name || null,
+        duration_seconds: call.duration_seconds || 0,
+        created_at: call.created_at
+      })
+    });
+    return res.ok || res.status === 201;
+  } catch {
+    return false;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// IN-MEMORY / DISK DATA STATE
+// -----------------------------------------------------------------------------
 export let dbCrmUsers: Record<string, ServerCrmUser> = {};
 export let dbCrmLeads: Record<string, ServerCrmLead> = {};
 export let dbCrmCalls: ServerCrmCallLog[] = [];
 export let dbCrmAudit: any[] = [];
 
-// Load initial state
+// Load initial state from local JSON files
 try {
   if (fs.existsSync(CRM_USERS_FILE)) {
     dbCrmUsers = JSON.parse(fs.readFileSync(CRM_USERS_FILE, 'utf-8'));
@@ -138,113 +353,6 @@ if (Object.keys(dbCrmUsers).length === 0) {
   saveUsers();
 }
 
-// Seed default sample leads if empty
-if (Object.keys(dbCrmLeads).length === 0) {
-  const now = Date.now();
-  const sampleLeads: ServerCrmLead[] = [
-    {
-      id: 'CRM-2601-10001',
-      customer_name: 'Vikramaditya Sharma',
-      phone: '+919845012345',
-      email: 'vikram.sharma@example.com',
-      source: 'IndiaMART',
-      interested_service: '3BHK Luxury Turnkey Interior',
-      city: 'Bengaluru (Hebbal)',
-      budget: '₹25 - 35 Lakhs',
-      temperature: 'Hot',
-      status: 'Follow-up',
-      notes: 'Client wants Italian marble living room and Burma teak pooja door. Follow up on design render approval.',
-      last_contact_at: new Date(now - 2 * 3600 * 1000).toISOString(),
-      next_followup_at: new Date(now + 4 * 3600 * 1000).toISOString(),
-      created_by: 'crm_admin_primary',
-      created_by_name: 'Royal Epic Admin',
-      created_at: new Date(now - 86400000 * 2).toISOString(),
-      updated_at: new Date(now - 2 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 'CRM-2601-10002',
-      customer_name: 'Dr. Meenakshi Sundaram',
-      phone: '+919900188765',
-      email: 'meenakshi.s@gmail.com',
-      source: 'Justdial',
-      interested_service: 'Modular Kitchen & Sliding Wardrobes',
-      city: 'Bengaluru (Thanisandra)',
-      budget: '₹12 - 18 Lakhs',
-      temperature: 'Hot',
-      status: 'Site Visit',
-      notes: 'Site visit requested for Thanisandra villa. Keys with security.',
-      last_contact_at: new Date(now - 86400000).toISOString(),
-      next_followup_at: new Date(now + 86400000).toISOString(),
-      created_by: 'crm_telecaller_1',
-      created_by_name: 'Pooja',
-      created_at: new Date(now - 86400000 * 3).toISOString(),
-      updated_at: new Date(now - 86400000).toISOString()
-    },
-    {
-      id: 'CRM-2601-10003',
-      customer_name: 'Ananya Deshmukh',
-      phone: '+919886033421',
-      email: 'ananya.d@techcorp.in',
-      source: 'Facebook',
-      interested_service: 'Full Home Turnkey Interior',
-      city: 'Bengaluru (Whitefield)',
-      budget: '₹30 - 45 Lakhs',
-      temperature: 'Warm',
-      status: 'Quotation',
-      notes: 'Shared preliminary BOQ for 4BHK apartment. Awaiting client review.',
-      last_contact_at: new Date(now - 86400000 * 3).toISOString(),
-      next_followup_at: new Date(now - 86400000).toISOString(), // Overdue
-      created_by: 'crm_telecaller_1',
-      created_by_name: 'Pooja',
-      created_at: new Date(now - 86400000 * 5).toISOString(),
-      updated_at: new Date(now - 86400000 * 3).toISOString()
-    },
-    {
-      id: 'CRM-2601-10004',
-      customer_name: 'Rajesh K. Varma',
-      phone: '+919448077123',
-      email: 'rajesh.varma@varmaestate.com',
-      source: 'Website',
-      interested_service: 'Commercial Office Fit-Out',
-      city: 'Bengaluru (Koramangala)',
-      budget: '₹50 Lakhs+',
-      temperature: 'Hot',
-      status: 'Qualified',
-      notes: '5000 sq.ft commercial space. Needs acoustic glass partitions and executive furniture.',
-      last_contact_at: new Date(now - 4 * 3600 * 1000).toISOString(),
-      next_followup_at: new Date(now + 86400000 * 2).toISOString(),
-      created_by: 'crm_admin_primary',
-      created_by_name: 'Royal Epic Admin',
-      created_at: new Date(now - 86400000).toISOString(),
-      updated_at: new Date(now - 4 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 'CRM-2601-10005',
-      customer_name: 'Kavita Chawla',
-      phone: '+919731244556',
-      email: 'kavita.c@gmail.com',
-      source: 'Instagram',
-      interested_service: 'WPC Waterproof Bathroom Doors',
-      city: 'Bengaluru (Yelahanka)',
-      budget: '₹2 - 4 Lakhs',
-      temperature: 'Cold',
-      status: 'No Answer',
-      notes: 'Tried calling twice; phone rang without answer. Sent WhatsApp overview.',
-      last_contact_at: new Date(now - 86400000).toISOString(),
-      next_followup_at: new Date(now + 3 * 3600 * 1000).toISOString(),
-      created_by: 'crm_telecaller_1',
-      created_by_name: 'Pooja',
-      created_at: new Date(now - 86400000 * 2).toISOString(),
-      updated_at: new Date(now - 86400000).toISOString()
-    }
-  ];
-
-  sampleLeads.forEach(l => {
-    dbCrmLeads[l.id] = l;
-  });
-  saveLeads();
-}
-
 export function saveUsers() {
   try {
     fs.writeFileSync(CRM_USERS_FILE, JSON.stringify(dbCrmUsers, null, 2));
@@ -269,7 +377,83 @@ export function saveAudit() {
   } catch (_) {}
 }
 
-// Authentication & Session Extraction Middleware
+// Pull any existing Supabase rows into memory on startup
+(async function initSupabaseSync() {
+  const { url, key } = getSupabaseCredentials();
+  try {
+    // 1. Try crm_leads first
+    const res = await fetch(`${url}/rest/v1/crm_leads?select=*&order=created_at.desc`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length > 0) {
+        rows.forEach((r: any) => {
+          if (!dbCrmLeads[r.id]) {
+            dbCrmLeads[r.id] = {
+              id: r.id,
+              customer_name: r.customer_name || r.name,
+              phone: r.phone,
+              normalized_phone: r.normalized_phone || normalizePhone(r.phone),
+              alternate_phone: r.alternate_phone,
+              email: r.email,
+              source: r.source || 'Website Enquiry',
+              custom_source: r.custom_source,
+              interested_service: r.interested_service || 'Residential Interior',
+              custom_service: r.custom_service,
+              city: r.city || 'Bengaluru',
+              project_address: r.project_address,
+              budget: r.budget,
+              temperature: r.temperature || 'Warm',
+              status: r.status || 'New Lead',
+              notes: r.notes,
+              assigned_to: r.assigned_to,
+              assigned_to_name: r.assigned_to_name,
+              last_contact_at: r.last_contact_at,
+              next_followup_at: r.next_followup_at,
+              next_followup_date: r.next_followup_date,
+              next_followup_time: r.next_followup_time,
+              created_by: r.created_by,
+              created_by_name: r.created_by_name,
+              created_at: r.created_at || new Date().toISOString(),
+              updated_at: r.updated_at || new Date().toISOString()
+            };
+          }
+        });
+        saveLeads();
+      }
+    }
+  } catch (e) {
+    console.warn('Initial crm_leads pull note:', e);
+  }
+})();
+
+// Helper to format lead object with backward-compatible aliases
+function formatLeadWithAliases(lead: ServerCrmLead) {
+  const cName = lead.customer_name || (lead as any).name || 'Unknown Client';
+  const cPhone = lead.phone || '';
+  const cCity = lead.city || (lead as any).location || 'Bengaluru';
+  const cService = lead.interested_service || (lead as any).projectType || 'Residential Interior';
+  const cCreatedAt = lead.created_at || (lead as any).createdAt || new Date().toISOString();
+
+  return {
+    ...lead,
+    customer_name: cName,
+    name: cName, // backward compatibility
+    phone: cPhone,
+    normalized_phone: lead.normalized_phone || normalizePhone(cPhone),
+    city: cCity,
+    location: cCity, // backward compatibility
+    interested_service: cService,
+    projectType: cService, // backward compatibility
+    created_at: cCreatedAt,
+    createdAt: cCreatedAt // backward compatibility
+  };
+}
+
+// -----------------------------------------------------------------------------
+// AUTHENTICATION & SESSION EXTRACTION
+// -----------------------------------------------------------------------------
 export function extractUserFromReq(req: Request): ServerCrmUser | null {
   const authHeader = req.headers['authorization'];
   const userIdHeader = req.headers['x-crm-user-id'] as string;
@@ -281,20 +465,16 @@ export function extractUserFromReq(req: Request): ServerCrmUser | null {
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7).trim();
-    // In our implementation, token is either a demo token or user id based
     const found = Object.values(dbCrmUsers).find(u => token.includes(u.id) || token.includes(u.email));
     if (found && found.status === 'active') return found;
   }
 
-  // No unauthenticated fallback: caller must present valid credentials
   return null;
 }
 
-// =========================================================================
+// -----------------------------------------------------------------------------
 // AUTH ENDPOINTS
-// =========================================================================
-
-// POST /api/crm/auth/login
+// -----------------------------------------------------------------------------
 crmRouter.post('/auth/login', (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -313,7 +493,6 @@ crmRouter.post('/auth/login', (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: 'Your account has been suspended by an administrator.' });
     }
 
-    // Verify password if set
     if (user.password && user.password !== password) {
       return res.status(401).json({ success: false, error: 'Invalid password. Please verify your credentials.' });
     }
@@ -332,7 +511,6 @@ crmRouter.post('/auth/login', (req: Request, res: Response) => {
   }
 });
 
-// GET /api/crm/auth/session
 crmRouter.get('/auth/session', (req: Request, res: Response) => {
   const user = extractUserFromReq(req);
   if (!user) {
@@ -343,22 +521,13 @@ crmRouter.get('/auth/session', (req: Request, res: Response) => {
   res.json({ success: true, user: safeUser });
 });
 
-// POST /api/crm/auth/logout
 crmRouter.post('/auth/logout', (_req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// POST /api/crm/auth/init-first-admin (Disabled for production security)
-crmRouter.post('/auth/init-first-admin', (_req: Request, res: Response) => {
-  res.status(403).json({
-    success: false,
-    error: 'Administrator self-registration is disabled for production security. Accounts must be provisioned by an authenticated administrator.'
-  });
-});
-
-// =========================================================================
+// -----------------------------------------------------------------------------
 // LEADS ENDPOINTS
-// =========================================================================
+// -----------------------------------------------------------------------------
 
 // GET /api/crm/leads
 crmRouter.get('/leads', (req: Request, res: Response) => {
@@ -367,66 +536,175 @@ crmRouter.get('/leads', (req: Request, res: Response) => {
     const status = (req.query.status as string) || '';
     const temperature = (req.query.temperature as string) || '';
     const source = (req.query.source as string) || '';
+    const service = (req.query.service as string) || '';
+    const budget = (req.query.budget as string) || '';
+    const location = ((req.query.location as string) || '').toLowerCase().trim();
+    const assigned_to = (req.query.assigned_to as string) || '';
+    const followup_filter = (req.query.followup_filter as string) || '';
+    const followup_date = (req.query.followup_date as string) || '';
+    const created_date = (req.query.created_date as string) || '';
     const sortBy = (req.query.sortBy as string) || 'created_desc';
     const page = Math.max(Number(req.query.page) || 1, 1);
     const pageSize = Math.max(Number(req.query.pageSize) || 15, 1);
 
     let list = Object.values(dbCrmLeads);
 
-    // Filter by search
+    // 1. Search (Name, Phone, Alternate Phone, Email, Service, Location, Notes)
     if (search) {
-      list = list.filter(l => 
-        l.customer_name.toLowerCase().includes(search) ||
-        l.phone.includes(search) ||
-        (l.email && l.email.toLowerCase().includes(search)) ||
-        l.interested_service.toLowerCase().includes(search) ||
-        (l.city && l.city.toLowerCase().includes(search))
-      );
+      list = list.filter(l => {
+        const cName = (l.customer_name || (l as any).name || '').toLowerCase();
+        const cPhone = l.phone || '';
+        const cAltPhone = l.alternate_phone || '';
+        const cEmail = (l.email || '').toLowerCase();
+        const cService = (l.interested_service || (l as any).projectType || '').toLowerCase();
+        const cCustomService = (l.custom_service || '').toLowerCase();
+        const cCity = (l.city || (l as any).location || '').toLowerCase();
+        const cAddr = (l.project_address || '').toLowerCase();
+        const cNotes = (l.notes || '').toLowerCase();
+
+        return (
+          cName.includes(search) ||
+          cPhone.includes(search) ||
+          cAltPhone.includes(search) ||
+          cEmail.includes(search) ||
+          cService.includes(search) ||
+          cCustomService.includes(search) ||
+          cCity.includes(search) ||
+          cAddr.includes(search) ||
+          cNotes.includes(search)
+        );
+      });
     }
 
-    // Filter by status
+    // 2. Status filter
     if (status && status !== 'All') {
-      list = list.filter(l => l.status === status);
+      if (status === 'New Lead') {
+        list = list.filter(l => l.status === 'New Lead' || l.status === 'New');
+      } else if (status === 'Follow-up Required') {
+        list = list.filter(l => l.status === 'Follow-up Required' || l.status === 'Follow-up');
+      } else {
+        list = list.filter(l => l.status === status);
+      }
     }
 
-    // Filter by temperature
-    if (temperature && temperature !== 'All') {
-      list = list.filter(l => l.temperature === temperature);
-    }
-
-    // Filter by source
+    // 3. Source filter
     if (source && source !== 'All') {
       list = list.filter(l => l.source === source);
     }
 
+    // 4. Service filter
+    if (service && service !== 'All') {
+      list = list.filter(l => (l.interested_service || (l as any).projectType) === service);
+    }
+
+    // 5. Budget filter
+    if (budget && budget !== 'All') {
+      list = list.filter(l => l.budget === budget);
+    }
+
+    // 6. Location filter
+    if (location) {
+      list = list.filter(l => {
+        const cCity = (l.city || (l as any).location || '').toLowerCase();
+        const cAddr = (l.project_address || '').toLowerCase();
+        return cCity.includes(location) || cAddr.includes(location);
+      });
+    }
+
+    // 7. Assigned Telecaller
+    if (assigned_to && assigned_to !== 'All') {
+      if (assigned_to === 'unassigned') {
+        list = list.filter(l => !l.assigned_to);
+      } else {
+        list = list.filter(l => l.assigned_to === assigned_to);
+      }
+    }
+
+    // 8. Follow-up Filter using EXACT IST (Asia/Kolkata) boundaries
+    const { startEpoch: istTodayStart, endEpoch: istTodayEnd } = getIstDayBoundaries();
+
+    if (followup_filter && followup_filter !== 'All') {
+      if (followup_filter === 'today') {
+        list = list.filter(l => {
+          if (!l.next_followup_at) return false;
+          const t = new Date(l.next_followup_at).getTime();
+          return t >= istTodayStart && t <= istTodayEnd;
+        });
+      } else if (followup_filter === 'overdue') {
+        list = list.filter(l => {
+          if (!l.next_followup_at || l.status === 'Converted' || l.status === 'Lost') return false;
+          const t = new Date(l.next_followup_at).getTime();
+          return t < istTodayStart;
+        });
+      } else if (followup_filter === 'upcoming') {
+        list = list.filter(l => {
+          if (!l.next_followup_at) return false;
+          const t = new Date(l.next_followup_at).getTime();
+          return t > istTodayEnd;
+        });
+      } else if (followup_filter === 'completed') {
+        list = list.filter(l => l.status === 'Converted' || l.status === 'Site Visit Scheduled' || l.status === 'Quotation Sent');
+      } else if (followup_filter === 'custom' && followup_date) {
+        list = list.filter(l => l.next_followup_at && l.next_followup_at.startsWith(followup_date));
+      }
+    }
+
+    // 9. Created Date Filter using IST boundaries
+    if (created_date && created_date !== 'All') {
+      if (created_date === 'today') {
+        list = list.filter(l => new Date(l.created_at || (l as any).createdAt).getTime() >= istTodayStart);
+      } else if (created_date === '7days') {
+        const d7 = Date.now() - 7 * 86400000;
+        list = list.filter(l => new Date(l.created_at || (l as any).createdAt).getTime() >= d7);
+      } else if (created_date === '30days') {
+        const d30 = Date.now() - 30 * 86400000;
+        list = list.filter(l => new Date(l.created_at || (l as any).createdAt).getTime() >= d30);
+      }
+    }
+
+    // 10. Temperature filter
+    if (temperature && temperature !== 'All') {
+      list = list.filter(l => l.temperature === temperature);
+    }
+
     // Sort
     list.sort((a, b) => {
-      if (sortBy === 'created_desc') {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-      if (sortBy === 'created_asc') {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      }
+      const aCreated = new Date(a.created_at || (a as any).createdAt || 0).getTime();
+      const bCreated = new Date(b.created_at || (b as any).createdAt || 0).getTime();
+
+      if (sortBy === 'created_desc') return bCreated - aCreated;
+      if (sortBy === 'created_asc') return aCreated - bCreated;
+
       if (sortBy === 'followup_asc') {
         if (!a.next_followup_at) return 1;
         if (!b.next_followup_at) return -1;
         return new Date(a.next_followup_at).getTime() - new Date(b.next_followup_at).getTime();
       }
-      if (sortBy === 'temperature_desc') {
-        const order: Record<string, number> = { 'Hot': 3, 'Warm': 2, 'Cold': 1 };
-        return (order[b.temperature] || 0) - (order[a.temperature] || 0);
+      if (sortBy === 'followup_desc') {
+        if (!a.next_followup_at) return 1;
+        if (!b.next_followup_at) return -1;
+        return new Date(b.next_followup_at).getTime() - new Date(a.next_followup_at).getTime();
       }
       if (sortBy === 'name_asc') {
-        return a.customer_name.localeCompare(b.customer_name);
+        const aName = a.customer_name || (a as any).name || '';
+        const bName = b.customer_name || (b as any).name || '';
+        return aName.localeCompare(bName);
       }
       return 0;
     });
 
     const total = list.length;
     const startIndex = (page - 1) * pageSize;
-    const paginated = list.slice(startIndex, startIndex + pageSize);
+    const paginated = list.slice(startIndex, startIndex + pageSize).map(formatLeadWithAliases);
 
-    res.json({ success: true, leads: paginated, total, page, pageSize });
+    res.json({
+      success: true,
+      leads: paginated,
+      total,
+      count: total, // backward compatibility
+      page,
+      pageSize
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error fetching leads' });
   }
@@ -438,88 +716,169 @@ crmRouter.get('/leads/:id', (req: Request, res: Response) => {
   if (!lead) {
     return res.status(404).json({ success: false, error: 'Lead not found.' });
   }
-  res.json({ success: true, lead });
+  res.json({ success: true, lead: formatLeadWithAliases(lead) });
 });
 
-// POST /api/crm/leads (Create Lead)
-crmRouter.post('/leads', (req: Request, res: Response) => {
+// POST /api/crm/leads (Unified Manual Entry & Website Ingestion)
+crmRouter.post('/leads', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    const { 
-      customer_name, 
-      phone, 
-      email, 
-      source = 'Website', 
-      interested_service = 'Turnkey Interior',
-      city = 'Bengaluru',
-      budget,
-      temperature = 'Warm',
-      status = 'New',
-      notes,
-      next_followup_at
-    } = req.body;
+    const body = req.body || {};
 
-    if (!customer_name || !phone) {
-      return res.status(400).json({ success: false, error: 'Customer name and phone number are required.' });
+    const rawName = body.customer_name || body.name || '';
+    const rawPhone = body.phone || '';
+    const rawAltPhone = body.alternate_phone || '';
+    const rawEmail = body.email || '';
+    const rawSource = body.source || 'Website Enquiry';
+    const rawCustomSource = body.custom_source || '';
+    const rawService = body.interested_service || body.projectType || body.service || 'Residential Interior';
+    const rawCustomService = body.custom_service || '';
+    const rawCity = body.city || body.location || 'Bengaluru';
+    const rawAddress = body.project_address || '';
+    const rawBudget = body.budget || '';
+    const rawTemp = body.temperature || 'Warm';
+    const rawStatus = body.status || 'New Lead';
+    
+    // Notes can arrive as string, or as discoveredInfo/recommendations from AI consultant
+    let rawNotes = body.notes || '';
+    if (!rawNotes && body.discoveredInfo) {
+      rawNotes = typeof body.discoveredInfo === 'object' ? JSON.stringify(body.discoveredInfo) : String(body.discoveredInfo);
+    }
+    if (!rawNotes && body.recommendations) {
+      rawNotes = String(body.recommendations);
     }
 
-    const normPhone = normalizePhone(phone);
+    if (!rawName.trim() || !rawPhone.trim()) {
+      return res.status(400).json({ success: false, error: 'Customer Name and Mobile Number are required.' });
+    }
 
-    // Duplicate Phone Check
+    const normPhone = normalizePhone(rawPhone);
+    const digitsOnly = rawPhone.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit mobile number.' });
+    }
+
+    // Duplicate Phone Number Check (Application-Level Enforcement)
     const existingLead = Object.values(dbCrmLeads).find(l => normalizePhone(l.phone) === normPhone);
     if (existingLead) {
+      // If submitted from AI Consultant / Public website form, merge gracefully
+      if (rawSource.includes('AI') || rawSource.includes('Website Form')) {
+        existingLead.notes = `${existingLead.notes || ''}\n[Update ${new Date().toISOString().slice(0, 10)}]: ${rawNotes}`.trim();
+        existingLead.updated_at = new Date().toISOString();
+        dbCrmLeads[existingLead.id] = existingLead;
+        saveLeads();
+        syncLeadToSupabase(existingLead).catch(() => {});
+        return res.json({
+          success: true,
+          leadId: existingLead.id,
+          message: 'Existing lead updated with new consultation details.',
+          lead: formatLeadWithAliases(existingLead)
+        });
+      }
+
+      // For Telecaller manual entry: Enforce duplicate block
       return res.status(409).json({
         success: false,
         isDuplicate: true,
-        error: `A lead with phone number ${phone} already exists in CRM for "${existingLead.customer_name}" (ID: ${existingLead.id}).`
+        error: `A lead with mobile number ${rawPhone} already exists in CRM for "${existingLead.customer_name || (existingLead as any).name}" (ID: ${existingLead.id}).`
       });
     }
 
+    let finalFollowupAt = body.next_followup_at || body.preferredDate;
+    if (!finalFollowupAt && body.next_followup_date) {
+      finalFollowupAt = `${body.next_followup_date}T${body.next_followup_time || '10:00'}:00`;
+    }
+
     const now = new Date().toISOString();
-    const id = `CRM-${new Date().toISOString().slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
+    const id = body.id || `CRM-${now.slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const newLead: ServerCrmLead = {
       id,
-      customer_name: customer_name.trim(),
+      customer_name: rawName.trim(),
       phone: normPhone,
-      email: email?.trim() || undefined,
-      source,
-      interested_service: interested_service.trim(),
-      city: city.trim(),
-      budget: budget?.trim() || undefined,
-      temperature,
-      status,
-      notes: notes?.trim() || undefined,
-      next_followup_at: next_followup_at || undefined,
+      normalized_phone: normPhone,
+      alternate_phone: rawAltPhone ? normalizePhone(rawAltPhone) : undefined,
+      email: rawEmail?.trim() || undefined,
+      source: rawSource || 'Website Enquiry',
+      custom_source: rawCustomSource?.trim() || undefined,
+      interested_service: (rawSource === 'Other' && rawCustomSource) ? rawCustomSource : rawService.trim(),
+      custom_service: rawCustomService?.trim() || undefined,
+      city: rawCity?.trim() || 'Bengaluru',
+      project_address: rawAddress?.trim() || undefined,
+      budget: rawBudget?.trim() || undefined,
+      temperature: rawTemp,
+      status: rawStatus || 'New Lead',
+      notes: rawNotes?.trim() || undefined,
+      assigned_to: body.assigned_to || undefined,
+      assigned_to_name: body.assigned_to_name || undefined,
+      next_followup_at: finalFollowupAt || undefined,
+      next_followup_date: body.next_followup_date || undefined,
+      next_followup_time: body.next_followup_time || undefined,
       created_by: user?.id,
       created_by_name: user?.name,
       created_at: now,
       updated_at: now
     };
 
+    // 1. Save to in-memory dictionary & disk JSON
     dbCrmLeads[id] = newLead;
     saveLeads();
 
-    // Audit Log
+    // 2. Persist to Supabase asynchronously
+    syncLeadToSupabase(newLead).catch((sbErr) => {
+      console.warn('Supabase sync background note:', sbErr?.message || sbErr);
+    });
+
+    // 3. Dispatch Hostinger SMTP email notification asynchronously
+    sendLeadNotificationEmail({
+      id: newLead.id,
+      full_name: newLead.customer_name,
+      phone: newLead.phone,
+      email: newLead.email,
+      city: newLead.city,
+      service_type: newLead.interested_service,
+      estimated_budget: newLead.budget,
+      project_scope: newLead.notes || '',
+      source: newLead.source,
+      created_at: newLead.created_at
+    }).catch((mailErr) => {
+      console.error('⚠️ [Hostinger SMTP] CRM lead notification note:', mailErr?.message || mailErr);
+    });
+
+    // 4. Record Audit Log
     dbCrmAudit.push({
       id: `AUDIT-${Date.now()}`,
       lead_id: id,
       action: 'CREATE',
-      performed_by: user?.id || 'unknown',
-      performed_by_name: user?.name || 'unknown',
-      details: { customer_name, phone: normPhone },
+      performed_by: user?.id || 'system',
+      performed_by_name: user?.name || 'Public Web / CRM',
+      details: { customer_name: rawName, phone: normPhone, source: rawSource, status: rawStatus },
       created_at: now
     });
     saveAudit();
 
-    res.status(201).json({ success: true, lead: newLead });
+    res.status(201).json({
+      success: true,
+      leadId: newLead.id,
+      lead: formatLeadWithAliases(newLead),
+      message: 'Lead successfully captured in Royal Epic CRM system.'
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error creating lead' });
   }
 });
 
-// PUT /api/crm/leads/:id (Update Lead)
-crmRouter.put('/leads/:id', (req: Request, res: Response) => {
+// PUT /api/crm/leads/:id (Full Lead Update)
+crmRouter.put('/leads/:id', async (req: Request, res: Response) => {
+  handleLeadUpdate(req, res);
+});
+
+// PATCH /api/crm/leads/:id (Partial Lead Update)
+crmRouter.patch('/leads/:id', async (req: Request, res: Response) => {
+  handleLeadUpdate(req, res);
+});
+
+async function handleLeadUpdate(req: Request, res: Response) {
   try {
     const user = extractUserFromReq(req);
     const lead = dbCrmLeads[req.params.id];
@@ -527,44 +886,49 @@ crmRouter.put('/leads/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Lead not found.' });
     }
 
-    const {
-      customer_name,
-      phone,
-      email,
-      source,
-      interested_service,
-      city,
-      budget,
-      temperature,
-      status,
-      notes,
-      next_followup_at
-    } = req.body;
+    const body = req.body || {};
 
-    if (phone) {
-      const normPhone = normalizePhone(phone);
+    if (body.phone) {
+      const normPhone = normalizePhone(body.phone);
       // Check if duplicate with ANOTHER lead
       const duplicate = Object.values(dbCrmLeads).find(l => l.id !== lead.id && normalizePhone(l.phone) === normPhone);
       if (duplicate) {
         return res.status(409).json({
           success: false,
           isDuplicate: true,
-          error: `Another lead "${duplicate.customer_name}" already uses phone number ${phone}.`
+          error: `Another lead "${duplicate.customer_name || (duplicate as any).name}" already uses phone number ${body.phone}.`
         });
       }
       lead.phone = normPhone;
+      lead.normalized_phone = normPhone;
     }
 
-    if (customer_name) lead.customer_name = customer_name.trim();
-    if (email !== undefined) lead.email = email?.trim() || undefined;
-    if (source) lead.source = source;
-    if (interested_service) lead.interested_service = interested_service.trim();
-    if (city !== undefined) lead.city = city.trim();
-    if (budget !== undefined) lead.budget = budget?.trim() || undefined;
-    if (temperature) lead.temperature = temperature;
-    if (status) lead.status = status;
-    if (notes !== undefined) lead.notes = notes?.trim() || undefined;
-    if (next_followup_at !== undefined) lead.next_followup_at = next_followup_at || undefined;
+    if (body.customer_name || body.name) lead.customer_name = (body.customer_name || body.name).trim();
+    if (body.alternate_phone !== undefined) lead.alternate_phone = body.alternate_phone ? normalizePhone(body.alternate_phone) : undefined;
+    if (body.email !== undefined) lead.email = body.email?.trim() || undefined;
+    if (body.source) lead.source = body.source;
+    if (body.custom_source !== undefined) lead.custom_source = body.custom_source?.trim() || undefined;
+    if (body.interested_service || body.projectType) lead.interested_service = (body.interested_service || body.projectType).trim();
+    if (body.custom_service !== undefined) lead.custom_service = body.custom_service?.trim() || undefined;
+    if (body.city !== undefined || body.location !== undefined) lead.city = (body.city || body.location).trim();
+    if (body.project_address !== undefined) lead.project_address = body.project_address?.trim() || undefined;
+    if (body.budget !== undefined) lead.budget = body.budget?.trim() || undefined;
+    if (body.temperature) lead.temperature = body.temperature;
+    if (body.status) lead.status = body.status;
+    if (body.notes !== undefined) lead.notes = body.notes?.trim() || undefined;
+    if (body.assigned_to !== undefined) lead.assigned_to = body.assigned_to || undefined;
+    if (body.assigned_to_name !== undefined) lead.assigned_to_name = body.assigned_to_name || undefined;
+
+    if (body.next_followup_at !== undefined) {
+      lead.next_followup_at = body.next_followup_at || undefined;
+    } else if (body.next_followup_date) {
+      lead.next_followup_at = `${body.next_followup_date}T${body.next_followup_time || '10:00'}:00`;
+    } else if (body.preferredDate) {
+      lead.next_followup_at = body.preferredDate;
+    }
+
+    if (body.next_followup_date !== undefined) lead.next_followup_date = body.next_followup_date || undefined;
+    if (body.next_followup_time !== undefined) lead.next_followup_time = body.next_followup_time || undefined;
 
     lead.last_updated_by = user?.id;
     lead.last_updated_by_name = user?.name;
@@ -573,14 +937,17 @@ crmRouter.put('/leads/:id', (req: Request, res: Response) => {
     dbCrmLeads[lead.id] = lead;
     saveLeads();
 
-    res.json({ success: true, lead });
+    // Async sync to Supabase
+    syncLeadToSupabase(lead).catch(() => {});
+
+    res.json({ success: true, lead: formatLeadWithAliases(lead), message: 'Lead successfully updated.' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error updating lead' });
   }
-});
+}
 
 // DELETE /api/crm/leads/:id (Strictly Admin-Only)
-crmRouter.delete('/leads/:id', (req: Request, res: Response) => {
+crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
     if (!user || user.role !== 'admin') {
@@ -597,6 +964,9 @@ crmRouter.delete('/leads/:id', (req: Request, res: Response) => {
 
     delete dbCrmLeads[req.params.id];
     saveLeads();
+
+    // Async delete from Supabase
+    deleteLeadFromSupabase(req.params.id).catch(() => {});
 
     // Audit log
     dbCrmAudit.push({
@@ -616,11 +986,17 @@ crmRouter.delete('/leads/:id', (req: Request, res: Response) => {
   }
 });
 
-// =========================================================================
+// -----------------------------------------------------------------------------
 // CALL LOGS ENDPOINTS
-// =========================================================================
+// -----------------------------------------------------------------------------
 
-// GET /api/crm/leads/:id/calls
+// GET /api/crm/calls (All Calls)
+crmRouter.get('/calls', (_req: Request, res: Response) => {
+  const calls = [...dbCrmCalls].sort((a, b) => new Date(b.call_date).getTime() - new Date(a.call_date).getTime());
+  res.json({ success: true, calls, total: calls.length });
+});
+
+// GET /api/crm/leads/:id/calls (Calls for specific lead)
 crmRouter.get('/leads/:id/calls', (req: Request, res: Response) => {
   const calls = dbCrmCalls
     .filter(c => c.lead_id === req.params.id)
@@ -628,8 +1004,8 @@ crmRouter.get('/leads/:id/calls', (req: Request, res: Response) => {
   res.json({ success: true, calls });
 });
 
-// POST /api/crm/calls (Log Interaction & Update Follow-up)
-crmRouter.post('/calls', (req: Request, res: Response) => {
+// POST /api/crm/calls (Log Call & Update Follow-up)
+crmRouter.post('/calls', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
     const { lead_id, outcome, notes, followup_date, update_lead_status, update_lead_temperature } = req.body;
@@ -645,7 +1021,7 @@ crmRouter.post('/calls', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     const callLog: ServerCrmCallLog = {
-      id: `CALL-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `CALL-${now.slice(2, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`,
       lead_id,
       call_date: now,
       outcome,
@@ -659,6 +1035,9 @@ crmRouter.post('/calls', (req: Request, res: Response) => {
     dbCrmCalls.push(callLog);
     saveCalls();
 
+    // Sync call log to Supabase
+    syncCallLogToSupabase(callLog).catch(() => {});
+
     // Automatically update lead's metadata
     lead.last_contact_at = now;
     if (update_lead_status) lead.status = update_lead_status;
@@ -671,88 +1050,108 @@ crmRouter.post('/calls', (req: Request, res: Response) => {
     dbCrmLeads[lead_id] = lead;
     saveLeads();
 
-    res.status(201).json({ success: true, callLog, lead });
+    // Sync updated lead to Supabase
+    syncLeadToSupabase(lead).catch(() => {});
+
+    res.status(201).json({ success: true, callLog, lead: formatLeadWithAliases(lead) });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error recording call' });
   }
 });
 
-// =========================================================================
-// FOLLOW-UPS ENDPOINT
-// =========================================================================
-
-// GET /api/crm/followups
+// -----------------------------------------------------------------------------
+// FOLLOW-UPS ENDPOINT (Strict IST boundaries)
+// -----------------------------------------------------------------------------
 crmRouter.get('/followups', (_req: Request, res: Response) => {
   try {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const todayEnd = todayStart + 86400000;
+    const { startEpoch: istTodayStart, endEpoch: istTodayEnd } = getIstDayBoundaries();
 
-    const all = Object.values(dbCrmLeads).filter(l => l.next_followup_at && l.status !== 'Converted' && l.status !== 'Lost');
+    const allLeads = Object.values(dbCrmLeads);
+    const activeFollowups = allLeads.filter(l => l.next_followup_at && l.status !== 'Converted' && l.status !== 'Lost');
 
-    const dueToday: ServerCrmLead[] = [];
-    const overdue: ServerCrmLead[] = [];
-    const upcoming: ServerCrmLead[] = [];
+    const dueToday: any[] = [];
+    const overdue: any[] = [];
+    const upcoming: any[] = [];
+    const completed: any[] = [];
 
-    all.forEach(l => {
+    activeFollowups.forEach(l => {
       const fTime = new Date(l.next_followup_at!).getTime();
-      if (fTime < todayStart) {
-        overdue.push(l);
-      } else if (fTime >= todayStart && fTime < todayEnd) {
-        dueToday.push(l);
+      const formatted = formatLeadWithAliases(l);
+      if (fTime < istTodayStart) {
+        overdue.push(formatted);
+      } else if (fTime >= istTodayStart && fTime <= istTodayEnd) {
+        dueToday.push(formatted);
       } else {
-        upcoming.push(l);
+        upcoming.push(formatted);
       }
     });
 
-    // Sort overdue by most overdue first
-    overdue.sort((a, b) => new Date(a.next_followup_at!).getTime() - new Date(b.next_followup_at!).getTime());
-    // Sort due today by earliest time
-    dueToday.sort((a, b) => new Date(a.next_followup_at!).getTime() - new Date(b.next_followup_at!).getTime());
-    // Sort upcoming by earliest
-    upcoming.sort((a, b) => new Date(a.next_followup_at!).getTime() - new Date(b.next_followup_at!).getTime());
+    // Completed follow-ups
+    allLeads.forEach(l => {
+      if (l.status === 'Converted' || l.status === 'Site Visit Scheduled' || l.status === 'Quotation Sent') {
+        completed.push(formatLeadWithAliases(l));
+      }
+    });
 
-    res.json({ success: true, dueToday, overdue, upcoming });
+    overdue.sort((a, b) => new Date(a.next_followup_at!).getTime() - new Date(b.next_followup_at!).getTime());
+    dueToday.sort((a, b) => new Date(a.next_followup_at!).getTime() - new Date(b.next_followup_at!).getTime());
+    upcoming.sort((a, b) => new Date(a.next_followup_at!).getTime() - new Date(b.next_followup_at!).getTime());
+    completed.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+    res.json({ success: true, dueToday, overdue, upcoming, completed: completed.slice(0, 50) });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error fetching followups' });
   }
 });
 
-// =========================================================================
-// DASHBOARD METRICS ENDPOINT
-// =========================================================================
-
-// GET /api/crm/dashboard-metrics
+// -----------------------------------------------------------------------------
+// DASHBOARD METRICS ENDPOINT (Strict IST boundaries)
+// -----------------------------------------------------------------------------
 crmRouter.get('/dashboard-metrics', (_req: Request, res: Response) => {
   try {
     const leads = Object.values(dbCrmLeads);
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const todayEnd = todayStart + 86400000;
+    const { startEpoch: istTodayStart, endEpoch: istTodayEnd } = getIstDayBoundaries();
 
     const totalLeads = leads.length;
-    const newLeads = leads.filter(l => l.status === 'New').length;
-    const hotLeads = leads.filter(l => l.temperature === 'Hot').length;
-    const qualifiedLeads = leads.filter(l => l.status === 'Qualified' || l.status === 'Site Visit').length;
-    const convertedLeads = leads.filter(l => l.status === 'Converted').length;
+    const newLeads = leads.filter(l => l.status === 'New Lead' || l.status === 'New').length;
+    const interestedLeads = leads.filter(l => 
+      l.status === 'Interested' || 
+      l.temperature === 'Hot' ||
+      l.status === 'Site Visit Scheduled' ||
+      l.status === 'Quotation Sent' ||
+      l.status === 'Negotiation'
+    ).length;
 
-    // Follow-ups
+    // Follow-ups Due: Overdue + Due Today in IST
+    const followupsDue = leads.filter(l => {
+      if (!l.next_followup_at || l.status === 'Converted' || l.status === 'Lost') return false;
+      const t = new Date(l.next_followup_at).getTime();
+      return t <= istTodayEnd;
+    }).length;
+
     const followupsDueToday = leads.filter(l => {
       if (!l.next_followup_at || l.status === 'Converted' || l.status === 'Lost') return false;
       const t = new Date(l.next_followup_at).getTime();
-      return t >= todayStart && t < todayEnd;
+      return t >= istTodayStart && t <= istTodayEnd;
     }).length;
 
     const overdueFollowups = leads.filter(l => {
       if (!l.next_followup_at || l.status === 'Converted' || l.status === 'Lost') return false;
       const t = new Date(l.next_followup_at).getTime();
-      return t < todayStart;
+      return t < istTodayStart;
     }).length;
 
-    // Calls Today
+    const convertedLeads = leads.filter(l => l.status === 'Converted').length;
+    const lostLeads = leads.filter(l => 
+      l.status === 'Lost' || 
+      l.status === 'Not Interested' || 
+      l.status === 'Not Reachable'
+    ).length;
+
+    // Calls Today in IST
     const callsToday = dbCrmCalls.filter(c => {
       const t = new Date(c.call_date).getTime();
-      return t >= todayStart && t < todayEnd;
+      return t >= istTodayStart && t <= istTodayEnd;
     }).length;
 
     res.json({
@@ -760,12 +1159,13 @@ crmRouter.get('/dashboard-metrics', (_req: Request, res: Response) => {
       metrics: {
         totalLeads,
         newLeads,
-        hotLeads,
+        interestedLeads,
+        followupsDue,
+        convertedLeads,
+        lostLeads,
         callsToday,
         followupsDueToday,
-        overdueFollowups,
-        qualifiedLeads,
-        convertedLeads
+        overdueFollowups
       }
     });
   } catch (err: any) {
@@ -773,41 +1173,92 @@ crmRouter.get('/dashboard-metrics', (_req: Request, res: Response) => {
   }
 });
 
-// =========================================================================
-// REPORTS ENDPOINT
-// =========================================================================
+// -----------------------------------------------------------------------------
+// CSV EXPORT ENDPOINT
+// -----------------------------------------------------------------------------
+crmRouter.get('/export-csv', (_req: Request, res: Response) => {
+  try {
+    const list = Object.values(dbCrmLeads);
+    
+    const headers = [
+      'Customer Name',
+      'Mobile Number',
+      'Alternate Mobile',
+      'Lead Source',
+      'Service Required',
+      'Customer Location',
+      'Project Address',
+      'Budget Range',
+      'Lead Status',
+      'Next Follow-up',
+      'Assigned Telecaller',
+      'Customer Notes',
+      'Created Date'
+    ];
 
-// GET /api/crm/reports
+    const escapeCsv = (val?: string | null) => {
+      if (!val) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = list.map(l => [
+      escapeCsv(l.customer_name || (l as any).name),
+      escapeCsv(l.phone),
+      escapeCsv(l.alternate_phone || ''),
+      escapeCsv(l.source),
+      escapeCsv(l.interested_service || (l as any).projectType),
+      escapeCsv(l.city || (l as any).location || ''),
+      escapeCsv(l.project_address || ''),
+      escapeCsv(l.budget || ''),
+      escapeCsv(l.status),
+      escapeCsv(l.next_followup_at || ''),
+      escapeCsv(l.assigned_to_name || l.assigned_to || 'Unassigned'),
+      escapeCsv(l.notes || ''),
+      escapeCsv(l.created_at ? l.created_at.slice(0, 10) : '')
+    ].join(','));
+
+    const csvContent = [headers.join(','), ...rows].join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="Royal_Epic_CRM_Leads_${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.status(200).send(csvContent);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to export CSV' });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// REPORTS ENDPOINT
+// -----------------------------------------------------------------------------
 crmRouter.get('/reports', (req: Request, res: Response) => {
   try {
     const days = Number(req.query.days) || 30;
     const cutoff = Date.now() - days * 86400000;
 
-    const leads = Object.values(dbCrmLeads).filter(l => new Date(l.created_at).getTime() >= cutoff);
+    const leads = Object.values(dbCrmLeads).filter(l => new Date(l.created_at || (l as any).createdAt).getTime() >= cutoff);
     const calls = dbCrmCalls.filter(c => new Date(c.call_date).getTime() >= cutoff);
 
-    // By Source
     const sourceMap: Record<string, number> = {};
     leads.forEach(l => {
       sourceMap[l.source] = (sourceMap[l.source] || 0) + 1;
     });
     const bySource = Object.entries(sourceMap).map(([source, count]) => ({ source, count }));
 
-    // By Status
     const statusMap: Record<string, number> = {};
     leads.forEach(l => {
       statusMap[l.status] = (statusMap[l.status] || 0) + 1;
     });
     const byStatus = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
 
-    // By Temperature
     const tempMap: Record<string, number> = { 'Hot': 0, 'Warm': 0, 'Cold': 0 };
     leads.forEach(l => {
-      tempMap[l.temperature] = (tempMap[l.temperature] || 0) + 1;
+      if (l.temperature && tempMap[l.temperature] !== undefined) {
+        tempMap[l.temperature] = (tempMap[l.temperature] || 0) + 1;
+      }
     });
     const byTemperature = Object.entries(tempMap).map(([temperature, count]) => ({ temperature, count }));
 
-    // Calls by Outcome
     const outcomeMap: Record<string, number> = {};
     calls.forEach(c => {
       outcomeMap[c.outcome] = (outcomeMap[c.outcome] || 0) + 1;
@@ -833,11 +1284,9 @@ crmRouter.get('/reports', (req: Request, res: Response) => {
   }
 });
 
-// =========================================================================
+// -----------------------------------------------------------------------------
 // CSV IMPORT ENDPOINT (Admin Only)
-// =========================================================================
-
-// POST /api/crm/import-csv
+// -----------------------------------------------------------------------------
 crmRouter.post('/import-csv', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
@@ -858,31 +1307,34 @@ crmRouter.post('/import-csv', (req: Request, res: Response) => {
     const now = new Date().toISOString();
 
     incomingLeads.forEach((row: any, idx: number) => {
-      if (!row.customer_name || !row.phone) {
+      const name = row.customer_name || row.name;
+      const phone = row.phone;
+      if (!name || !phone) {
         skippedCount++;
         errors.push({ row: idx + 1, reason: 'Name or phone is missing' });
         return;
       }
 
-      const norm = normalizePhone(row.phone);
+      const norm = normalizePhone(phone);
       if (existingPhones.has(norm)) {
         skippedCount++;
         errors.push({ row: idx + 1, reason: `Phone ${norm} already exists in CRM` });
         return;
       }
 
-      const id = `CRM-${new Date().toISOString().slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
+      const id = `CRM-${now.slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
       const lead: ServerCrmLead = {
         id,
-        customer_name: String(row.customer_name).trim(),
+        customer_name: String(name).trim(),
         phone: norm,
+        normalized_phone: norm,
         email: row.email ? String(row.email).trim() : undefined,
         source: row.source || 'Website',
-        interested_service: row.interested_service || 'Turnkey Interior',
-        city: row.city || 'Bengaluru',
+        interested_service: row.interested_service || row.projectType || 'Turnkey Interior',
+        city: row.city || row.location || 'Bengaluru',
         budget: row.budget || undefined,
         temperature: row.temperature || 'Warm',
-        status: row.status || 'New',
+        status: row.status || 'New Lead',
         notes: row.notes || undefined,
         external_lead_id: row.external_lead_id ? String(row.external_lead_id).trim() : undefined,
         alternate_phone: row.alternate_phone ? normalizePhone(String(row.alternate_phone)) : undefined,
@@ -895,11 +1347,12 @@ crmRouter.post('/import-csv', (req: Request, res: Response) => {
       dbCrmLeads[id] = lead;
       existingPhones.add(norm);
       importedCount++;
+
+      syncLeadToSupabase(lead).catch(() => {});
     });
 
     saveLeads();
 
-    // Audit Log
     dbCrmAudit.push({
       id: `AUDIT-${Date.now()}`,
       action: 'IMPORT',
@@ -916,11 +1369,9 @@ crmRouter.post('/import-csv', (req: Request, res: Response) => {
   }
 });
 
-// =========================================================================
-// USER & ROLE MANAGEMENT ENDPOINTS (Admin Only)
-// =========================================================================
-
-// GET /api/crm/users
+// -----------------------------------------------------------------------------
+// USER MANAGEMENT ENDPOINTS (Admin Only)
+// -----------------------------------------------------------------------------
 crmRouter.get('/users', (req: Request, res: Response) => {
   const user = extractUserFromReq(req);
   if (!user || user.role !== 'admin') {
@@ -936,7 +1387,6 @@ crmRouter.get('/users', (req: Request, res: Response) => {
   res.json({ success: true, users: safeUsers });
 });
 
-// POST /api/crm/users/role
 crmRouter.post('/users/role', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
@@ -964,7 +1414,6 @@ crmRouter.post('/users/role', (req: Request, res: Response) => {
   }
 });
 
-// POST /api/crm/users/create
 crmRouter.post('/users/create', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
@@ -1002,5 +1451,52 @@ crmRouter.post('/users/create', (req: Request, res: Response) => {
     res.status(201).json({ success: true, user: safe });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error creating user' });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// POST /api/crm/migrate-to-supabase
+// One-click idempotent migration of local leads into Supabase PostgreSQL
+// -----------------------------------------------------------------------------
+crmRouter.post('/migrate-to-supabase', async (req: Request, res: Response) => {
+  try {
+    const user = extractUserFromReq(req);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin authentication required to trigger migration.' });
+    }
+
+    const leads = Object.values(dbCrmLeads);
+    const calls = dbCrmCalls;
+    let leadsSuccess = 0;
+    let leadsFailed = 0;
+    let callsSuccess = 0;
+    let callsFailed = 0;
+
+    for (const lead of leads) {
+      const result = await syncLeadToSupabase(lead);
+      if (result.success) leadsSuccess++;
+      else leadsFailed++;
+    }
+
+    for (const call of calls) {
+      const ok = await syncCallLogToSupabase(call);
+      if (ok) callsSuccess++;
+      else callsFailed++;
+    }
+
+    res.json({
+      success: true,
+      message: 'Supabase migration execution complete.',
+      stats: {
+        totalLeads: leads.length,
+        leadsMigrated: leadsSuccess,
+        leadsFailed,
+        totalCalls: calls.length,
+        callsMigrated: callsSuccess,
+        callsFailed
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Migration error' });
   }
 });

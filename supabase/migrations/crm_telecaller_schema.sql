@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS public.crm_leads (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Additive columns for enhanced manual lead fields
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS alternate_phone TEXT;
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS project_address TEXT;
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS assigned_to_name TEXT;
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS custom_source TEXT;
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS custom_service TEXT;
+
 -- Optimize search and dashboard filters
 CREATE INDEX IF NOT EXISTS idx_crm_leads_normalized_phone ON public.crm_leads(normalized_phone);
 CREATE INDEX IF NOT EXISTS idx_crm_leads_status ON public.crm_leads(status);

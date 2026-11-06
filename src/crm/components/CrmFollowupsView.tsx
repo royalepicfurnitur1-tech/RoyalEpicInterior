@@ -9,8 +9,10 @@ import {
   PhoneCall, 
   RefreshCw, 
   CheckCircle2, 
-  Flame, 
-  MapPin 
+  MapPin,
+  CheckCircle,
+  Eye,
+  User
 } from 'lucide-react';
 
 interface CrmFollowupsViewProps {
@@ -22,10 +24,11 @@ export const CrmFollowupsView: React.FC<CrmFollowupsViewProps> = ({
   onSelectLead,
   onQuickCall
 }) => {
-  const [activeTab, setActiveTab] = useState<'due' | 'overdue' | 'upcoming'>('due');
+  const [activeTab, setActiveTab] = useState<'today' | 'overdue' | 'upcoming' | 'completed'>('today');
   const [dueToday, setDueToday] = useState<CrmLead[]>([]);
   const [overdue, setOverdue] = useState<CrmLead[]>([]);
   const [upcoming, setUpcoming] = useState<CrmLead[]>([]);
+  const [completed, setCompleted] = useState<CrmLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +43,8 @@ export const CrmFollowupsView: React.FC<CrmFollowupsViewProps> = ({
         setDueToday(res.dueToday);
         setOverdue(res.overdue);
         setUpcoming(res.upcoming);
-        // If overdue has items and dueToday is empty, open overdue by default
+        setCompleted(res.completed || []);
+        // If overdue has leads and today has none, open overdue by default
         if (res.dueToday.length === 0 && res.overdue.length > 0) {
           setActiveTab('overdue');
         }
@@ -57,92 +61,122 @@ export const CrmFollowupsView: React.FC<CrmFollowupsViewProps> = ({
   }, []);
 
   const currentList = 
-    activeTab === 'due' ? dueToday :
+    activeTab === 'today' ? dueToday :
     activeTab === 'overdue' ? overdue :
-    upcoming;
+    activeTab === 'upcoming' ? upcoming :
+    completed;
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/80 p-4 rounded-2xl border border-neutral-800 shadow-md">
         <div>
-          <h1 className="text-xl font-serif font-bold text-white tracking-wide">
-            Scheduled Follow-ups Tracker
+          <h1 className="text-lg font-serif font-bold text-white tracking-wide flex items-center gap-2">
+            <span>Follow-up Management</span>
+            {overdue.length > 0 && (
+              <span className="animate-pulse bg-red-500/20 text-red-400 border border-red-500/40 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full">
+                {overdue.length} Overdue
+              </span>
+            )}
           </h1>
-          <p className="text-xs text-neutral-400 font-mono">
-            Direct queue for client callbacks, appointment reminders, and design follow-ups
+          <p className="text-xs text-neutral-400 font-mono mt-0.5">
+            Organized queues for timely callbacks, client site visits, and design consultations
           </p>
         </div>
 
         <button
           onClick={loadData}
           disabled={loading}
-          className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white transition cursor-pointer self-start sm:self-auto"
-          title="Refresh Follow-ups"
+          className="p-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 hover:text-white transition cursor-pointer self-start sm:self-auto flex items-center gap-1.5 text-xs font-mono"
+          title="Refresh Queue"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-950/40 border border-red-800 p-4 rounded-xl text-xs text-red-200">
+        <div className="bg-red-950/40 border border-red-800 p-3.5 rounded-xl text-xs text-red-200">
           {error}
         </div>
       )}
 
-      {/* Tab Navigation Pill Bar */}
-      <div className="flex items-center gap-2 p-1.5 bg-neutral-900/90 border border-neutral-800 rounded-2xl">
+      {/* 4 Tab Navigation Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-md">
+        {/* Tab 1: Today */}
         <button
-          onClick={() => setActiveTab('due')}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-mono transition flex items-center justify-center gap-2 cursor-pointer ${
-            activeTab === 'due'
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-              : 'text-neutral-400 hover:text-neutral-200'
+          onClick={() => setActiveTab('today')}
+          className={`py-2.5 px-3 rounded-xl text-xs font-mono transition flex items-center justify-center gap-2 cursor-pointer ${
+            activeTab === 'today'
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-md'
+              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
           }`}
         >
           <Clock className="w-3.5 h-3.5 text-amber-400" />
-          <span>Due Today ({dueToday.length})</span>
+          <span>Today ({dueToday.length})</span>
         </button>
 
+        {/* Tab 2: Overdue (Visually Prominent Alert) */}
         <button
           onClick={() => setActiveTab('overdue')}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-mono transition flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-3 rounded-xl text-xs font-mono transition flex items-center justify-center gap-2 cursor-pointer relative ${
             activeTab === 'overdue'
-              ? 'bg-red-950/60 text-red-300 border border-red-800 font-bold'
-              : 'text-neutral-400 hover:text-neutral-200'
+              ? 'bg-red-950/80 text-red-300 border border-red-700 font-bold shadow-md shadow-red-950/50'
+              : overdue.length > 0
+              ? 'text-red-400 bg-red-950/30 border border-red-900/60 hover:bg-red-950/50'
+              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
           }`}
         >
-          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
           <span>Overdue ({overdue.length})</span>
+          {overdue.length > 0 && (
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute right-2.5 top-2.5" />
+          )}
         </button>
 
+        {/* Tab 3: Upcoming */}
         <button
           onClick={() => setActiveTab('upcoming')}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-mono transition flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-3 rounded-xl text-xs font-mono transition flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'upcoming'
-              ? 'bg-neutral-800 text-white border border-neutral-700 font-bold'
-              : 'text-neutral-400 hover:text-neutral-200'
+              ? 'bg-neutral-800 text-white border border-neutral-700 font-bold shadow-md'
+              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
           }`}
         >
           <Calendar className="w-3.5 h-3.5 text-blue-400" />
           <span>Upcoming ({upcoming.length})</span>
         </button>
+
+        {/* Tab 4: Completed */}
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`py-2.5 px-3 rounded-xl text-xs font-mono transition flex items-center justify-center gap-2 cursor-pointer ${
+            activeTab === 'completed'
+              ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-700 font-bold shadow-md'
+              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
+          }`}
+        >
+          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Completed ({completed.length})</span>
+        </button>
       </div>
 
-      {/* Main List */}
-      <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl overflow-hidden shadow-xl p-4">
+      {/* Main List Container */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-xl p-4 sm:p-5">
         {loading ? (
           <div className="py-20 text-center text-xs font-mono text-neutral-400">
-            Loading follow-up queue...
+            <div className="w-8 h-8 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin mx-auto mb-3" />
+            <span>Loading follow-up queue...</span>
           </div>
         ) : currentList.length === 0 ? (
           <div className="py-20 text-center px-4">
-            <CheckCircle2 className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
-            <p className="text-neutral-300 text-sm font-medium">
-              No {activeTab === 'due' ? 'follow-ups due today' : activeTab === 'overdue' ? 'overdue callbacks' : 'upcoming follow-ups'}.
-            </p>
-            <p className="text-neutral-500 text-xs mt-1">
-              {activeTab === 'overdue' ? 'Great job! Zero missed client appointments.' : 'All customer callbacks are up to date.'}
+            <CheckCircle2 className="w-10 h-10 text-neutral-600 mx-auto mb-2.5" />
+            <p className="text-neutral-300 text-sm font-medium">No follow-ups in this queue</p>
+            <p className="text-neutral-500 text-xs font-mono mt-1">
+              {activeTab === 'overdue' ? 'Great job! There are no overdue client calls.' :
+               activeTab === 'today' ? 'No calls scheduled for today yet.' :
+               activeTab === 'upcoming' ? 'No future follow-ups scheduled.' :
+               'No completed leads recorded yet.'}
             </p>
           </div>
         ) : (
@@ -151,76 +185,94 @@ export const CrmFollowupsView: React.FC<CrmFollowupsViewProps> = ({
               <div
                 key={lead.id}
                 onClick={() => onSelectLead(lead)}
-                className={`p-4 rounded-xl border transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                className={`p-4 rounded-xl border transition cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 ${
                   activeTab === 'overdue'
-                    ? 'bg-red-950/10 border-red-900/50 hover:border-red-700'
+                    ? 'bg-red-950/20 border-red-900/60 hover:border-red-700/80'
+                    : activeTab === 'today'
+                    ? 'bg-neutral-950/70 border-amber-500/30 hover:border-amber-500/60'
                     : 'bg-neutral-950/60 border-neutral-800 hover:border-neutral-700'
                 }`}
               >
+                {/* Lead Info */}
                 <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm text-white hover:text-amber-400 transition">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="font-semibold text-white text-sm hover:text-amber-400 transition">
                       {lead.customer_name}
                     </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase ${
-                      lead.temperature === 'Hot' ? 'bg-red-950 text-red-400 border border-red-800' :
-                      lead.temperature === 'Warm' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
-                      'bg-blue-950 text-blue-400 border border-blue-800'
-                    }`}>
-                      {lead.temperature}
+                    <span className="font-mono text-xs text-amber-400 font-medium">
+                      {lead.phone}
                     </span>
-                    <span className="text-[10px] text-neutral-400 font-mono bg-neutral-800 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-mono uppercase bg-neutral-800 px-2 py-0.5 rounded text-neutral-300 border border-neutral-700">
+                      {lead.source}
+                    </span>
+                    <span className="text-[10px] font-mono uppercase bg-neutral-850 px-2 py-0.5 rounded text-neutral-300 border border-neutral-750">
                       {lead.status}
-                    </span>
-                    <span className="text-[10px] font-mono text-neutral-400">
-                      Source: {lead.source}
                     </span>
                   </div>
 
-                  <div className="text-xs text-neutral-300">
-                    {lead.interested_service} {lead.city ? `• ${lead.city}` : ''} {lead.budget ? `• ${lead.budget}` : ''}
+                  <div className="flex items-center gap-3 text-xs text-neutral-400 flex-wrap">
+                    <span className="text-neutral-200 font-medium">{lead.interested_service}</span>
+                    <span>•</span>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-neutral-400" />
+                      <span>{lead.city || 'Bengaluru'}</span>
+                    </div>
+                    {lead.budget && (
+                      <>
+                        <span>•</span>
+                        <span className="text-amber-300 font-mono">{lead.budget}</span>
+                      </>
+                    )}
+                    <span>•</span>
+                    <div className="flex items-center gap-1">
+                      <User className="w-3 h-3 text-neutral-400" />
+                      <span>{lead.assigned_to_name || lead.assigned_to || 'Unassigned'}</span>
+                    </div>
                   </div>
 
                   {lead.notes && (
-                    <div className="text-[11px] text-neutral-400 bg-neutral-900/80 p-2 rounded-lg border border-neutral-800/80 max-w-xl">
-                      {lead.notes}
-                    </div>
+                    <p className="text-xs text-neutral-400 italic line-clamp-1 mt-1">
+                      "{lead.notes}"
+                    </p>
                   )}
-
-                  <div className="flex items-center gap-3 text-[11px] font-mono text-neutral-400 pt-1">
-                    <div className="flex items-center gap-1 text-amber-300">
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      <span>
-                        Scheduled: {lead.next_followup_at ? new Date(lead.next_followup_at).toLocaleString('en-IN') : 'N/A'}
-                      </span>
-                    </div>
-
-                    {lead.last_contact_at && (
-                      <span className="text-neutral-400">
-                        Last called: {new Date(lead.last_contact_at).toLocaleDateString('en-IN')}
-                      </span>
-                    )}
-                  </div>
                 </div>
 
-                {/* Right Action buttons */}
-                <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                {/* Follow-up Schedule & Quick Action Buttons */}
+                <div className="flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-right font-mono hidden sm:block">
+                    <div className="text-[10px] uppercase text-neutral-400">Scheduled Time</div>
+                    <div className="text-xs font-semibold text-amber-300">
+                      {lead.next_followup_at
+                        ? new Date(lead.next_followup_at).toLocaleString('en-IN', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                          })
+                        : 'Unscheduled'}
+                    </div>
+                  </div>
+
                   <a
                     href={`tel:${lead.phone}`}
-                    onClick={() => onQuickCall(lead)}
-                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold font-mono text-xs flex items-center justify-center gap-1.5 transition shadow-md shadow-amber-500/10"
-                    title="Click to Dial"
+                    className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition cursor-pointer"
+                    title="Direct Phone Call"
                   >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>Dial {lead.phone}</span>
+                    <Phone className="w-4 h-4" />
                   </a>
 
                   <button
                     onClick={() => onQuickCall(lead)}
-                    className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-mono text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-blue-600/20"
                   >
-                    <PhoneCall className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Log Outcome</span>
+                    <PhoneCall className="w-3.5 h-3.5" />
+                    <span>Log Call</span>
+                  </button>
+
+                  <button
+                    onClick={() => onSelectLead(lead)}
+                    className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition cursor-pointer border border-neutral-700"
+                    title="View Full Details"
+                  >
+                    <Eye className="w-4 h-4" />
                   </button>
                 </div>
               </div>
