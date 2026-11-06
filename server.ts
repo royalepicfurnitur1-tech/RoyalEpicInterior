@@ -14,8 +14,10 @@ import {
   injectPolicyIntoHtml,
   injectHomepageIntoHtml,
   injectCatalogIntoHtml,
+  injectSeoPageIntoHtml,
   SITE_URL
 } from "./src/server/productHtmlRenderer";
+import { SEO_PAGES } from "./src/data/seoPages";
 import { PRODUCTS_DATA } from "./src/data/mockData";
 import { 
   sendLeadNotificationEmail, 
@@ -499,8 +501,15 @@ async function startServer() {
 
   app.get("/sitemap.xml", async (req, res) => {
     try {
+      const host = (req.get("host") || "").toLowerCase();
+      const hostOrigin = host.includes("royalepicinterior.in") || (host.endsWith(".in") && host.includes("royalepic"))
+        ? "https://royalepicinterior.in"
+        : host.includes("royalepicinterior.com") || (host.endsWith(".com") && host.includes("royalepic"))
+          ? "https://royalepicinterior.com"
+          : SITE_URL;
+
       const liveProducts = await getLiveCatalogProducts();
-      const sitemapXml = generateSitemapXml(liveProducts);
+      const sitemapXml = generateSitemapXml(liveProducts, hostOrigin);
       res.setHeader("Content-Type", "application/xml; charset=utf-8");
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.setHeader("X-Content-Type-Options", "nosniff");
@@ -540,6 +549,32 @@ async function startServer() {
     } catch (err) {
       next();
     }
+  });
+
+  // Dedicated Crawlable SEO Landing Pages with SSR Metadata & Semantic Content Injection
+  app.get(["/hotel-interior-design-bangalore", "/jewellery-showroom-interior-design-bangalore"], async (req, res, next) => {
+    try {
+      const slug = req.path;
+      const pageData = SEO_PAGES[slug];
+      if (pageData) {
+        const host = (req.get("host") || "").toLowerCase();
+        const hostOrigin = host.includes("royalepicinterior.in") || (host.endsWith(".in") && host.includes("royalepic"))
+          ? "https://royalepicinterior.in"
+          : host.includes("royalepicinterior.com") || (host.endsWith(".com") && host.includes("royalepic"))
+            ? "https://royalepicinterior.com"
+            : SITE_URL;
+
+        const template = await getIndexHtmlTemplate(req.path);
+        const enrichedHtml = injectSeoPageIntoHtml(template, pageData, slug, hostOrigin);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(200).send(enrichedHtml);
+      }
+    } catch (err: any) {
+      console.warn("[SeoPageSSR] Error rendering SEO page HTML:", err?.message || err);
+    }
+    next();
   });
 
   // Product Catalog Route (/products) - Serves authentic application shell with canonical meta tags

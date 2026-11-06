@@ -53,17 +53,37 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
       metaKw.setAttribute('content', pageData.keywords.join(', '));
     }
 
-    // 3. Canonical Tag
+    // 3. Domain-Aware Dynamic Origin Resolution (.in and .com independent indexability)
+    const getBaseOrigin = (): string => {
+      if (typeof window !== 'undefined' && window.location) {
+        const hostname = (window.location.hostname || '').toLowerCase();
+        if (hostname.includes('royalepicinterior.in') || (hostname.endsWith('.in') && hostname.includes('royalepic'))) {
+          return 'https://royalepicinterior.in';
+        }
+        if (hostname.includes('royalepicinterior.com') || (hostname.endsWith('.com') && hostname.includes('royalepic'))) {
+          return 'https://royalepicinterior.com';
+        }
+        if (window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1')) {
+          return window.location.origin.includes('.in') ? 'https://royalepicinterior.in' : 'https://royalepicinterior.com';
+        }
+      }
+      return 'https://royalepicinterior.com';
+    };
+
+    const currentOrigin = getBaseOrigin();
+    const cleanSlug = pageData.slug === '/' ? '' : (pageData.slug.startsWith('/') ? pageData.slug : `/${pageData.slug}`);
+    const fullUrl = `${currentOrigin}${cleanSlug}`;
+
+    // 3b. Self-referencing Canonical Tag
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) {
       canonical = document.createElement('link');
       canonical.setAttribute('rel', 'canonical');
       document.head.appendChild(canonical);
     }
-    const fullUrl = `https://royalepicinterior.com${pageData.slug === '/' ? '' : pageData.slug}`;
     canonical.setAttribute('href', fullUrl);
 
-    // 3b. OpenGraph and Twitter Meta Tags
+    // 3c. OpenGraph and Twitter Meta Tags
     const setMetaTag = (property: string, content: string) => {
       let el = document.querySelector(`meta[property="${property}"]`) || document.querySelector(`meta[name="${property}"]`);
       if (!el) {
@@ -110,7 +130,7 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
         "@type": "ListItem",
         "position": idx + 1,
         "name": b.name,
-        "item": `https://royalepicinterior.com${b.url === '/' ? '' : b.url}`
+        "item": `${currentOrigin}${b.url === '/' ? '' : (b.url.startsWith('/') ? b.url : `/${b.url}`)}`
       }))
     };
 
@@ -128,7 +148,17 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
       }))
     } : null;
 
-    const schemasToInject = [pageData.schema, breadcrumbListSchema, faqSchema].filter(Boolean);
+    // Localize schema URLs to current origin
+    let localizedBaseSchema = pageData.schema;
+    try {
+      localizedBaseSchema = JSON.parse(
+        JSON.stringify(pageData.schema)
+          .replace(/https:\/\/royalepicinterior\.com/g, currentOrigin)
+          .replace(/https:\/\/royalepicfurniture\.com/g, currentOrigin)
+      );
+    } catch (_) {}
+
+    const schemasToInject = [localizedBaseSchema, breadcrumbListSchema, faqSchema].filter(Boolean);
     schemaScript.textContent = JSON.stringify(schemasToInject);
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -403,6 +433,8 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
                 <li><button onClick={() => onNavigate('/tv-unit-design')} className="hover:text-gold">TV Unit Design</button></li>
                 <li><button onClick={() => onNavigate('/pooja-room-design')} className="hover:text-gold">Pooja Room Design</button></li>
                 <li><button onClick={() => onNavigate('/false-ceiling-design')} className="hover:text-gold">False Ceiling Design</button></li>
+                <li><button onClick={() => onNavigate('/hotel-interior-design-bangalore')} className="hover:text-gold">Hotel Interior Design</button></li>
+                <li><button onClick={() => onNavigate('/jewellery-showroom-interior-design-bangalore')} className="hover:text-gold">Jewellery Showroom Design</button></li>
               </ul>
             </div>
 

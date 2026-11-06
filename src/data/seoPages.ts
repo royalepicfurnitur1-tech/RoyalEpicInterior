@@ -3820,6 +3820,16 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "title": "Office Interior Design",
         "url": "/office-interior-design-bangalore",
         "category": "Services"
+      },
+      {
+        "title": "Hotel Interior Design Bangalore",
+        "url": "/hotel-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Jewellery Showroom Interior Bangalore",
+        "url": "/jewellery-showroom-interior-design-bangalore",
+        "category": "Commercial"
       }
     ],
     "keywords": [
@@ -4015,6 +4025,16 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "title": "Office Interior Design",
         "url": "/office-interior-design-bangalore",
         "category": "Services"
+      },
+      {
+        "title": "Hotel Interior Design Bangalore",
+        "url": "/hotel-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Jewellery Showroom Interior Bangalore",
+        "url": "/jewellery-showroom-interior-design-bangalore",
+        "category": "Commercial"
       }
     ],
     "keywords": [
@@ -4210,6 +4230,11 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "title": "Office Interior Design",
         "url": "/office-interior-design-bangalore",
         "category": "Services"
+      },
+      {
+        "title": "Hotel Interior Design Bangalore",
+        "url": "/hotel-interior-design-bangalore",
+        "category": "Commercial"
       }
     ],
     "keywords": [
@@ -4405,6 +4430,11 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "title": "Office Interior Design",
         "url": "/office-interior-design-bangalore",
         "category": "Services"
+      },
+      {
+        "title": "Jewellery Showroom Interior Bangalore",
+        "url": "/jewellery-showroom-interior-design-bangalore",
+        "category": "Commercial"
       }
     ],
     "keywords": [
@@ -8719,6 +8749,451 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Trending false ceiling design ideas in Bangalore. Simple living room ceiling designs, wooden rafter patterns, and peripheral cove lighting.",
       "image": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1600&q=80",
       "type": "article"
+    }
+  },
+  "/hotel-interior-design-bangalore": {
+    "slug": "/hotel-interior-design-bangalore",
+    "title": "Hotel Interior Design Bangalore | Luxury Hospitality Interiors | Royal Epic",
+    "metaDescription": "Bespoke hotel interior design in Bangalore by Royal Epic Interiors. We plan and execute luxury boutique hotels, guest suites, lobby reception lounges, and dining spaces.",
+    "h1": "Hotel Interior Design & Turnkey Fit-Outs in Bangalore",
+    "subtitle": "Creating refined guest journeys, memorable reception lobbies, serene guest suites, and functional hospitality spaces tailored for durability and guest comfort.",
+    "category": "service",
+    "heroImage": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80",
+    "breadcrumbs": [
+      {
+        "name": "Home",
+        "url": "/"
+      },
+      {
+        "name": "Services",
+        "url": "/our-services"
+      },
+      {
+        "name": "Commercial Interiors",
+        "url": "/commercial-interior-design-bangalore"
+      },
+      {
+        "name": "Hotel Interior Design",
+        "url": "/hotel-interior-design-bangalore"
+      }
+    ],
+    "schema": {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "Hotel Interior Design & Turnkey Fit-Outs in Bangalore",
+      "serviceType": "Hospitality and Hotel Interior Architecture",
+      "description": "Bespoke hotel interior design in Bangalore by Royal Epic Interiors. Planning and turnkey execution for luxury boutique hotels, guest suites, lobby lounges, and restaurant dining areas.",
+      "url": "https://royalepicinterior.com/hotel-interior-design-bangalore",
+      "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80",
+      "provider": {
+        "@context": "https://schema.org",
+        "@type": "HomeAndConstructionBusiness",
+        "name": "Royal Epic Interior & Furniture",
+        "image": "https://royalepicinterior.com/logo.png",
+        "@id": "https://royalepicinterior.com/#organization",
+        "url": "https://royalepicinterior.com",
+        "telephone": "+91-9916633338",
+        "priceRange": "₹₹₹",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
+          "addressLocality": "Bengaluru",
+          "addressRegion": "Karnataka",
+          "postalCode": "560045",
+          "addressCountry": "IN"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 13.0612,
+          "longitude": 77.6254
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "opens": "09:30",
+          "closes": "20:00"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "320"
+        }
+      },
+      "areaServed": {
+        "@type": "City",
+        "name": "Bengaluru",
+        "containedInPlace": {
+          "@type": "State",
+          "name": "Karnataka"
+        }
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Hotel Interior Fit-Out Services",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Hotel Reception & Lobby Lounge Architecture",
+              "description": "Custom reception desks, acoustic wall cladding, accent lighting, and passenger luggage circulation layout."
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Guestroom & Luxury Suite Fit-Outs",
+              "description": "Ergonomic headboards, custom wardrobe joinery, study desks, and integrated connectivity hubs."
+            }
+          }
+        ]
+      }
+    },
+    "faqs": [
+      {
+        "question": "What is the typical workflow for hotel interior design in Bangalore?",
+        "answer": "We start with a comprehensive site assessment and operational zoning review. After establishing guest circulation and service corridors, we create 2D space layouts and 3D architectural visualisations. Once material specifications and BOQs are finalized, prototype room mockups can be fabricated in our Thanisandra facility before batch manufacturing and phased site installation."
+      },
+      {
+        "question": "Can Royal Epic manufacture custom furniture for hotel guestrooms and public areas?",
+        "answer": "Yes. Royal Epic operates an in-house manufacturing workshop in Thanisandra, Bengaluru. We custom build hotel beds, luggage consoles, study workstations, wardrobe joinery, dining tables, upholstered lounge chairs, and reception counters tailored to your specific architectural floor plan."
+      },
+      {
+        "question": "Do you handle restaurant, cafe, and breakfast buffet interiors within hotels?",
+        "answer": "Yes. We design and execute turnkey dining environments including breakfast buffet counters with durable solid surfaces, acoustic ceiling treatments to minimize reverberation, custom banquette booths, and lighting systems that transition from morning service to evening dining."
+      },
+      {
+        "question": "How do you coordinate site execution to minimize downtime for operational properties?",
+        "answer": "For operational hotels undergoing refurbishment, we execute in phased floor-by-floor sequences with defined work hours and off-site prefabrication in our Thanisandra workshop. This minimizes noise, dust, and transit interference for active hotel guests."
+      }
+    ],
+    "contentSections": [
+      {
+        "title": "Welcoming Reception Lobbies & Concierge Desks",
+        "description": "The lobby experience sets the tone for the entire guest stay. We design bespoke reception counters, feature backdrop panelling with integrated indirect LED lighting, comfortable transit seating zones, and commercial-grade flooring designed for heavy luggage traffic and high footfall.",
+        "highlights": [
+          "Custom front desks crafted in our Thanisandra manufacturing facility",
+          "Architectural cove lighting and decorative wall panelling",
+          "Ergonomic concierge and check-in workstation layouts",
+          "Durable stone, marble, and anti-skid commercial floor surfaces"
+        ]
+      },
+      {
+        "title": "Guestroom & Luxury Suite Interior Fit-Outs",
+        "description": "Hotel bedrooms must combine aesthetic tranquility with operational durability. We build tailored upholstered headboards with bedside lighting controls, modular sliding wardrobes with luggage recesses and safe niches, and ergonomic study desks designed for corporate travelers.",
+        "highlights": [
+          "Custom cushioned headboards with integrated electrical outlets",
+          "Modular wardrobes with luggage benches and minibar provisions",
+          "Concealed curtain pelmets planned for 100% blackout drape tracks",
+          "Durable marine ply cabinetry engineered for frequent guest turnover"
+        ]
+      },
+      {
+        "title": "Hospitality Dining, Coffee Lounges & Buffet Counters",
+        "description": "Dining areas require an effortless balance between ambiance and staff efficiency. We integrate stain-resistant solid surface buffet counters, custom banquet and booth seating, acoustic baffles to dampen reverberation, and layered lighting schemes.",
+        "highlights": [
+          "Custom upholstered booth and banquette seating arrangements",
+          "Stain-resistant solid surface and quartz buffet display stations",
+          "Acoustic panel ceiling treatments controlling ambient noise",
+          "Clear service circulation pathways between kitchen and dining hall"
+        ]
+      },
+      {
+        "title": "Turnkey Execution & In-House Workshop Fabrication",
+        "description": "Executing hospitality interiors demands synchronized collaboration across civil alterations, electrical wiring, plumbing, HVAC integration, and architectural joinery. Royal Epic's in-house team provides single-point accountability with transparent milestone schedules and itemized BOQ accounting.",
+        "highlights": [
+          "Direct fabrication from our 10,000 sq.ft. Thanisandra production unit",
+          "Detailed itemized BOQs without hidden site contingencies",
+          "Mockup sample room fabrication for physical tactile review",
+          "Dedicated site project managers for continuous quality control"
+        ]
+      }
+    ],
+    "relatedLinks": [
+      {
+        "title": "Commercial Interior Design Bangalore",
+        "url": "/commercial-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Restaurant Interior Design",
+        "url": "/restaurant-interior-design",
+        "category": "Commercial"
+      },
+      {
+        "title": "Jewellery Showroom Interior Bangalore",
+        "url": "/jewellery-showroom-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Office Interior Design Bangalore",
+        "url": "/office-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Retail Shop Interior Design",
+        "url": "/retail-shop-interior-design",
+        "category": "Commercial"
+      },
+      {
+        "title": "Custom Furniture Manufacturer",
+        "url": "/custom-furniture-manufacturer",
+        "category": "Services"
+      },
+      {
+        "title": "Interior Designer Whitefield",
+        "url": "/interior-designer-whitefield",
+        "category": "Locations"
+      },
+      {
+        "title": "Interior Designer Thanisandra",
+        "url": "/interior-designer-thanisandra",
+        "category": "Locations"
+      }
+    ],
+    "keywords": [
+      "hotel interior design in bangalore",
+      "hotel interior designers bangalore",
+      "boutique hotel interior design bangalore",
+      "hospitality interior contractors bangalore",
+      "hotel lobby and reception design bangalore",
+      "hotel guestroom interior execution",
+      "commercial hospitality turnkey fitout bangalore"
+    ],
+    "openGraph": {
+      "title": "Hotel Interior Design Bangalore | Luxury Hospitality Interiors | Royal Epic",
+      "description": "Bespoke hotel interior design in Bangalore by Royal Epic Interiors. We plan and execute luxury boutique hotels, guest suites, lobby reception lounges, and dining spaces.",
+      "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80",
+      "type": "website"
+    }
+  },
+  "/jewellery-showroom-interior-design-bangalore": {
+    "slug": "/jewellery-showroom-interior-design-bangalore",
+    "title": "Jewellery Showroom Interior Design Bangalore | Royal Epic Interiors",
+    "metaDescription": "Specialized jewellery showroom interior design in Bangalore by Royal Epic Interiors. High-security display cases, optical display lighting, VIP consultation lounges & turnkey retail fitouts.",
+    "h1": "Jewellery Showroom Interior Design & Turnkey Fit-Outs in Bangalore",
+    "subtitle": "Creating prestigious retail environments with optical display lighting, reinforced showcase cabinetry, private bridal consultation suites, and seamless customer circulation.",
+    "category": "service",
+    "heroImage": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1600&q=80",
+    "breadcrumbs": [
+      {
+        "name": "Home",
+        "url": "/"
+      },
+      {
+        "name": "Services",
+        "url": "/our-services"
+      },
+      {
+        "name": "Commercial Interiors",
+        "url": "/commercial-interior-design-bangalore"
+      },
+      {
+        "name": "Jewellery Showroom Design",
+        "url": "/jewellery-showroom-interior-design-bangalore"
+      }
+    ],
+    "schema": {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "Jewellery Showroom Interior Design & Turnkey Fit-Outs in Bangalore",
+      "serviceType": "Jewellery Store Architecture and Showroom Fit-Out",
+      "description": "Specialized jewellery showroom interior design in Bangalore by Royal Epic Interiors. High-clarity display counters, CRI 90+ diamond and gold lighting, VIP consultation lounges, and turnkey retail fit-outs.",
+      "url": "https://royalepicinterior.com/jewellery-showroom-interior-design-bangalore",
+      "image": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1600&q=80",
+      "provider": {
+        "@context": "https://schema.org",
+        "@type": "HomeAndConstructionBusiness",
+        "name": "Royal Epic Interior & Furniture",
+        "image": "https://royalepicinterior.com/logo.png",
+        "@id": "https://royalepicinterior.com/#organization",
+        "url": "https://royalepicinterior.com",
+        "telephone": "+91-9916633338",
+        "priceRange": "₹₹₹",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara",
+          "addressLocality": "Bengaluru",
+          "addressRegion": "Karnataka",
+          "postalCode": "560045",
+          "addressCountry": "IN"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 13.0612,
+          "longitude": 77.6254
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "opens": "09:30",
+          "closes": "20:00"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "320"
+        }
+      },
+      "areaServed": {
+        "@type": "City",
+        "name": "Bengaluru",
+        "containedInPlace": {
+          "@type": "State",
+          "name": "Karnataka"
+        }
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Jewellery Showroom Interior Services",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "High-Security Jewellery Display Counter Manufacturing",
+              "description": "Extra-clear glass showcases, smooth velvet pullout trays, and reinforced locking hardware."
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "High-CRI Jewellery Showcase Lighting Design",
+              "description": "Specialized LED lighting calibrated for diamond brilliance and warm gold reflection without heat buildup."
+            }
+          }
+        ]
+      }
+    },
+    "faqs": [
+      {
+        "question": "What lighting color temperature is recommended for gold versus diamond jewellery?",
+        "answer": "Warm lighting in the 3000K to 3500K range enhances the rich yellow luster of gold and traditional antique jewelry. For diamonds, polki, and precious stones, high-CRI (90+) neutral illumination between 4000K and 5000K highlights clarity and brilliance. We design multi-circuit lighting with thermal-dissipating channels so displays stay cool."
+      },
+      {
+        "question": "Can Royal Epic manufacture custom jewellery display counters and wall cabinetry?",
+        "answer": "Yes. All showcase islands, wall vitrines, consultation desks, and cashier counters are custom-built in our 10,000 sq.ft. Thanisandra factory in Bengaluru. We combine low-iron extra-clear glass, PVD stainless steel trims, velvet-lined pullout trays, and concealed security locks."
+      },
+      {
+        "question": "How do you incorporate showroom security into the architectural aesthetic?",
+        "answer": "We coordinate with your security partners to integrate CCTV camera angles cleanly into false ceilings, plan supervisor sightlines without visual obstruction, design reinforced cashier partitions, and conceal all security cabling within protected conduits."
+      },
+      {
+        "question": "How do we get started with a jewellery showroom design in Bengaluru?",
+        "answer": "You can contact our team to arrange a site consultation or share your architectural floor plans. We provide on-site laser measurements, develop 2D zoning layouts for display and customer flow, deliver 3D photorealistic renderings, and supply an itemized turnkey BOQ."
+      }
+    ],
+    "contentSections": [
+      {
+        "title": "High-Clarity Display Counters & Custom Showcase Joinery",
+        "description": "Displaying precious gold, diamond, and gemstone jewellery requires meticulous craftsmanship. We fabricate bespoke display cases using low-iron extra-clear glass for true color rendering, velvet-lined pullout trays, seamless PVD metallic accents, and concealed locking mechanisms for effortless daily transactions.",
+        "highlights": [
+          "Low-iron extra-clear glass showcases eliminating green tint distortion",
+          "Bespoke showcase cabinetry crafted in our Thanisandra factory",
+          "PVD-coated champagne gold and brushed brass metal profile accents",
+          "Ergonomic counter depths and heights for comfortable customer viewing"
+        ]
+      },
+      {
+        "title": "Specialized Optical Lighting for Diamonds & Gold",
+        "description": "Lighting is critical to jewellery customer decisions. We engineer dedicated illumination layouts combining warm 3000K accent spots for gold luster with high-CRI (90+) crisp LEDs for diamond facet fire, using aluminium heat sinks to eliminate heat inside display glass.",
+        "highlights": [
+          "High CRI (90+) LED showcase lights revealing true gemstone color",
+          "Independent lighting controls for yellow gold, platinum, and diamonds",
+          "Anti-glare diffused overhead lighting protecting buyer comfort",
+          "Concealed thermal-dissipation profiles preventing glass heating"
+        ]
+      },
+      {
+        "title": "Private VIP & Bridal Consultation Suites",
+        "description": "High-value bridal selections require privacy, comfort, and attentive service. We craft private VIP rooms complete with acoustic fabric wall panelling, plush lounge seating, discreet transaction desks, and ambient hospitality amenities.",
+        "highlights": [
+          "Acoustically insulated private customer consultation rooms",
+          "Custom plush leatherette and velvet lounge seating options",
+          "Discreet invoicing and transaction desk joinery",
+          "Warm ambient lighting fostering a calm, unhurried buying atmosphere"
+        ]
+      },
+      {
+        "title": "Showroom Security Layout & Customer Flow Planning",
+        "description": "A successful jewellery retail floor plan balances inviting openness with rigorous structural security. We design unobstructed sightlines for showroom supervisors, secure zoning between public halls and cashier cabins, and clean conduit pathways for surveillance systems.",
+        "highlights": [
+          "Circulation planning preventing congestion during festive seasons",
+          "Clear 360-degree supervisor sightlines across all counter islands",
+          "Reinforced cashier enclosures and safe pass-through hatches",
+          "Concealed routing for alarm wiring, panic triggers, and CCTV cameras"
+        ]
+      }
+    ],
+    "relatedLinks": [
+      {
+        "title": "Commercial Interior Design Bangalore",
+        "url": "/commercial-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Retail Shop Interior Design",
+        "url": "/retail-shop-interior-design",
+        "category": "Commercial"
+      },
+      {
+        "title": "Hotel Interior Design Bangalore",
+        "url": "/hotel-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Office Interior Design Bangalore",
+        "url": "/office-interior-design-bangalore",
+        "category": "Commercial"
+      },
+      {
+        "title": "Custom Furniture Manufacturer",
+        "url": "/custom-furniture-manufacturer",
+        "category": "Services"
+      },
+      {
+        "title": "Interior Designer Whitefield",
+        "url": "/interior-designer-whitefield",
+        "category": "Locations"
+      },
+      {
+        "title": "Interior Designer Thanisandra",
+        "url": "/interior-designer-thanisandra",
+        "category": "Locations"
+      }
+    ],
+    "keywords": [
+      "jewellery showroom interior design in bangalore",
+      "jewellery showroom interior designers bangalore",
+      "jewelry store interior design bangalore",
+      "jewellery display counter manufacturing bangalore",
+      "luxury retail showroom interior bangalore",
+      "gold and diamond showroom interior designers",
+      "commercial retail fitouts bangalore"
+    ],
+    "openGraph": {
+      "title": "Jewellery Showroom Interior Design Bangalore | Royal Epic Interiors",
+      "description": "Specialized jewellery showroom interior design in Bangalore by Royal Epic Interiors. High-security display cases, optical display lighting, VIP consultation lounges & turnkey retail fitouts.",
+      "image": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1600&q=80",
+      "type": "website"
     }
   }
 };

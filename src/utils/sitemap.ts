@@ -52,6 +52,8 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   { path: '/false-ceiling-design', changefreq: 'weekly', priority: 0.8 },
   { path: '/office-interior-design-bangalore', changefreq: 'weekly', priority: 0.9 },
   { path: '/commercial-interior-design-bangalore', changefreq: 'weekly', priority: 0.9 },
+  { path: '/hotel-interior-design-bangalore', changefreq: 'weekly', priority: 0.9 },
+  { path: '/jewellery-showroom-interior-design-bangalore', changefreq: 'weekly', priority: 0.9 },
   { path: '/restaurant-interior-design', changefreq: 'weekly', priority: 0.85 },
   { path: '/retail-shop-interior-design', changefreq: 'weekly', priority: 0.8 },
   { path: '/hospital-interior-design', changefreq: 'weekly', priority: 0.8 },
@@ -89,7 +91,8 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   { path: '/refund-policy', changefreq: 'monthly', priority: 0.7 }
 ];
 
-export function generateSitemapXml(products?: any[]): string {
+export function generateSitemapXml(products?: any[], siteBaseUrl?: string): string {
+  const effectiveBaseUrl = (siteBaseUrl || SITE_URL).replace(/\/+$/, '');
   const today = new Date().toISOString().split('T')[0];
   const seenUrls = new Set<string>();
   const urlNodes: string[] = [];
@@ -97,7 +100,7 @@ export function generateSitemapXml(products?: any[]): string {
   // Helper to add unique URL node
   const addUrlNode = (loc: string, changefreq: string, priority: string) => {
     // Clean trailing slashes except for root domain
-    const cleanLoc = loc.endsWith('/') && loc !== `${SITE_URL}/` ? loc.slice(0, -1) : loc;
+    const cleanLoc = loc.endsWith('/') && loc !== `${effectiveBaseUrl}/` ? loc.slice(0, -1) : loc;
     if (seenUrls.has(cleanLoc)) return;
     seenUrls.add(cleanLoc);
 
@@ -111,7 +114,7 @@ export function generateSitemapXml(products?: any[]): string {
 
   // 1. Base public routes
   for (const route of SITEMAP_ROUTES) {
-    const fullLoc = route.path === '/' ? `${SITE_URL}/` : `${SITE_URL}${route.path.startsWith('/') ? route.path : `/${route.path}`}`;
+    const fullLoc = route.path === '/' ? `${effectiveBaseUrl}/` : `${effectiveBaseUrl}${route.path.startsWith('/') ? route.path : `/${route.path}`}`;
     addUrlNode(fullLoc, route.changefreq, route.priority.toFixed(2));
   }
 
@@ -121,7 +124,7 @@ export function generateSitemapXml(products?: any[]): string {
     if (!product || product.category === '__SYSTEM__') continue;
     const slug = getProductSlug(product);
     if (!slug) continue;
-    const fullLoc = `${SITE_URL}/products/${slug}`;
+    const fullLoc = `${effectiveBaseUrl}/products/${slug}`;
     addUrlNode(fullLoc, 'weekly', '0.85');
   }
 

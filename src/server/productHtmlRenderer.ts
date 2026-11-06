@@ -793,3 +793,183 @@ export function injectCatalogIntoHtml(templateHtml: string, products: any[]): st
 
   return html.replace('<div id="root"></div>', preRenderedCatalog);
 }
+
+/**
+ * Render complete SEO landing page HTML with accurate meta tags, canonical URL, Open Graph,
+ * Schema.org JSON-LD, and pre-rendered semantic HTML for search crawlers.
+ * Respects dynamic host origin so .in and .com domains maintain self-referencing canonicals.
+ */
+export function injectSeoPageIntoHtml(
+  templateHtml: string,
+  pageData: any,
+  slug: string,
+  hostOrigin: string = 'https://royalepicinterior.com'
+): string {
+  const cleanTitle = escapeHtml(pageData.title);
+  const cleanDesc = escapeHtml(pageData.metaDescription);
+  const cleanKeywords = escapeHtml(pageData.keywords?.join(', ') || '');
+  const cleanH1 = escapeHtml(pageData.h1);
+  const cleanSubtitle = escapeHtml(pageData.subtitle);
+  const canonicalUrl = `${hostOrigin}${pageData.slug === '/' ? '' : pageData.slug}`;
+  const heroImage = pageData.heroImage || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
+
+  let html = templateHtml;
+
+  // 1. Replace <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${cleanTitle}</title>`);
+
+  // 2. Replace or update <meta name="description">
+  const metaDescTag = `<meta name="description" content="${cleanDesc}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. Replace or update <meta name="keywords">
+  const metaKeywordsTag = `<meta name="keywords" content="${cleanKeywords}" />`;
+  if (/<meta\s+name=["']keywords["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']keywords["'][^>]*>/i, metaKeywordsTag);
+  } else {
+    html = html.replace('</head>', `  ${metaKeywordsTag}\n  </head>`);
+  }
+
+  // 4. Replace or update Canonical URL (Dynamic self-referencing canonical matching request host)
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 5. Replace or update Open Graph & Twitter Cards
+  const ogTitle = `<meta property="og:title" content="${cleanTitle}" />`;
+  const ogDesc = `<meta property="og:description" content="${cleanDesc}" />`;
+  const ogUrl = `<meta property="og:url" content="${canonicalUrl}" />`;
+  const ogImage = `<meta property="og:image" content="${heroImage}" />`;
+  const ogType = `<meta property="og:type" content="website" />`;
+
+  const twTitle = `<meta name="twitter:title" content="${cleanTitle}" />`;
+  const twDesc = `<meta name="twitter:description" content="${cleanDesc}" />`;
+  const twImage = `<meta name="twitter:image" content="${heroImage}" />`;
+
+  html = html
+    .replace(/<meta\s+property=["']og:title["'][^>]*>/i, ogTitle)
+    .replace(/<meta\s+property=["']og:description["'][^>]*>/i, ogDesc)
+    .replace(/<meta\s+property=["']og:url["'][^>]*>/i, ogUrl)
+    .replace(/<meta\s+property=["']og:image["'][^>]*>/i, ogImage)
+    .replace(/<meta\s+property=["']og:type["'][^>]*>/i, ogType)
+    .replace(/<meta\s+name=["']twitter:title["'][^>]*>/i, twTitle)
+    .replace(/<meta\s+name=["']twitter:description["'][^>]*>/i, twDesc)
+    .replace(/<meta\s+name=["']twitter:image["'][^>]*>/i, twImage);
+
+  // 6. Localize Schema.org JSON-LD to the current origin
+  let localizedSchema = pageData.schema;
+  try {
+    localizedSchema = JSON.parse(
+      JSON.stringify(pageData.schema)
+        .replace(/https:\/\/royalepicinterior\.com/g, hostOrigin)
+        .replace(/https:\/\/royalepicfurniture\.com/g, hostOrigin)
+    );
+  } catch (_) {}
+
+  const breadcrumbsSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": (pageData.breadcrumbs || []).map((b: any, idx: number) => ({
+      "@type": "ListItem",
+      "position": idx + 1,
+      "name": b.name,
+      "item": `${hostOrigin}${b.url === '/' ? '' : b.url}`
+    }))
+  };
+
+  const faqSchema = (pageData.faqs && pageData.faqs.length > 0) ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": pageData.faqs.map((f: any) => ({
+      "@type": "Question",
+      "name": f.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": f.answer
+      }
+    }))
+  } : null;
+
+  const schemasToInject = [localizedSchema, breadcrumbsSchema, faqSchema].filter(Boolean);
+  const jsonLdTag = `\n    <!-- Schema.org JSON-LD for SEO Landing Page -->\n    <script type="application/ld+json" id="seo-schema-script">\n${JSON.stringify(schemasToInject, null, 2)}\n    </script>\n  `;
+  html = html.replace('</head>', `${jsonLdTag}</head>`);
+
+  // 7. Inject Semantic Pre-Rendered HTML inside <div id="root"> for non-JS search crawlers
+  const sectionsHtml = (pageData.contentSections || []).map((s: any) => `
+    <section style="margin-bottom: 32px;">
+      <h2 style="font-size: 22px; font-weight: 700; color: #171717; margin-bottom: 12px; border-left: 4px solid #b45309; padding-left: 12px;">${escapeHtml(s.title)}</h2>
+      <p style="font-size: 15px; line-height: 1.7; color: #404040; margin-bottom: 12px;">${escapeHtml(s.description)}</p>
+      ${s.highlights && s.highlights.length > 0 ? `
+        <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px;">
+          ${s.highlights.map((h: string) => `<li style="background: #f5f5f5; padding: 10px 14px; border-radius: 8px; font-size: 13px; color: #262626; border: 1px solid #e5e5e5;">✓ ${escapeHtml(h)}</li>`).join('')}
+        </ul>
+      ` : ''}
+    </section>
+  `).join('');
+
+  const faqsHtml = (pageData.faqs || []).map((f: any) => `
+    <div style="border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 12px; padding: 16px; background: #ffffff;">
+      <h3 style="font-size: 16px; font-weight: 600; color: #171717; margin: 0 0 8px 0;">${escapeHtml(f.question)}</h3>
+      <p style="font-size: 14px; line-height: 1.6; color: #525252; margin: 0;">${escapeHtml(f.answer)}</p>
+    </div>
+  `).join('');
+
+  const preRenderedPage = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #ffffff; color: #171717; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <!-- Breadcrumb Nav -->
+        <nav style="background: #f5f5f5; border-bottom: 1px solid #e5e5e5; padding: 12px 24px; font-size: 13px; color: #737373;">
+          <div style="max-width: 1280px; margin: 0 auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            ${(pageData.breadcrumbs || []).map((b: any, idx: number) => `
+              ${idx > 0 ? '&gt;' : ''}
+              <a href="${b.url}" style="color: #404040; text-decoration: none;">${escapeHtml(b.name)}</a>
+            `).join('')}
+          </div>
+        </nav>
+
+        <!-- Hero Header -->
+        <header style="background: #171717; color: #ffffff; padding: 60px 24px; border-bottom: 1px solid #262626;">
+          <div style="max-width: 1280px; margin: 0 auto;">
+            <span style="display: inline-block; padding: 4px 12px; background: rgba(180, 83, 9, 0.2); color: #d97706; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 16px;">
+              Royal Epic Interior • Bengaluru Commercial Division
+            </span>
+            <h1 style="font-size: 36px; font-weight: 800; line-height: 1.2; margin: 0 0 16px 0; color: #ffffff;">${cleanH1}</h1>
+            <p style="font-size: 16px; line-height: 1.6; color: #d4d4d4; max-width: 800px; margin: 0 0 24px 0;">${cleanSubtitle}</p>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <a href="tel:+919916633338" style="padding: 12px 24px; background: #b45309; color: #ffffff; font-weight: 700; text-decoration: none; border-radius: 8px; font-size: 14px;">Call Senior Designer (+91 99166 33338)</a>
+              <a href="/get-free-quote" style="padding: 12px 24px; background: #262626; color: #ffffff; font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 14px; border: 1px solid #404040;">Get Free BOQ Quote</a>
+            </div>
+          </div>
+        </header>
+
+        <!-- Content Body -->
+        <div style="max-width: 1280px; margin: 0 auto; padding: 48px 24px;">
+          ${sectionsHtml}
+
+          ${pageData.faqs && pageData.faqs.length > 0 ? `
+            <div style="margin-top: 48px; padding-top: 32px; border-top: 1px solid #e5e5e5;">
+              <h2 style="font-size: 24px; font-weight: 700; color: #171717; margin-bottom: 24px;">Frequently Asked Questions</h2>
+              ${faqsHtml}
+            </div>
+          ` : ''}
+
+          <!-- Business Footer Card -->
+          <div style="margin-top: 48px; padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 13px; color: #4b5563; line-height: 1.8;">
+            <p style="margin: 0;"><strong>Company:</strong> Royal Epic Commercial &amp; Home Interiors</p>
+            <p style="margin: 0;"><strong>Factory &amp; Studio:</strong> No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</p>
+            <p style="margin: 0;"><strong>Direct Contacts:</strong> +91 99166 33338 / +91 96063 56839 • enquiry@royalepicinterior.com</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', preRenderedPage);
+}
