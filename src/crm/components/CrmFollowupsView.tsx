@@ -11,7 +11,7 @@ import {
   CheckCircle2, 
   MapPin,
   CalendarClock,
-  Eye,
+  Edit2,
   User,
   Copy,
   Check
@@ -277,10 +277,10 @@ export const CrmFollowupsView: React.FC<CrmFollowupsViewProps> = ({
 
                   <button
                     onClick={() => onSelectLead(lead)}
-                    className="p-2 rounded-lg bg-white border border-[#E2E8F0] hover:bg-slate-100 text-slate-600 transition cursor-pointer"
-                    title="View details"
+                    className="p-2 rounded-lg bg-white border border-[#E2E8F0] hover:bg-slate-100 text-slate-600 hover:text-[#356AE6] transition cursor-pointer"
+                    title="Edit lead details"
                   >
-                    <Eye className="w-3.5 h-3.5" />
+                    <Edit2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

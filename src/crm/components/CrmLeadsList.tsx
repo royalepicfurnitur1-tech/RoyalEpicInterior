@@ -624,13 +624,13 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
                             <PhoneCall className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* View/Edit Lead */}
+                          {/* Edit Lead Details */}
                           <button
                             onClick={() => onSelectLead(lead)}
-                            className="p-1.5 rounded-lg text-slate-600 hover:text-[#172033] hover:bg-slate-100 transition cursor-pointer"
-                            title="View / Edit Lead"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-[#356AE6] hover:bg-blue-50 transition cursor-pointer"
+                            title="Edit Lead Details"
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
 
                           {/* Delete Lead (Admin Only) */}

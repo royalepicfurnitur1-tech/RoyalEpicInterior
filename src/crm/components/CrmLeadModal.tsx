@@ -39,7 +39,8 @@ import {
   Check,
   Building,
   Tag,
-  CalendarClock
+  CalendarClock,
+  Eye
 } from 'lucide-react';
 
 interface CrmLeadModalProps {
@@ -60,7 +61,7 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
   const { isAdmin } = useCrmAuth();
   const [callLogs, setCallLogs] = useState<CrmCallLog[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -122,7 +123,7 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
         setFollowupTime(lead.next_followup_time || '11:00');
       }
 
-      setIsEditing(false);
+      setIsEditing(true);
       setErrorMessage(null);
       setSuccessMessage(null);
       loadCalls(lead.id);
@@ -195,8 +196,8 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
         setErrorMessage(res.error || 'Failed to update lead');
       }
     } else {
-      setSuccessMessage('Lead updated successfully.');
-      setIsEditing(false);
+      setSuccessMessage('Lead details updated successfully.');
+      setIsEditing(true);
       onLeadUpdated();
     }
   };
@@ -214,6 +215,70 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
       setErrorMessage(res.error || 'Failed to delete lead');
     }
   };
+
+  const renderCallHistory = () => (
+    <div className="space-y-3 pt-4 border-t border-[#E2E8F0]">
+      <div className="flex items-center justify-between pb-1 border-b border-[#E2E8F0]">
+        <div className="flex items-center gap-1.5">
+          <History className="w-3.5 h-3.5 text-slate-500" />
+          <h3 className="text-xs font-bold text-[#172033] uppercase tracking-wider">
+            Call History Timeline ({callLogs.length})
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={() => onOpenLogCall(lead)}
+          className="text-xs font-semibold text-[#356AE6] hover:underline cursor-pointer"
+        >
+          + Log New Call
+        </button>
+      </div>
+
+      {loadingCalls ? (
+        <div className="py-4 text-center text-slate-400 text-xs">Loading call history...</div>
+      ) : callLogs.length === 0 ? (
+        <div className="p-4 rounded-lg bg-slate-50 text-center text-slate-400 text-xs">
+          No calls logged for this lead yet. Click &quot;Log Call&quot; above to record the first conversation.
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {callLogs.map((log) => (
+            <div 
+              key={log.id}
+              className="p-3 rounded-lg bg-slate-50/80 border border-[#E2E8F0] space-y-1.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-[#172033] text-xs">
+                  {log.outcome}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {new Date(log.call_date).toLocaleString('en-IN', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+
+              {log.notes && (
+                <p className="text-slate-600 text-xs leading-relaxed">
+                  {log.notes}
+                </p>
+              )}
+
+              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-[#E2E8F0]">
+                <span>Caller: {log.logged_by_name || 'Telecaller'}</span>
+                {log.followup_date && (
+                  <span>Next: {new Date(log.followup_date).toLocaleDateString('en-IN')}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex justify-end">
@@ -266,12 +331,12 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
               onClick={() => setIsEditing(!isEditing)}
               className={`p-2 rounded-lg border transition-colors cursor-pointer ${
                 isEditing
-                  ? 'bg-slate-200 text-[#172033] border-slate-300'
-                  : 'bg-white text-slate-600 border-[#E2E8F0] hover:bg-slate-50'
+                  ? 'bg-slate-100 text-slate-600 border-[#E2E8F0] hover:bg-slate-200'
+                  : 'bg-[#356AE6] text-white border-[#356AE6]'
               }`}
-              title={isEditing ? 'Cancel Edit' : 'Edit Lead'}
+              title={isEditing ? 'Switch to Read-Only Summary' : 'Edit Lead Details'}
             >
-              <Edit3 className="w-3.5 h-3.5" />
+              {isEditing ? <Eye className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
             </button>
 
             <button
@@ -301,13 +366,17 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
 
           {isEditing ? (
             /* ========================================================================= */
-            /* EDIT FORM MODE */
+            /* EDIT FORM MODE (Directly editable upon selecting lead) */
             /* ========================================================================= */
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-[#172033] uppercase tracking-wider pb-1 border-b border-[#E2E8F0]">
-                  Edit Lead Details
-                </h3>
+            <div className="space-y-6">
+              <form onSubmit={handleSave} className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b border-[#E2E8F0]">
+                    <h3 className="text-xs font-bold text-[#172033] uppercase tracking-wider">
+                      Edit Lead Details
+                    </h3>
+                    <span className="text-[11px] text-slate-500 font-medium">Direct Edit Mode</span>
+                  </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -485,15 +554,15 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-600 font-medium text-xs"
+                    onClick={onClose}
+                    className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-600 font-medium text-xs cursor-pointer"
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="px-4 py-1.5 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs flex items-center gap-1 shadow-xs disabled:opacity-50"
+                    className="px-4 py-1.5 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs flex items-center gap-1 shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -501,6 +570,10 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
                 </div>
               </div>
             </form>
+
+            {/* Call History Timeline (Directly available below edit form) */}
+            {renderCallHistory()}
+          </div>
           ) : (
             /* ========================================================================= */
             /* READ-ONLY VIEW MODE (Organized into structured sections) */
@@ -604,66 +677,7 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
               </div>
 
               {/* 4. CALL HISTORY TIMELINE */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between pb-1 border-b border-[#E2E8F0]">
-                  <div className="flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5 text-slate-500" />
-                    <h3 className="text-xs font-bold text-[#172033] uppercase tracking-wider">
-                      Call History Timeline ({callLogs.length})
-                    </h3>
-                  </div>
-                  <button
-                    onClick={() => onOpenLogCall(lead)}
-                    className="text-xs font-semibold text-[#356AE6] hover:underline cursor-pointer"
-                  >
-                    + Log New Call
-                  </button>
-                </div>
-
-                {loadingCalls ? (
-                  <div className="py-4 text-center text-slate-400 text-xs">Loading call history...</div>
-                ) : callLogs.length === 0 ? (
-                  <div className="p-4 rounded-lg bg-slate-50 text-center text-slate-400 text-xs">
-                    No calls logged for this lead yet. Click "Log Call" above to record the first conversation.
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {callLogs.map((log) => (
-                      <div 
-                        key={log.id}
-                        className="p-3 rounded-lg bg-slate-50/80 border border-[#E2E8F0] space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-[#172033] text-xs">
-                            {log.outcome}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {new Date(log.call_date).toLocaleString('en-IN', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-
-                        {log.notes && (
-                          <p className="text-slate-600 text-xs leading-relaxed">
-                            {log.notes}
-                          </p>
-                        )}
-
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-[#E2E8F0]">
-                          <span>Caller: {log.logged_by_name || 'Telecaller'}</span>
-                          {log.followup_date && (
-                            <span>Next: {new Date(log.followup_date).toLocaleDateString('en-IN')}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {renderCallHistory()}
             </div>
           )}
         </div>
