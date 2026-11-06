@@ -50,5 +50,30 @@
       "phone": "+919876543210"
     },
     "created_at": "2026-11-06T06:40:09.962Z"
+  },
+  {
+    "id": "AUDIT-1793963238820",
+    "lead_id": "CRM-2611-92907",
+    "action": "CREATE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "customer_name": "Test Lead Verification",
+      "phone": "+919876599991",
+      "source": "Justdial",
+      "status": "New"
+    },
+    "created_at": "2026-11-06T11:07:18.818Z"
+  },
+  {
+    "id": "AUDIT-1793963294190",
+    "action": "IMPORT",
+    "performed_by": "crm_admin_executive",
+    "performed_by_name": "Royal Epic Executive Admin",
+    "details": {
+      "importedCount": 1,
+      "skippedCount": 0
+    },
+    "created_at": "2026-11-06T11:08:14.188Z"
   }
 ]

@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { sendLeadNotificationEmail, LeadEmailPayload } from './emailNotificationService';
 
 export const crmRouter = express.Router();
 
@@ -863,23 +862,7 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
       console.warn('Supabase sync background note:', sbErr?.message || sbErr);
     });
 
-    // 3. Dispatch Hostinger SMTP email notification asynchronously
-    sendLeadNotificationEmail({
-      id: newLead.id,
-      full_name: newLead.customer_name,
-      phone: newLead.phone,
-      email: newLead.email,
-      city: newLead.city,
-      service_type: newLead.interested_service,
-      estimated_budget: newLead.budget,
-      project_scope: newLead.notes || '',
-      source: newLead.source,
-      created_at: newLead.created_at
-    }).catch((mailErr) => {
-      console.error('⚠️ [Hostinger SMTP] CRM lead notification note:', mailErr?.message || mailErr);
-    });
-
-    // 4. Record Audit Log
+    // 3. Record Audit Log
     dbCrmAudit.push({
       id: `AUDIT-${Date.now()}`,
       lead_id: id,
@@ -1208,58 +1191,13 @@ crmRouter.get('/dashboard-metrics', (_req: Request, res: Response) => {
 });
 
 // -----------------------------------------------------------------------------
-// CSV EXPORT ENDPOINT
+// CSV EXPORT ENDPOINT (DISABLED BY SYSTEM POLICY)
 // -----------------------------------------------------------------------------
 crmRouter.get('/export-csv', (_req: Request, res: Response) => {
-  try {
-    const list = Object.values(dbCrmLeads);
-    
-    const headers = [
-      'Customer Name',
-      'Mobile Number',
-      'Alternate Mobile',
-      'Lead Source',
-      'Service Required',
-      'Customer Location',
-      'Project Address',
-      'Budget Range',
-      'Lead Status',
-      'Next Follow-up',
-      'Assigned Telecaller',
-      'Customer Notes',
-      'Created Date'
-    ];
-
-    const escapeCsv = (val?: string | null) => {
-      if (!val) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
-
-    const rows = list.map(l => [
-      escapeCsv(l.customer_name || (l as any).name),
-      escapeCsv(l.phone),
-      escapeCsv(l.alternate_phone || ''),
-      escapeCsv(l.source),
-      escapeCsv(l.interested_service || (l as any).projectType),
-      escapeCsv(l.city || (l as any).location || ''),
-      escapeCsv(l.project_address || ''),
-      escapeCsv(l.budget || ''),
-      escapeCsv(l.status),
-      escapeCsv(l.next_followup_at || ''),
-      escapeCsv(l.assigned_to_name || l.assigned_to || 'Unassigned'),
-      escapeCsv(l.notes || ''),
-      escapeCsv(l.created_at ? l.created_at.slice(0, 10) : '')
-    ].join(','));
-
-    const csvContent = [headers.join(','), ...rows].join('\r\n');
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="Royal_Epic_CRM_Leads_${new Date().toISOString().slice(0, 10)}.csv"`);
-    res.status(200).send(csvContent);
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Failed to export CSV' });
-  }
+  return res.status(403).json({
+    success: false,
+    error: 'Lead data export has been disabled by system policy.'
+  });
 });
 
 // -----------------------------------------------------------------------------

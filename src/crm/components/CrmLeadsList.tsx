@@ -14,7 +14,6 @@ import {
 import { 
   fetchCrmLeads, 
   deleteCrmLead, 
-  downloadCrmLeadsCsv, 
   getCrmAuthHeaders 
 } from '../crmService';
 import { useCrmAuth } from '../CrmAuthContext';
@@ -31,7 +30,6 @@ import {
   ArrowUpDown, 
   RefreshCw, 
   PhoneCall, 
-  Download, 
   Trash2, 
   Eye, 
   RotateCcw, 
@@ -63,7 +61,6 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
-  const [exportingCsv, setExportingCsv] = useState(false);
   const [usersList, setUsersList] = useState<Array<{ id: string; name: string }>>([]);
   const [showFiltersBar, setShowFiltersBar] = useState(true);
 
@@ -147,12 +144,6 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     navigator.clipboard.writeText(phoneNum);
     setCopiedPhone(id);
     setTimeout(() => setCopiedPhone(null), 2000);
-  };
-
-  const handleExportCsv = async () => {
-    setExportingCsv(true);
-    await downloadCrmLeadsCsv();
-    setExportingCsv(false);
   };
 
   const handleDeleteLead = async (id: string, name: string, e: React.MouseEvent) => {
@@ -288,16 +279,6 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
                 {activeFilterChips.length}
               </span>
             )}
-          </button>
-
-          <button
-            onClick={handleExportCsv}
-            disabled={exportingCsv}
-            className="px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
-            title="Download full CSV export"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>{exportingCsv ? 'Exporting...' : 'Export CSV'}</span>
           </button>
 
           <button

@@ -255,30 +255,6 @@ export async function fetchCrmFollowups(): Promise<{
   }
 }
 
-// 1-Click CSV Export Download Helper
-export async function downloadCrmLeadsCsv(): Promise<{ success: boolean; error?: string }> {
-  try {
-    const res = await fetch('/api/crm/export-csv', {
-      headers: getCrmAuthHeaders()
-    });
-    if (!res.ok) {
-      return { success: false, error: 'Failed to generate CSV export' };
-    }
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Royal_Epic_CRM_Leads_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error downloading CSV' };
-  }
-}
-
 export async function fetchCrmDashboardMetrics(): Promise<{
   metrics?: CrmDashboardMetrics;
   error?: string;

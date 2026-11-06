@@ -1646,43 +1646,6 @@ export const TelecallerCrmPortal: React.FC<TelecallerCrmPortalProps> = ({
                   Real-time conversion metrics, lead sources and pipeline volume
                 </p>
               </div>
-
-              {/* Export CSV button (Admin Only) */}
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const csvRows = [
-                      ["ID", "Name", "Phone", "Email", "Source", "Service", "City", "Budget", "Temperature", "Status", "Created At"],
-                      ...leads.map(l => [
-                        l.id,
-                        `"${l.name}"`,
-                        l.phone,
-                        l.email || "",
-                        l.source,
-                        `"${l.interested_service}"`,
-                        l.city,
-                        l.budget || "",
-                        l.temperature,
-                        l.status,
-                        l.created_at
-                      ])
-                    ];
-                    const csvString = csvRows.map(r => r.join(",")).join("\n");
-                    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvString);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", `royal_epic_leads_export_${new Date().toISOString().slice(0, 10)}.csv`);
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  className="px-3.5 py-2 bg-[#141B2D] hover:bg-[#1C263F] border border-[#232D42] text-xs font-semibold rounded-lg text-white flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
-                  <span>Export All Leads (CSV)</span>
-                </button>
-              )}
             </div>
 
             {/* KPI Overview */}
