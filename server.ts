@@ -26,7 +26,7 @@ import {
   OrderEmailPayload, 
   OrderEmailItem 
 } from "./src/server/emailNotificationService";
-import { crmRouter } from "./src/server/crmRoutes";
+import { crmRouter, ingestPublicWebsiteLead } from "./src/server/crmRoutes";
 import { justdialRouter } from "./src/server/justdialRoutes";
 
 dotenv.config();
@@ -1292,6 +1292,9 @@ async function startServer() {
       if (response.ok) {
         const insertedData = await response.json();
         console.log("✅ Successfully inserted lead into Supabase:", leadRecord.id);
+
+        // Instantly ingest into Telecaller CRM
+        ingestPublicWebsiteLead(leadRecord);
 
         // Dispatch Hostinger SMTP email notification (non-blocking, fail-safe, deduplicated)
         sendLeadNotificationEmail(leadRecord).catch((mailErr) => {
@@ -2804,6 +2807,9 @@ Provide a JSON response with the following keys:
       source: 'Free Architectural Consultation Modal',
       created_at: new Date().toISOString()
     };
+
+    // Ingest directly into Telecaller CRM
+    ingestPublicWebsiteLead(leadRecord);
 
     // Dispatch notification email with deduplication (if already dispatched via /api/supabase/submit-lead, this is automatically suppressed)
     sendLeadNotificationEmail(leadRecord).catch((mailErr) => {

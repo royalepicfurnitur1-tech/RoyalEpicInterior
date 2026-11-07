@@ -404,55 +404,144 @@ export function saveAudit() {
   } catch (_) {}
 }
 
-// Pull any existing Supabase rows into memory on startup
-(async function initSupabaseSync() {
+// Helper to filter out past developer test / demo entries from syncing into production CRM
+export function isDeveloperTestRecord(name?: string, phone?: string): boolean {
+  if (!name) return false;
+  const lower = name.toLowerCase().trim();
+  const testNames = [
+    'test lead verification',
+    'csv import verification',
+    'audit test customer',
+    'audit test',
+    'diagnostic test customer',
+    'tester1',
+    'tester2',
+    'tester2@gmail.com',
+    'testermail1',
+    'testnow',
+    'website testing',
+    'lead1',
+    'lead2',
+    'name1',
+    'refe',
+    'erre',
+    'rttt',
+    'test1',
+    'anita deshmukh', // verification test after duplicate fix
+    'suresh menon'     // testing direct supabase client fallback
+  ];
+
+  if (testNames.some(t => lower === t || lower.includes(t))) {
+    return true;
+  }
+
+  // Filter out dummy/mock phones like 123478965, 741741741, 1111222233
+  const cleanedPhone = (phone || '').replace(/\D/g, '');
+  if (cleanedPhone === '123478965' || cleanedPhone === '741741741' || cleanedPhone === '1111222233' || cleanedPhone === '852852852' || cleanedPhone === '1231231231') {
+    return true;
+  }
+
+  return false;
+}
+
+// Ingest a public website enquiry immediately into the Telecaller CRM
+export function ingestPublicWebsiteLead(leadRecord: {
+  id: string;
+  full_name?: string;
+  customer_name?: string;
+  phone: string;
+  email?: string | null;
+  city?: string | null;
+  service_type?: string | null;
+  estimated_budget?: string | null;
+  project_scope?: string | null;
+  source?: string | null;
+  status?: string | null;
+  preferred_date?: string | null;
+  drawing_name?: string | null;
+  notes?: string | null;
+  created_at?: string;
+}): ServerCrmLead {
+  const normPhone = normalizePhone(leadRecord.phone);
+  const leadId = leadRecord.id || `LEAD-${Date.now().toString().slice(-6)}`;
+  const custName = leadRecord.full_name || leadRecord.customer_name || 'Website Visitor';
+  
+  const crmLead: ServerCrmLead = {
+    id: leadId,
+    customer_name: custName,
+    name: custName,
+    phone: leadRecord.phone,
+    normalized_phone: normPhone,
+    email: leadRecord.email || undefined,
+    source: leadRecord.source || 'Website Enquiry',
+    interested_service: leadRecord.service_type || 'Residential Interior',
+    projectType: leadRecord.service_type || 'Residential Interior',
+    city: leadRecord.city || 'Bengaluru',
+    location: leadRecord.city || 'Bengaluru',
+    budget: leadRecord.estimated_budget || 'To be discussed',
+    temperature: 'Hot',
+    status: 'New Lead',
+    notes: [
+      leadRecord.project_scope || '',
+      leadRecord.drawing_name ? `Uploaded Drawing: ${leadRecord.drawing_name}` : '',
+      leadRecord.preferred_date ? `Preferred Consultation Date: ${leadRecord.preferred_date}` : '',
+      leadRecord.notes || ''
+    ].filter(Boolean).join(' | ') || undefined,
+    created_by: 'system_website_enquiry',
+    created_by_name: 'Website Public Enquiry',
+    created_at: leadRecord.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  dbCrmLeads[crmLead.id] = crmLead;
+  saveLeads();
+  console.log(`✅ [CRM Ingestion] Ingested website enquiry ${crmLead.id} for "${crmLead.customer_name}" (${crmLead.phone}) into Telecaller CRM.`);
+  return crmLead;
+}
+
+// Pull existing website public enquiries from Supabase leads_and_inquiries into Telecaller CRM
+export async function syncLeadsFromSupabase(): Promise<number> {
   const { url, key } = getSupabaseCredentials();
+  let syncedCount = 0;
   try {
-    // 1. Try crm_leads first
-    const res = await fetch(`${url}/rest/v1/crm_leads?select=*&order=created_at.desc`, {
+    // Query leads_and_inquiries (where website submissions are stored in Supabase)
+    const res = await fetch(`${url}/rest/v1/leads_and_inquiries?select=*&order=created_at.desc&limit=200`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` }
     });
     if (res.ok) {
       const rows = await res.json();
       if (Array.isArray(rows) && rows.length > 0) {
         rows.forEach((r: any) => {
+          const custName = r.full_name || r.customer_name || '';
+          // Skip past developer test entries and fake prototype entries
+          if (isDeveloperTestRecord(custName, r.phone)) {
+            return;
+          }
+          // Ingest if not already loaded into CRM
           if (!dbCrmLeads[r.id]) {
-            dbCrmLeads[r.id] = {
-              id: r.id,
-              customer_name: r.customer_name || r.name,
-              phone: r.phone,
-              normalized_phone: r.normalized_phone || normalizePhone(r.phone),
-              alternate_phone: r.alternate_phone,
-              email: r.email,
-              source: r.source || 'Website Enquiry',
-              custom_source: r.custom_source,
-              interested_service: r.interested_service || 'Residential Interior',
-              custom_service: r.custom_service,
-              city: r.city || 'Bengaluru',
-              project_address: r.project_address,
-              budget: r.budget,
-              temperature: r.temperature || 'Warm',
-              status: r.status || 'New Lead',
-              notes: r.notes,
-              assigned_to: r.assigned_to,
-              assigned_to_name: r.assigned_to_name,
-              last_contact_at: r.last_contact_at,
-              next_followup_at: r.next_followup_at,
-              next_followup_date: r.next_followup_date,
-              next_followup_time: r.next_followup_time,
-              created_by: r.created_by,
-              created_by_name: r.created_by_name,
-              created_at: r.created_at || new Date().toISOString(),
-              updated_at: r.updated_at || new Date().toISOString()
-            };
+            ingestPublicWebsiteLead(r);
+            syncedCount++;
           }
         });
-        saveLeads();
+        if (syncedCount > 0) {
+          saveLeads();
+          console.log(`✅ [CRM Sync] Pulled ${syncedCount} website enquiries from Supabase into Telecaller CRM.`);
+        }
       }
     }
-  } catch (e) {
-    console.warn('Initial crm_leads pull note:', e);
+  } catch (err: any) {
+    console.warn('Supabase leads_and_inquiries sync note:', err?.message || err);
   }
+  return syncedCount;
+}
+
+// Background throttle timestamp for Supabase sync
+let lastSupabaseSyncTimestamp = 0;
+
+// Pull on startup
+(async function initSupabaseSync() {
+  await syncLeadsFromSupabase();
+  lastSupabaseSyncTimestamp = Date.now();
 })();
 
 // Helper to format lead object with backward-compatible aliases
@@ -565,6 +654,12 @@ crmRouter.post('/auth/logout', (_req: Request, res: Response) => {
 // GET /api/crm/leads
 crmRouter.get('/leads', (req: Request, res: Response) => {
   try {
+    // Non-blocking background sync with Supabase website leads (throttled every 15s)
+    if (Date.now() - lastSupabaseSyncTimestamp > 15000) {
+      lastSupabaseSyncTimestamp = Date.now();
+      syncLeadsFromSupabase().catch(() => {});
+    }
+
     const search = ((req.query.search as string) || '').toLowerCase().trim();
     const status = (req.query.status as string) || '';
     const temperature = (req.query.temperature as string) || '';
