@@ -1,5 +1,5 @@
 -- ==============================================================================
--- ROYAL EPIC INTERIORS — PRODUCTION CRM SUPABASE V2 MIGRATION SCRIPT (FINAL)
+-- ROYAL EPIC INTERIORS — PRODUCTION CRM SUPABASE V2 MIGRATION SCRIPT (FINAL PRODUCTION)
 -- File: supabase_crm_v2_migration.sql
 -- Subdomain: https://tele.royalepicinterior.com/
 -- Target Database: Supabase PostgreSQL (Project ID: lwrfoztfsyffgtybesia)
@@ -14,14 +14,19 @@
 -- - Preserves all existing records, IDs, and raw_details JSONB data.
 -- - Additive columns only (using ADD COLUMN IF NOT EXISTS with safe defaults).
 -- - Anonymous public visitors can ONLY INSERT enquiries (zero SELECT, UPDATE, DELETE).
+-- - Direct SELECT, UPDATE, and DELETE completely denied to anon, public, and authenticated.
+-- - Dynamic DO-block policy purge: Eliminates ALL pre-existing policies regardless of name.
 -- - CRM customer leads and call logs restricted strictly to the service_role.
 -- - All CRM operations remain brokered behind authenticated Express backend routes.
--- - SECURITY DEFINER functions use explicit SET search_path = public, pg_temp.
--- - archive_crm_lead() prevents duplicate archive notes on repeated invocations.
+-- - Call-log foreign key enforces ON DELETE RESTRICT.
+-- - archive_crm_lead() records Admin ID and Admin Name separately.
+-- - archive_crm_lead() uses FOR UPDATE to prevent race conditions during concurrent archiving.
+-- - archive_crm_lead() includes an idempotency guard preventing duplicate notes or overwrites.
+-- - SECURITY DEFINER functions use explicit SET search_path = pg_catalog, pg_temp.
 -- - RPC execution restricted strictly to service_role (zero direct client-side execution).
 -- - Zero physical DELETE statements executed on genuine customer records or call logs.
 -- - Preserves all 4 public website enquiry forms (Hero, Contact, Quote, Services).
--- - 100% Idempotent and safely rerunnable (uses DROP POLICY IF EXISTS before CREATE POLICY).
+-- - 100% Idempotent and safely rerunnable.
 -- ==============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -50,40 +55,47 @@ CREATE INDEX IF NOT EXISTS idx_leads_is_deleted ON public.leads_and_inquiries(is
 CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads_and_inquiries(status);
 
 -- -----------------------------------------------------------------------------
--- 3. PERSISTENT CALL LOGS TABLE IN SUPABASE
+-- 3. PERSISTENT CALL LOGS TABLE IN SUPABASE (ON DELETE RESTRICT)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.crm_call_logs (
     id TEXT PRIMARY KEY,
-    lead_id TEXT NOT NULL REFERENCES public.leads_and_inquiries(id) ON DELETE CASCADE,
-    call_date TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    lead_id TEXT NOT NULL REFERENCES public.leads_and_inquiries(id) ON DELETE RESTRICT,
+    call_date TIMESTAMPTZ DEFAULT pg_catalog.now() NOT NULL,
     outcome TEXT NOT NULL,
     notes TEXT,
     followup_date TEXT,
     logged_by TEXT,
     logged_by_name TEXT,
     duration_seconds INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+    created_at TIMESTAMPTZ DEFAULT pg_catalog.now() NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_call_logs_lead_id ON public.crm_call_logs(lead_id);
 CREATE INDEX IF NOT EXISTS idx_call_logs_date ON public.crm_call_logs(call_date DESC);
 
 -- -----------------------------------------------------------------------------
--- 4. ROW LEVEL SECURITY (RLS) ON CRM_CALL_LOGS (STRICT SERVICE_ROLE ISOLATION)
+-- 4. ROW LEVEL SECURITY & PERMISSION AUDIT ON CRM_CALL_LOGS
 -- -----------------------------------------------------------------------------
 ALTER TABLE public.crm_call_logs ENABLE ROW LEVEL SECURITY;
 
--- Idempotent Cleanup: Clean any prior policies before recreating
-DROP POLICY IF EXISTS "Allow public insert on crm_call_logs" ON public.crm_call_logs;
-DROP POLICY IF EXISTS "Allow select on crm_call_logs" ON public.crm_call_logs;
-DROP POLICY IF EXISTS "Allow authenticated insert on crm_call_logs" ON public.crm_call_logs;
-DROP POLICY IF EXISTS "Allow authenticated select on crm_call_logs" ON public.crm_call_logs;
-DROP POLICY IF EXISTS "Allow service_role full access on crm_call_logs" ON public.crm_call_logs;
-DROP POLICY IF EXISTS "Service role full access on crm_call_logs" ON public.crm_call_logs;
+-- Dynamic Audit & Cleanup: Drop EVERY existing policy on crm_call_logs regardless of name
+DO $$
+DECLARE
+    pol RECORD;
+BEGIN
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'crm_call_logs'
+    LOOP
+        EXECUTE pg_catalog.format('DROP POLICY IF EXISTS %I ON public.crm_call_logs', pol.policyname);
+    END LOOP;
+END;
+$$;
 
--- CRITICAL SECURITY: Revoke all direct client-side access from public, anon, and authenticated roles.
--- Call logs must NEVER be readable or insertable via client-side PostgREST.
--- All CRM call-log queries and writes are mediated by the authenticated Express CRM backend.
+-- CRITICAL PRIVILEGE HARDENING:
+-- Revoke all direct client-side privileges from public, anon, and authenticated roles.
+-- Call logs must NEVER be readable, insertable, or modifiable via client-side PostgREST.
 REVOKE ALL ON TABLE public.crm_call_logs FROM anon;
 REVOKE ALL ON TABLE public.crm_call_logs FROM public;
 REVOKE ALL ON TABLE public.crm_call_logs FROM authenticated;
@@ -100,12 +112,19 @@ USING (true)
 WITH CHECK (true);
 
 -- -----------------------------------------------------------------------------
--- 5. SECURE SERVER-SIDE SOFT-ARCHIVE FUNCTIONS (SECURITY DEFINER WITH SEARCH_PATH)
+-- 5. SECURE SERVER-SIDE SOFT-ARCHIVE FUNCTION (CONCURRENCY-SAFE, ADMIN ATTRIBUTION)
 -- -----------------------------------------------------------------------------
+-- Clean up legacy alias and older function signatures if they existed
+DROP FUNCTION IF EXISTS public.delete_crm_lead(TEXT);
+DROP FUNCTION IF EXISTS public.archive_crm_lead(TEXT);
+DROP FUNCTION IF EXISTS public.archive_crm_lead(TEXT, TEXT);
+
 -- This function executes server-side soft-archiving:
--- - Safe search_path explicitly configured to public, pg_temp
+-- - Hardened search_path explicitly configured to pg_catalog, pg_temp
 -- - Qualified database objects (public.leads_and_inquiries)
--- - Prevents duplicate archive notes on repeated invocations
+-- - Records Admin ID (p_archived_by) and Admin Name (p_archived_by_name) separately
+-- - Row-level exclusive lock (FOR UPDATE) prevents race conditions during concurrent archiving
+-- - Idempotency guard prevents duplicate archive notes or timestamp overwrites
 -- - Sets status = 'archived', is_deleted = TRUE, deleted_at = NOW()
 -- - Preserves customer information and raw_details JSONB
 -- - Preserves all related call history in crm_call_logs
@@ -113,33 +132,37 @@ WITH CHECK (true);
 -- - NEVER executes DELETE FROM crm_call_logs
 CREATE OR REPLACE FUNCTION public.archive_crm_lead(
     p_lead_id TEXT,
-    p_archived_by TEXT DEFAULT 'admin'
+    p_archived_by TEXT DEFAULT 'admin',
+    p_archived_by_name TEXT DEFAULT 'Royal Epic Admin'
 )
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = pg_catalog, pg_temp
 AS $$
 DECLARE
     v_lead RECORD;
 BEGIN
-    -- Verify lead exists in public.leads_and_inquiries
+    -- 1. Verify lead exists and acquire exclusive row-level lock (FOR UPDATE)
+    -- This guarantees concurrent archive requests queue sequentially without racing.
     SELECT id, full_name, phone, status, is_deleted, raw_details
     INTO v_lead
     FROM public.leads_and_inquiries
-    WHERE id = p_lead_id;
+    WHERE id = p_lead_id
+    FOR UPDATE;
 
     IF NOT FOUND THEN
-        RETURN jsonb_build_object(
+        RETURN pg_catalog.jsonb_build_object(
             'success', false,
             'archived', false,
             'error', 'Lead record not found in leads_and_inquiries'
         );
     END IF;
 
-    -- Idempotency check: If lead is already archived, do not append duplicate archive notes
+    -- 2. Idempotency Guard: If lead is already archived, return immediately.
+    -- Prevents duplicate archive notes even if multiple calls execute concurrently.
     IF v_lead.is_deleted = TRUE OR v_lead.status = 'archived' THEN
-        RETURN jsonb_build_object(
+        RETURN pg_catalog.jsonb_build_object(
             'success', true,
             'archived', true,
             'already_archived', true,
@@ -149,85 +172,80 @@ BEGIN
         );
     END IF;
 
-    -- Perform soft-archive (preserves row, IDs, raw_details, and call history)
+    -- 3. Perform soft-archive (preserves row, IDs, raw_details, and call history)
     UPDATE public.leads_and_inquiries
     SET 
         status = 'archived',
         is_deleted = TRUE,
-        deleted_at = NOW(),
-        updated_at = NOW(),
+        deleted_at = pg_catalog.now(),
+        updated_at = pg_catalog.now(),
         last_updated_by = p_archived_by,
-        raw_details = COALESCE(raw_details, '{}'::JSONB) || jsonb_build_object(
+        last_updated_by_name = p_archived_by_name,
+        raw_details = pg_catalog.coalesce(raw_details, '{}'::pg_catalog.jsonb) || pg_catalog.jsonb_build_object(
             'is_deleted', true, 
-            'deleted_at', NOW(),
-            'archived_by', p_archived_by
+            'deleted_at', pg_catalog.now(),
+            'archived_by', p_archived_by,
+            'archived_by_name', p_archived_by_name
         ),
-        notes = COALESCE(notes, '') || E'\n[ARCHIVED BY ADMIN]: Archived at ' || NOW()::TEXT
+        notes = pg_catalog.coalesce(notes, '') || E'\n[ARCHIVED BY ADMIN]: Archived by ' || p_archived_by_name || ' (' || p_archived_by || ') at ' || pg_catalog.now()::TEXT
     WHERE id = p_lead_id;
 
-    RETURN jsonb_build_object(
+    RETURN pg_catalog.jsonb_build_object(
         'success', true,
         'archived', true,
         'lead_id', p_lead_id,
         'customer_name', v_lead.full_name,
         'phone', v_lead.phone,
+        'archived_by', p_archived_by,
+        'archived_by_name', p_archived_by_name,
         'message', 'Lead archived successfully in Supabase PostgreSQL.'
     );
 END;
 $$;
 
--- Backward-compatible alias: If legacy backend invokes delete_crm_lead, it routes safely to archive_crm_lead
-CREATE OR REPLACE FUNCTION public.delete_crm_lead(p_lead_id TEXT)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-    RETURN public.archive_crm_lead(p_lead_id, 'admin');
-END;
-$$;
-
 -- CRITICAL SECURITY: Revoke execution privileges from public, anon, and authenticated roles.
 -- Ordinary telecallers and public web users CANNOT invoke this RPC directly via client APIs.
-REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT) FROM public;
-REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT) FROM authenticated;
-
-REVOKE EXECUTE ON FUNCTION public.delete_crm_lead(TEXT) FROM public;
-REVOKE EXECUTE ON FUNCTION public.delete_crm_lead(TEXT) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.delete_crm_lead(TEXT) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM public;
+REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM authenticated;
 
 -- Grant execution strictly to service_role (Express backend admin verification required)
-GRANT EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.delete_crm_lead(TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) TO service_role;
 
 -- -----------------------------------------------------------------------------
--- 6. RLS POLICIES FOR LEADS_AND_INQUIRIES (STRICT WRITE-ONLY FOR PUBLIC FORMS)
+-- 6. RLS POLICIES & PERMISSION AUDIT ON LEADS_AND_INQUIRIES (WRITE-ONLY PUBLIC)
 -- -----------------------------------------------------------------------------
 -- Ensure RLS is enabled on leads_and_inquiries
 ALTER TABLE public.leads_and_inquiries ENABLE ROW LEVEL SECURITY;
 
--- Idempotent cleanup of all leads_and_inquiries policies
-DROP POLICY IF EXISTS "Public can insert leads" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Authenticated users can select leads" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Authenticated users can update leads" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Allow authenticated delete on leads_and_inquiries" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Allow public insert on leads_and_inquiries" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Allow authenticated select on leads_and_inquiries" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Allow authenticated update on leads_and_inquiries" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Allow public read on leads_and_inquiries" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Public website forms can insert leads" ON public.leads_and_inquiries;
-DROP POLICY IF EXISTS "Service role full access on leads_and_inquiries" ON public.leads_and_inquiries;
+-- Dynamic Audit & Cleanup: Drop EVERY existing policy on leads_and_inquiries regardless of name
+-- This eliminates all legacy policies, default templates ("Enable read access for all users"),
+-- and any non-standard policies that may have permitted public SELECT, UPDATE, or DELETE.
+DO $$
+DECLARE
+    pol RECORD;
+BEGIN
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'leads_and_inquiries'
+    LOOP
+        EXECUTE pg_catalog.format('DROP POLICY IF EXISTS %I ON public.leads_and_inquiries', pol.policyname);
+    END LOOP;
+END;
+$$;
 
 -- CRITICAL PRIVILEGE HARDENING:
 -- Anonymous web visitors can ONLY INSERT new enquiries (write-only).
--- Anonymous users and arbitrary authenticated users CANNOT SELECT, UPDATE, or DELETE customer records.
-REVOKE SELECT, UPDATE, DELETE ON TABLE public.leads_and_inquiries FROM anon;
-REVOKE SELECT, UPDATE, DELETE ON TABLE public.leads_and_inquiries FROM public;
-REVOKE SELECT, UPDATE, DELETE ON TABLE public.leads_and_inquiries FROM authenticated;
+-- All SELECT, UPDATE, and DELETE privileges are explicitly REVOKED from public, anon, and authenticated.
+REVOKE ALL ON TABLE public.leads_and_inquiries FROM anon;
+REVOKE ALL ON TABLE public.leads_and_inquiries FROM public;
+REVOKE ALL ON TABLE public.leads_and_inquiries FROM authenticated;
 
+-- Explicitly grant only INSERT to anon and authenticated (required by public website enquiry forms)
 GRANT INSERT ON TABLE public.leads_and_inquiries TO anon, authenticated;
+
+-- Full table privileges granted exclusively to service_role (used by authenticated Express backend)
 GRANT ALL ON TABLE public.leads_and_inquiries TO service_role;
 
 -- 1. Preserve public website form submissions (Contact Form, Quote Modal, Hero Consultation, Services)
@@ -246,9 +264,9 @@ TO service_role
 USING (true)
 WITH CHECK (true);
 
--- Explicitly ensure NO raw DELETE policy exists on leads_and_inquiries.
--- Deletion is strictly managed through server-side soft-archiving (archive_crm_lead).
+-- Explicitly ensure NO SELECT, UPDATE, or DELETE policy exists for anon, public, or authenticated.
+-- Unauthorised queries directly to Supabase PostgREST return empty results (0 rows) or 403 Forbidden.
 
 -- ==============================================================================
--- END OF CORRECTED MIGRATION SCRIPT
+-- END OF FINAL PRODUCTION MIGRATION SCRIPT
 -- ==============================================================================

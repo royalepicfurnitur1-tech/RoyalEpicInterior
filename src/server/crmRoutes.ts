@@ -234,10 +234,10 @@ interface SupabaseDeleteResult {
 }
 
 // Secure server-side archiving in Supabase database
-async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult> {
+async function deleteLeadFromSupabase(id: string, actorId: string = 'admin', actorName?: string): Promise<SupabaseDeleteResult> {
   const { url, key } = getSupabaseCredentials();
 
-  // 1. First, attempt via archive_crm_lead RPC (or fallback delete_crm_lead RPC)
+  // 1. First, attempt via archive_crm_lead RPC
   try {
     const rpcRes = await fetch(`${url}/rest/v1/rpc/archive_crm_lead`, {
       method: 'POST',
@@ -246,12 +246,12 @@ async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult>
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ p_lead_id: id })
+      body: JSON.stringify({ p_lead_id: id, p_archived_by: actorId, p_archived_by_name: actorName || actorId })
     });
     if (rpcRes.ok) {
       const rpcData = await rpcRes.json().catch(() => null);
       if (rpcData && (rpcData.success || rpcData.archived || rpcData.deleted_count === 1)) {
-        console.log(`✅ [Supabase Archive] Archived lead ${id} via RPC archive_crm_lead.`);
+        console.log(`✅ [Supabase Archive] Archived lead ${id} via RPC archive_crm_lead by ${actorId}.`);
         return { success: true, deleted_count: 1, method: 'rpc_archive' };
       }
     }
@@ -272,8 +272,15 @@ async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult>
       },
       body: JSON.stringify({
         status: 'archived',
-        notes: `[ARCHIVED BY ADMIN]: Archived from Telecaller CRM at ${new Date().toISOString()}`,
-        raw_details: { is_deleted: true, deleted_at: new Date().toISOString() },
+        last_updated_by: actorId,
+        last_updated_by_name: actorName || actorId,
+        notes: `[ARCHIVED BY ADMIN]: Archived by ${actorName || actorId} from Telecaller CRM at ${new Date().toISOString()}`,
+        raw_details: { 
+          is_deleted: true, 
+          deleted_at: new Date().toISOString(),
+          archived_by: actorId,
+          archived_by_name: actorName || actorId
+        },
         updated_at: new Date().toISOString()
       })
     });
@@ -281,7 +288,7 @@ async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult>
     if (patchRes.ok) {
       const patchedRows = await patchRes.json().catch(() => []);
       if (Array.isArray(patchedRows) && patchedRows.length === 1) {
-        console.log(`✅ [Supabase Archive] Database-archived lead ${id} in leads_and_inquiries (1 row updated).`);
+        console.log(`✅ [Supabase Archive] Database-archived lead ${id} in leads_and_inquiries by ${actorId} (1 row updated).`);
         return { success: true, deleted_count: 1, method: 'soft_delete_db' };
       }
     }
@@ -1331,7 +1338,7 @@ crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
     }
 
     // 1. Await database archiving in Supabase first
-    const dbResult = await deleteLeadFromSupabase(leadId);
+    const dbResult = await deleteLeadFromSupabase(leadId, user.id, user.name);
     if (!dbResult.success || dbResult.deleted_count === 0) {
       console.error(`❌ [CRM Archive] Supabase archiving failed for lead ${leadId}:`, dbResult.error);
       return res.status(500).json({
