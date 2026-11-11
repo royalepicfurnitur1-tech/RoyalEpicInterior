@@ -14,6 +14,7 @@ import {
 import { 
   fetchCrmLeadCalls, 
   saveCrmLead, 
+  archiveCrmLead, 
   deleteCrmLead, 
   normalizePhoneNumber,
   getCrmAuthHeaders 
@@ -29,6 +30,7 @@ import {
   Edit3, 
   Save, 
   Trash2, 
+  Archive, 
   PhoneCall, 
   CheckCircle, 
   AlertCircle,
@@ -202,17 +204,17 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
     }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!isAdmin) return;
-    if (!window.confirm(`Are you sure you want to permanently delete lead for "${lead.customer_name}"?`)) {
+    if (!window.confirm(`Are you sure you want to archive lead for "${lead.customer_name}"?`)) {
       return;
     }
-    const res = await deleteCrmLead(lead.id);
+    const res = await archiveCrmLead(lead.id);
     if (res.success) {
       onLeadUpdated();
       onClose();
     } else {
-      setErrorMessage(res.error || 'Failed to delete lead');
+      setErrorMessage(res.error || 'Failed to archive lead');
     }
   };
 
@@ -543,11 +545,12 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
                 {isAdmin ? (
                   <button
                     type="button"
-                    onClick={handleDelete}
-                    className="text-xs text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
+                    onClick={handleArchive}
+                    className="text-xs text-amber-600 hover:text-amber-850 flex items-center gap-1.5 cursor-pointer font-medium"
+                    title="Archive Lead"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Delete Lead</span>
+                    <Archive className="w-3.5 h-3.5" />
+                    <span>Archive Lead</span>
                   </button>
                 ) : <div />}
 

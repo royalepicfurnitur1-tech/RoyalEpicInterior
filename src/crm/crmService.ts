@@ -165,7 +165,7 @@ export async function saveCrmLead(leadData: Partial<CrmLead>): Promise<{
   }
 }
 
-export async function deleteCrmLead(id: string): Promise<{ success: boolean; error?: string }> {
+export async function archiveCrmLead(id: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const res = await fetch(`/api/crm/leads/${encodeURIComponent(id)}`, {
       method: 'DELETE',
@@ -174,14 +174,16 @@ export async function deleteCrmLead(id: string): Promise<{ success: boolean; err
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { success: false, error: data.error || 'Failed to delete lead' };
+      return { success: false, error: data.error || 'Failed to archive lead' };
     }
 
-    return { success: true };
+    return { success: true, message: data.message || 'Lead archived successfully.' };
   } catch (err: any) {
-    return { success: false, error: err.message || 'Network error deleting lead' };
+    return { success: false, error: err.message || 'Network error archiving lead' };
   }
 }
+
+export const deleteCrmLead = archiveCrmLead;
 
 export async function fetchCrmLeadCalls(leadId: string): Promise<{
   calls: CrmCallLog[];

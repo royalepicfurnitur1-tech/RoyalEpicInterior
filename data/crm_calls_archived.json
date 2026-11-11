@@ -1,0 +1,15 @@
+[
+  {
+    "id": "CALL-261111-1305",
+    "lead_id": "CRM-DISPOSABLE-TEST-01",
+    "call_date": "2026-11-11T04:56:13.284Z",
+    "outcome": "Interested",
+    "notes": "Discussed initial budget and booked site visit",
+    "logged_by": "crm_admin_primary",
+    "logged_by_name": "Royal Epic Admin",
+    "created_at": "2026-11-11T04:56:13.284Z",
+    "archived_at": "2026-11-11T04:56:24.307Z",
+    "archive_reason": "lead_deleted",
+    "deleted_by": "crm_admin_primary"
+  }
+]

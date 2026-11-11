@@ -6,7 +6,9 @@ export const crmRouter = express.Router();
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const CRM_LEADS_FILE = path.join(DB_DIR, 'crm_leads.json');
+const CRM_LEADS_DELETED_FILE = path.join(DB_DIR, 'crm_leads_deleted.json');
 const CRM_CALLS_FILE = path.join(DB_DIR, 'crm_calls.json');
+const CRM_CALLS_ARCHIVED_FILE = path.join(DB_DIR, 'crm_calls_archived.json');
 const CRM_USERS_FILE = path.join(DB_DIR, 'crm_users.json');
 const CRM_AUDIT_FILE = path.join(DB_DIR, 'crm_audit.json');
 
@@ -119,6 +121,7 @@ const getSupabaseCredentials = () => {
     process.env.SUPABASE_URL || 
     'https://lwrfoztfsyffgtybesia.supabase.co';
   const key = 
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY || 
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
     process.env.SUPABASE_ANON_KEY || 
@@ -143,123 +146,165 @@ async function testSupabaseTable(tableName: string): Promise<boolean> {
   }
 }
 
-// Non-destructive synchronization with Supabase
-async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boolean; table: string; error?: string }> {
+// Authoritative Supabase Cloud Persistence for CRM Leads
+async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boolean; table: string; error?: string; data?: any }> {
   const { url, key } = getSupabaseCredentials();
   const normPhone = normalizePhone(lead.phone);
 
-  // 1. Try to persist directly to dedicated crm_leads table
-  try {
-    const res = await fetch(`${url}/rest/v1/crm_leads`, {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({
-        id: lead.id,
-        customer_name: lead.customer_name,
-        phone: lead.phone,
-        normalized_phone: normPhone,
-        alternate_phone: lead.alternate_phone || null,
-        email: lead.email || null,
-        source: lead.source || 'Website Enquiry',
-        custom_source: lead.custom_source || null,
-        interested_service: lead.interested_service || 'Residential Interior',
-        custom_service: lead.custom_service || null,
-        city: lead.city || 'Bengaluru',
-        project_address: lead.project_address || null,
-        budget: lead.budget || null,
-        temperature: lead.temperature || 'Warm',
-        status: lead.status || 'New Lead',
-        notes: lead.notes || null,
-        assigned_to: lead.assigned_to || null,
-        assigned_to_name: lead.assigned_to_name || null,
-        last_contact_at: lead.last_contact_at || null,
-        next_followup_at: lead.next_followup_at || null,
-        next_followup_date: lead.next_followup_date || null,
-        next_followup_time: lead.next_followup_time || null,
-        created_by: lead.created_by || null,
-        created_by_name: lead.created_by_name || null,
-        last_updated_by: lead.last_updated_by || null,
-        last_updated_by_name: lead.last_updated_by_name || null,
-        created_at: lead.created_at,
-        updated_at: lead.updated_at
-      })
-    });
-
-    if (res.ok || res.status === 201 || res.status === 200) {
-      return { success: true, table: 'crm_leads' };
-    }
-  } catch (err: any) {
-    console.warn('Sync to crm_leads note:', err?.message || err);
-  }
-
-  // 2. Also mirror to public.leads_and_inquiries (existing active production table)
   try {
     let dbStatus = 'new';
     const st = (lead.status || '').toLowerCase();
-    if (st.includes('converted')) dbStatus = 'converted';
+    if (st.includes('converted') || st.includes('closed')) dbStatus = 'converted';
     else if (st.includes('site visit')) dbStatus = 'site_visit_scheduled';
     else if (st.includes('quotation') || st.includes('boq')) dbStatus = 'boq_sent';
     else if (st.includes('contact')) dbStatus = 'contacted';
+    else if (st.includes('archive') || st.includes('delete')) dbStatus = 'archived';
 
-    const res2 = await fetch(`${url}/rest/v1/leads_and_inquiries`, {
+    // Comprehensive CRM metadata embedded in JSONB raw_details for complete fidelity
+    const crmDetails = {
+      customer_name: lead.customer_name,
+      normalized_phone: normPhone,
+      alternate_phone: lead.alternate_phone || null,
+      custom_source: lead.custom_source || null,
+      custom_service: lead.custom_service || null,
+      project_address: lead.project_address || null,
+      temperature: lead.temperature || 'Warm',
+      crm_status: lead.status || 'New Lead',
+      assigned_to: lead.assigned_to || null,
+      assigned_to_name: lead.assigned_to_name || null,
+      last_contact_at: lead.last_contact_at || null,
+      next_followup_at: lead.next_followup_at || null,
+      next_followup_date: lead.next_followup_date || null,
+      next_followup_time: lead.next_followup_time || null,
+      created_by: lead.created_by || null,
+      created_by_name: lead.created_by_name || null,
+      last_updated_by: lead.last_updated_by || null,
+      last_updated_by_name: lead.last_updated_by_name || null,
+      ...(lead.raw_payload || {})
+    };
+
+    const payload = {
+      id: lead.id,
+      full_name: lead.customer_name,
+      phone: lead.phone,
+      email: lead.email || null,
+      city: lead.city || 'Bengaluru',
+      service_type: lead.interested_service || 'Residential Interior',
+      estimated_budget: lead.budget || null,
+      project_scope: lead.notes || null,
+      source: lead.source || 'CRM Lead',
+      status: dbStatus,
+      preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
+      notes: lead.notes || null,
+      raw_details: crmDetails,
+      created_at: lead.created_at,
+      updated_at: lead.updated_at || new Date().toISOString()
+    };
+
+    const res = await fetch(`${url}/rest/v1/leads_and_inquiries`, {
       method: 'POST',
       headers: {
         apikey: key,
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok || res.status === 201 || res.status === 200) {
+      const inserted = await res.json().catch(() => null);
+      return { success: true, table: 'leads_and_inquiries', data: inserted };
+    } else {
+      const errText = await res.text().catch(() => 'Unknown Supabase error');
+      console.warn('❌ [Supabase Sync] leads_and_inquiries write rejected:', res.status, errText);
+      return { success: false, table: 'leads_and_inquiries', error: `HTTP ${res.status}: ${errText}` };
+    }
+  } catch (err: any) {
+    console.error('❌ [Supabase Sync] Network exception:', err?.message || err);
+    return { success: false, table: 'leads_and_inquiries', error: err.message || 'Network error reaching Supabase' };
+  }
+}
+
+interface SupabaseDeleteResult {
+  success: boolean;
+  deleted_count: number;
+  method?: 'rpc' | 'rpc_archive' | 'hard_delete' | 'soft_delete_db';
+  error?: string;
+}
+
+// Secure server-side archiving in Supabase database
+async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult> {
+  const { url, key } = getSupabaseCredentials();
+
+  // 1. First, attempt via archive_crm_lead RPC (or fallback delete_crm_lead RPC)
+  try {
+    const rpcRes = await fetch(`${url}/rest/v1/rpc/archive_crm_lead`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_lead_id: id })
+    });
+    if (rpcRes.ok) {
+      const rpcData = await rpcRes.json().catch(() => null);
+      if (rpcData && (rpcData.success || rpcData.archived || rpcData.deleted_count === 1)) {
+        console.log(`✅ [Supabase Archive] Archived lead ${id} via RPC archive_crm_lead.`);
+        return { success: true, deleted_count: 1, method: 'rpc_archive' };
+      }
+    }
+  } catch (_) {
+    // Continue to PATCH archive fallback
+  }
+
+  // 2. Direct database-level soft-archive via PATCH on leads_and_inquiries
+  // (marking status = 'archived' and embedding is_deleted flag in raw_details)
+  try {
+    const patchRes = await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
       },
       body: JSON.stringify({
-        id: lead.id,
-        full_name: lead.customer_name,
-        phone: lead.phone,
-        email: lead.email || null,
-        city: lead.city || 'Bengaluru',
-        service_type: lead.interested_service || 'Turnkey Interior',
-        estimated_budget: lead.budget || null,
-        project_scope: lead.notes || null,
-        source: lead.source || 'CRM Lead',
-        status: dbStatus,
-        preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
-        created_at: lead.created_at
+        status: 'archived',
+        notes: `[ARCHIVED BY ADMIN]: Archived from Telecaller CRM at ${new Date().toISOString()}`,
+        raw_details: { is_deleted: true, deleted_at: new Date().toISOString() },
+        updated_at: new Date().toISOString()
       })
     });
 
-    if (res2.ok || res2.status === 201 || res2.status === 200) {
-      return { success: true, table: 'leads_and_inquiries' };
+    if (patchRes.ok) {
+      const patchedRows = await patchRes.json().catch(() => []);
+      if (Array.isArray(patchedRows) && patchedRows.length === 1) {
+        console.log(`✅ [Supabase Archive] Database-archived lead ${id} in leads_and_inquiries (1 row updated).`);
+        return { success: true, deleted_count: 1, method: 'soft_delete_db' };
+      }
     }
   } catch (err2: any) {
-    console.warn('Mirror to leads_and_inquiries note:', err2?.message || err2);
+    console.warn('Database archive fallback failed:', err2?.message || err2);
   }
 
-  return { success: false, table: 'none' };
+  return {
+    success: false,
+    deleted_count: 0,
+    error: 'Failed to archive record in Supabase database: 0 rows affected or permission denied.'
+  };
 }
 
-async function deleteLeadFromSupabase(id: string): Promise<boolean> {
-  const { url, key } = getSupabaseCredentials();
-  try {
-    // Delete from crm_leads
-    await fetch(`${url}/rest/v1/crm_leads?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { apikey: key, Authorization: `Bearer ${key}` }
-    });
-    // Also delete from leads_and_inquiries if exists
-    await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { apikey: key, Authorization: `Bearer ${key}` }
-    });
-    return true;
-  } catch {
-    return false;
-  }
+export interface SupabaseCallSyncResult {
+  success: boolean;
+  persisted_to_supabase: boolean;
+  migration_pending?: boolean;
+  status: 'synced_to_supabase' | 'table_pending_migration' | 'error' | 'network_error';
+  error?: string;
 }
 
-async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<boolean> {
+async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<SupabaseCallSyncResult> {
   const { url, key } = getSupabaseCredentials();
   try {
     const res = await fetch(`${url}/rest/v1/crm_call_logs`, {
@@ -267,7 +312,8 @@ async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<boolean> {
       headers: {
         apikey: key,
         Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
       },
       body: JSON.stringify({
         id: call.id,
@@ -282,9 +328,97 @@ async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<boolean> {
         created_at: call.created_at
       })
     });
-    return res.ok || res.status === 201;
+
+    if (res.ok || res.status === 201) {
+      console.log(`✅ [Supabase Calls] Successfully persisted call ${call.id} to public.crm_call_logs.`);
+      return { success: true, persisted_to_supabase: true, status: 'synced_to_supabase' };
+    }
+
+    const errText = await res.text().catch(() => '');
+    if (res.status === 404 || errText.includes('42P01') || errText.includes('PGRST205')) {
+      return {
+        success: false,
+        persisted_to_supabase: false,
+        migration_pending: true,
+        status: 'table_pending_migration',
+        error: "Table 'public.crm_call_logs' does not exist in Supabase yet. Call saved securely to server storage."
+      };
+    }
+
+    console.warn(`⚠️ [Supabase Calls] PostgREST insert note (${res.status}):`, errText);
+    return {
+      success: false,
+      persisted_to_supabase: false,
+      status: 'error',
+      error: errText
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      persisted_to_supabase: false,
+      status: 'network_error',
+      error: err?.message || String(err)
+    };
+  }
+}
+
+// Background synchronization of calls from Supabase when table exists
+let lastSupabaseCallSyncTimestamp = 0;
+async function syncCallsFromSupabase(): Promise<{ synced: number; tableAvailable: boolean }> {
+  // Throttle queries to once every 15 seconds
+  if (Date.now() - lastSupabaseCallSyncTimestamp < 15000) {
+    return { synced: 0, tableAvailable: false };
+  }
+  lastSupabaseCallSyncTimestamp = Date.now();
+
+  const { url, key } = getSupabaseCredentials();
+  try {
+    const res = await fetch(`${url}/rest/v1/crm_call_logs?select=*&order=call_date.desc&limit=500`, {
+      method: 'GET',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`
+      }
+    });
+
+    if (!res.ok) {
+      return { synced: 0, tableAvailable: false };
+    }
+
+    const rows = await res.json().catch(() => []);
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return { synced: 0, tableAvailable: true };
+    }
+
+    let newCount = 0;
+    const existingCallIds = new Set(dbCrmCalls.map(c => c.id));
+    for (const r of rows) {
+      if (r && r.id && !existingCallIds.has(r.id)) {
+        dbCrmCalls.push({
+          id: r.id,
+          lead_id: r.lead_id,
+          call_date: r.call_date || r.created_at,
+          outcome: r.outcome,
+          notes: r.notes || undefined,
+          followup_date: r.followup_date || undefined,
+          logged_by: r.logged_by || undefined,
+          logged_by_name: r.logged_by_name || undefined,
+          duration_seconds: r.duration_seconds || 0,
+          created_at: r.created_at || r.call_date
+        });
+        existingCallIds.add(r.id);
+        newCount++;
+      }
+    }
+
+    if (newCount > 0) {
+      saveCalls();
+      console.log(`✅ [CRM Call Sync] Synced ${newCount} call logs from Supabase.`);
+    }
+
+    return { synced: newCount, tableAvailable: true };
   } catch {
-    return false;
+    return { synced: 0, tableAvailable: false };
   }
 }
 
@@ -295,6 +429,8 @@ export let dbCrmUsers: Record<string, ServerCrmUser> = {};
 export let dbCrmLeads: Record<string, ServerCrmLead> = {};
 export let dbCrmCalls: ServerCrmCallLog[] = [];
 export let dbCrmAudit: any[] = [];
+export let dbCrmDeletedLeadIds = new Set<string>();
+export let dbCrmCallsArchived: any[] = [];
 
 // Load initial state from local JSON files
 try {
@@ -310,8 +446,23 @@ try {
 } catch (_) {}
 
 try {
+  if (fs.existsSync(CRM_LEADS_DELETED_FILE)) {
+    const rawDel = JSON.parse(fs.readFileSync(CRM_LEADS_DELETED_FILE, 'utf-8'));
+    if (Array.isArray(rawDel)) {
+      dbCrmDeletedLeadIds = new Set(rawDel);
+    }
+  }
+} catch (_) {}
+
+try {
   if (fs.existsSync(CRM_CALLS_FILE)) {
     dbCrmCalls = JSON.parse(fs.readFileSync(CRM_CALLS_FILE, 'utf-8'));
+  }
+} catch (_) {}
+
+try {
+  if (fs.existsSync(CRM_CALLS_ARCHIVED_FILE)) {
+    dbCrmCallsArchived = JSON.parse(fs.readFileSync(CRM_CALLS_ARCHIVED_FILE, 'utf-8'));
   }
 } catch (_) {}
 
@@ -321,7 +472,7 @@ try {
   }
 } catch (_) {}
 
-// Ensure Pooja is purged and telecaller1@gmail.com exists
+// Clean purge of Pooja and telecaller1 setup
 if (dbCrmUsers['telecaller1@royalepicinterior.com']) {
   delete dbCrmUsers['telecaller1@royalepicinterior.com'];
 }
@@ -392,9 +543,21 @@ export function saveLeads() {
   } catch (_) {}
 }
 
+export function saveDeletedLeadIds() {
+  try {
+    fs.writeFileSync(CRM_LEADS_DELETED_FILE, JSON.stringify(Array.from(dbCrmDeletedLeadIds), null, 2));
+  } catch (_) {}
+}
+
 export function saveCalls() {
   try {
     fs.writeFileSync(CRM_CALLS_FILE, JSON.stringify(dbCrmCalls, null, 2));
+  } catch (_) {}
+}
+
+export function saveArchivedCalls() {
+  try {
+    fs.writeFileSync(CRM_CALLS_ARCHIVED_FILE, JSON.stringify(dbCrmCallsArchived, null, 2));
   } catch (_) {}
 }
 
@@ -414,6 +577,9 @@ export function isDeveloperTestRecord(name?: string, phone?: string): boolean {
     'audit test customer',
     'audit test',
     'diagnostic test customer',
+    'temporary rls probe',
+    'lead-probe',
+    'probe',
     'tester1',
     'tester2',
     'tester2@gmail.com',
@@ -437,7 +603,7 @@ export function isDeveloperTestRecord(name?: string, phone?: string): boolean {
 
   // Filter out dummy/mock phones like 123478965, 741741741, 1111222233
   const cleanedPhone = (phone || '').replace(/\D/g, '');
-  if (cleanedPhone === '123478965' || cleanedPhone === '741741741' || cleanedPhone === '1111222233' || cleanedPhone === '852852852' || cleanedPhone === '1231231231') {
+  if (cleanedPhone === '123478965' || cleanedPhone === '741741741' || cleanedPhone === '1111222233' || cleanedPhone === '852852852' || cleanedPhone === '1231231231' || cleanedPhone === '9999900000') {
     return true;
   }
 
@@ -449,7 +615,7 @@ export function ingestPublicWebsiteLead(leadRecord: {
   id: string;
   full_name?: string;
   customer_name?: string;
-  phone: string;
+  phone?: string;
   email?: string | null;
   city?: string | null;
   service_type?: string | null;
@@ -460,37 +626,67 @@ export function ingestPublicWebsiteLead(leadRecord: {
   preferred_date?: string | null;
   drawing_name?: string | null;
   notes?: string | null;
+  raw_details?: Record<string, any> | null;
   created_at?: string;
-}): ServerCrmLead {
-  const normPhone = normalizePhone(leadRecord.phone);
-  const leadId = leadRecord.id || `LEAD-${Date.now().toString().slice(-6)}`;
+  updated_at?: string;
+}): ServerCrmLead | null {
+  if (!leadRecord || !leadRecord.id) return null;
+
+  // 1. Strict tombstone guard: Never restore a deliberately deleted lead
+  if (dbCrmDeletedLeadIds.has(leadRecord.id)) {
+    return null;
+  }
+
+  // 2. Strict archive guard: Never ingest archived or deleted rows
+  if (leadRecord.status === 'archived' || leadRecord.raw_details?.is_deleted === true) {
+    return null;
+  }
+
+  const rawPhone = leadRecord.phone || '';
+  const normPhone = normalizePhone(rawPhone);
+  const leadId = leadRecord.id;
   const custName = leadRecord.full_name || leadRecord.customer_name || 'Website Visitor';
   
+  if (isDeveloperTestRecord(custName, rawPhone)) {
+    return null;
+  }
+
+  const rd = leadRecord.raw_details || {};
+
   const crmLead: ServerCrmLead = {
     id: leadId,
-    customer_name: custName,
-    name: custName,
-    phone: leadRecord.phone,
-    normalized_phone: normPhone,
+    customer_name: rd.customer_name || custName,
+    name: rd.customer_name || custName,
+    phone: rd.phone || rawPhone,
+    normalized_phone: rd.normalized_phone || normPhone,
+    alternate_phone: rd.alternate_phone || undefined,
     email: leadRecord.email || undefined,
     source: leadRecord.source || 'Website Enquiry',
+    custom_source: rd.custom_source || undefined,
     interested_service: leadRecord.service_type || 'Residential Interior',
     projectType: leadRecord.service_type || 'Residential Interior',
+    custom_service: rd.custom_service || undefined,
     city: leadRecord.city || 'Bengaluru',
     location: leadRecord.city || 'Bengaluru',
+    project_address: rd.project_address || undefined,
     budget: leadRecord.estimated_budget || 'To be discussed',
-    temperature: 'Hot',
-    status: 'New Lead',
+    temperature: rd.temperature || 'Hot',
+    status: rd.crm_status || 'New Lead',
     notes: [
       leadRecord.project_scope || '',
       leadRecord.drawing_name ? `Uploaded Drawing: ${leadRecord.drawing_name}` : '',
       leadRecord.preferred_date ? `Preferred Consultation Date: ${leadRecord.preferred_date}` : '',
       leadRecord.notes || ''
     ].filter(Boolean).join(' | ') || undefined,
-    created_by: 'system_website_enquiry',
-    created_by_name: 'Website Public Enquiry',
+    assigned_to: rd.assigned_to || undefined,
+    assigned_to_name: rd.assigned_to_name || undefined,
+    next_followup_at: rd.next_followup_at || leadRecord.preferred_date || undefined,
+    next_followup_date: rd.next_followup_date || (leadRecord.preferred_date ? leadRecord.preferred_date.slice(0, 10) : undefined),
+    next_followup_time: rd.next_followup_time || '10:00',
+    created_by: rd.created_by || 'system_website_enquiry',
+    created_by_name: rd.created_by_name || 'Website Public Enquiry',
     created_at: leadRecord.created_at || new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: leadRecord.updated_at || new Date().toISOString()
   };
 
   dbCrmLeads[crmLead.id] = crmLead;
@@ -499,12 +695,20 @@ export function ingestPublicWebsiteLead(leadRecord: {
   return crmLead;
 }
 
+// Background throttle timestamp and sync lock
+let lastSupabaseSyncTimestamp = 0;
+let isSupabaseSyncInProgress = false;
+
 // Pull existing website public enquiries from Supabase leads_and_inquiries into Telecaller CRM
 export async function syncLeadsFromSupabase(): Promise<number> {
+  if (isSupabaseSyncInProgress) {
+    return 0; // Concurrency guard: avoid interleaving sync operations
+  }
+  isSupabaseSyncInProgress = true;
   const { url, key } = getSupabaseCredentials();
   let syncedCount = 0;
+
   try {
-    // Query leads_and_inquiries (where website submissions are stored in Supabase)
     const res = await fetch(`${url}/rest/v1/leads_and_inquiries?select=*&order=created_at.desc&limit=200`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` }
     });
@@ -512,31 +716,55 @@ export async function syncLeadsFromSupabase(): Promise<number> {
       const rows = await res.json();
       if (Array.isArray(rows) && rows.length > 0) {
         rows.forEach((r: any) => {
+          // 1. Strict tombstone check: If deleted by admin, never re-ingest
+          if (dbCrmDeletedLeadIds.has(r.id)) {
+            return;
+          }
+          // 2. Strict archive check
+          if (r.status === 'archived' || r.raw_details?.is_deleted === true) {
+            return;
+          }
           const custName = r.full_name || r.customer_name || '';
-          // Skip past developer test entries and fake prototype entries
+          // 3. Skip developer test / probe entries
           if (isDeveloperTestRecord(custName, r.phone)) {
             return;
           }
-          // Ingest if not already loaded into CRM
+          // 4. Ingest new leads
           if (!dbCrmLeads[r.id]) {
             ingestPublicWebsiteLead(r);
             syncedCount++;
+          } else {
+            // 5. Update local lead if Supabase has newer update timestamp
+            const local = dbCrmLeads[r.id];
+            const rUpdated = new Date(r.updated_at || r.created_at).getTime();
+            const lUpdated = new Date(local.updated_at || local.created_at).getTime();
+            if (rUpdated > lUpdated && r.raw_details) {
+              const rd = r.raw_details;
+              if (rd.temperature) local.temperature = rd.temperature;
+              if (rd.assigned_to) local.assigned_to = rd.assigned_to;
+              if (rd.assigned_to_name) local.assigned_to_name = rd.assigned_to_name;
+              if (rd.next_followup_at) local.next_followup_at = rd.next_followup_at;
+              if (rd.next_followup_date) local.next_followup_date = rd.next_followup_date;
+              if (rd.next_followup_time) local.next_followup_time = rd.next_followup_time;
+              if (rd.crm_status) local.status = rd.crm_status;
+              local.updated_at = r.updated_at;
+              syncedCount++;
+            }
           }
         });
         if (syncedCount > 0) {
           saveLeads();
-          console.log(`✅ [CRM Sync] Pulled ${syncedCount} website enquiries from Supabase into Telecaller CRM.`);
+          console.log(`✅ [CRM Sync] Synchronized ${syncedCount} website enquiries with Telecaller CRM.`);
         }
       }
     }
   } catch (err: any) {
     console.warn('Supabase leads_and_inquiries sync note:', err?.message || err);
+  } finally {
+    isSupabaseSyncInProgress = false;
   }
   return syncedCount;
 }
-
-// Background throttle timestamp for Supabase sync
-let lastSupabaseSyncTimestamp = 0;
 
 // Pull on startup
 (async function initSupabaseSync() {
@@ -675,11 +903,12 @@ crmRouter.get('/leads', (req: Request, res: Response) => {
     const page = Math.max(Number(req.query.page) || 1, 1);
     const pageSize = Math.max(Number(req.query.pageSize) || 15, 1);
 
-    let list = Object.values(dbCrmLeads);
+    let list = Object.values(dbCrmLeads).filter(l => !dbCrmDeletedLeadIds.has(l.id));
 
     // 1. Search (Name, Phone, Alternate Phone, Email, Service, Location, Notes)
     if (search) {
       list = list.filter(l => {
+        const cId = (l.id || '').toLowerCase();
         const cName = (l.customer_name || (l as any).name || '').toLowerCase();
         const cPhone = l.phone || '';
         const cAltPhone = l.alternate_phone || '';
@@ -691,6 +920,7 @@ crmRouter.get('/leads', (req: Request, res: Response) => {
         const cNotes = (l.notes || '').toLowerCase();
 
         return (
+          cId.includes(search) ||
           cName.includes(search) ||
           cPhone.includes(search) ||
           cAltPhone.includes(search) ||
@@ -948,14 +1178,19 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
       updated_at: now
     };
 
-    // 1. Save to in-memory dictionary & disk JSON
+    // 1. Await Supabase cloud persistence BEFORE saving to local state
+    const syncRes = await syncLeadToSupabase(newLead);
+    if (!syncRes.success) {
+      console.error('❌ [CRM Create] Aborting local save because Supabase write failed:', syncRes.error);
+      return res.status(500).json({
+        success: false,
+        error: `Database write failed: Could not persist lead to Supabase PostgreSQL (${syncRes.error})`
+      });
+    }
+
+    // 2. Only after confirmed cloud persistence, save to local memory & disk JSON
     dbCrmLeads[id] = newLead;
     saveLeads();
-
-    // 2. Persist to Supabase asynchronously
-    syncLeadToSupabase(newLead).catch((sbErr) => {
-      console.warn('Supabase sync background note:', sbErr?.message || sbErr);
-    });
 
     // 3. Record Audit Log
     dbCrmAudit.push({
@@ -973,7 +1208,7 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
       success: true,
       leadId: newLead.id,
       lead: formatLeadWithAliases(newLead),
-      message: 'Lead successfully captured in Royal Epic CRM system.'
+      message: 'Lead successfully captured and persisted in Supabase database.'
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error creating lead' });
@@ -995,7 +1230,7 @@ async function handleLeadUpdate(req: Request, res: Response) {
     const user = extractUserFromReq(req);
     const lead = dbCrmLeads[req.params.id];
     if (!lead) {
-      return res.status(404).json({ success: false, error: 'Lead not found.' });
+      return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
     }
 
     const body = req.body || {};
@@ -1046,55 +1281,118 @@ async function handleLeadUpdate(req: Request, res: Response) {
     lead.last_updated_by_name = user?.name;
     lead.updated_at = new Date().toISOString();
 
+    // 1. Await Supabase cloud update BEFORE updating local memory/cache
+    const syncRes = await syncLeadToSupabase(lead);
+    if (!syncRes.success) {
+      console.error('❌ [CRM Update] Aborting local update because Supabase write failed:', syncRes.error);
+      return res.status(500).json({
+        success: false,
+        error: `Database update failed: Could not persist changes to Supabase PostgreSQL (${syncRes.error})`
+      });
+    }
+
+    // 2. Only after confirmed cloud persistence, save to local memory & disk JSON
     dbCrmLeads[lead.id] = lead;
     saveLeads();
 
-    // Async sync to Supabase
-    syncLeadToSupabase(lead).catch(() => {});
+    // 3. Record Audit Log
+    dbCrmAudit.push({
+      id: `AUDIT-${Date.now()}`,
+      lead_id: lead.id,
+      action: 'UPDATE',
+      performed_by: user?.id || 'system',
+      performed_by_name: user?.name || 'CRM User',
+      details: { updated_fields: Object.keys(body) },
+      created_at: lead.updated_at
+    });
+    saveAudit();
 
-    res.json({ success: true, lead: formatLeadWithAliases(lead), message: 'Lead successfully updated.' });
+    res.json({ success: true, lead: formatLeadWithAliases(lead), message: 'Lead successfully updated in Supabase database and CRM.' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error updating lead' });
   }
 }
 
-// DELETE /api/crm/leads/:id (Strictly Admin-Only)
+// DELETE /api/crm/leads/:id (Archive Lead - Strictly Admin-Only)
 crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
     if (!user || user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        error: 'Forbidden: Only administrators are authorized to permanently delete CRM leads.'
+        error: 'Forbidden: Only administrators are authorized to archive CRM leads.'
       });
     }
 
-    const lead = dbCrmLeads[req.params.id];
+    const leadId = req.params.id;
+    const lead = dbCrmLeads[leadId];
     if (!lead) {
-      return res.status(404).json({ success: false, error: 'Lead not found.' });
+      return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
     }
 
-    delete dbCrmLeads[req.params.id];
+    // 1. Await database archiving in Supabase first
+    const dbResult = await deleteLeadFromSupabase(leadId);
+    if (!dbResult.success || dbResult.deleted_count === 0) {
+      console.error(`❌ [CRM Archive] Supabase archiving failed for lead ${leadId}:`, dbResult.error);
+      return res.status(500).json({
+        success: false,
+        error: dbResult.error || 'Failed to archive lead in Supabase database (0 rows updated).'
+      });
+    }
+
+    // 2. Only after confirmed database archive, add to persistent tombstone set
+    dbCrmDeletedLeadIds.add(leadId);
+    saveDeletedLeadIds();
+
+    // 3. Remove lead from active in-memory store and JSON file
+    delete dbCrmLeads[leadId];
     saveLeads();
 
-    // Async delete from Supabase
-    deleteLeadFromSupabase(req.params.id).catch(() => {});
+    // 4. Call History Retention Policy:
+    // Historical calls must be preserved even when a lead is archived.
+    // Archive an immutable copy in data/crm_calls_archived.json,
+    // and retain existing calls in dbCrmCalls so all reporting and telecaller histories remain accurate.
+    const associatedCalls = dbCrmCalls.filter(c => c.lead_id === leadId);
+    if (associatedCalls.length > 0) {
+      const existingArchivedIds = new Set(dbCrmCallsArchived.map(c => c.id));
+      for (const call of associatedCalls) {
+        if (!existingArchivedIds.has(call.id)) {
+          dbCrmCallsArchived.push({
+            ...call,
+            archived_at: new Date().toISOString(),
+            archive_reason: 'lead_archived',
+            deleted_by: user.id
+          });
+          existingArchivedIds.add(call.id);
+        }
+      }
+      saveArchivedCalls();
+    }
 
-    // Audit log
+    // 5. Audit log
     dbCrmAudit.push({
       id: `AUDIT-${Date.now()}`,
-      lead_id: req.params.id,
-      action: 'DELETE',
+      lead_id: leadId,
+      action: 'ARCHIVE',
       performed_by: user.id,
       performed_by_name: user.name,
-      details: { deleted_name: lead.customer_name, phone: lead.phone },
+      details: {
+        archived_name: lead.customer_name,
+        phone: lead.phone,
+        archive_method: dbResult.method
+      },
       created_at: new Date().toISOString()
     });
     saveAudit();
 
-    res.json({ success: true, message: 'Lead deleted successfully.' });
+    res.json({
+      success: true,
+      archived: true,
+      deleted_count: 1,
+      message: 'Lead archived successfully.'
+    });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error deleting lead' });
+    res.status(500).json({ success: false, error: err.message || 'Error archiving lead' });
   }
 });
 
@@ -1103,17 +1401,34 @@ crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
 // -----------------------------------------------------------------------------
 
 // GET /api/crm/calls (All Calls)
-crmRouter.get('/calls', (_req: Request, res: Response) => {
+crmRouter.get('/calls', async (_req: Request, res: Response) => {
+  // Sync fresh calls from Supabase if table is available
+  await syncCallsFromSupabase().catch(() => {});
   const calls = [...dbCrmCalls].sort((a, b) => new Date(b.call_date).getTime() - new Date(a.call_date).getTime());
   res.json({ success: true, calls, total: calls.length });
 });
 
 // GET /api/crm/leads/:id/calls (Calls for specific lead)
-crmRouter.get('/leads/:id/calls', (req: Request, res: Response) => {
-  const calls = dbCrmCalls
-    .filter(c => c.lead_id === req.params.id)
-    .sort((a, b) => new Date(b.call_date).getTime() - new Date(a.call_date).getTime());
-  res.json({ success: true, calls });
+crmRouter.get('/leads/:id/calls', async (req: Request, res: Response) => {
+  const leadId = req.params.id;
+  await syncCallsFromSupabase().catch(() => {});
+
+  // Search active calls first, then archived calls if needed so history is never lost
+  const activeCalls = dbCrmCalls.filter(c => c.lead_id === leadId);
+  const archivedCalls = dbCrmCallsArchived.filter(c => c.lead_id === leadId);
+
+  // Merge and deduplicate by call ID
+  const seenIds = new Set<string>();
+  const allLeadCalls: any[] = [];
+  for (const c of [...activeCalls, ...archivedCalls]) {
+    if (!seenIds.has(c.id)) {
+      seenIds.add(c.id);
+      allLeadCalls.push(c);
+    }
+  }
+
+  allLeadCalls.sort((a, b) => new Date(b.call_date).getTime() - new Date(a.call_date).getTime());
+  res.json({ success: true, calls: allLeadCalls });
 });
 
 // POST /api/crm/calls (Log Call & Update Follow-up)
@@ -1144,11 +1459,14 @@ crmRouter.post('/calls', async (req: Request, res: Response) => {
       created_at: now
     };
 
-    dbCrmCalls.push(callLog);
-    saveCalls();
+    // Deduplicate in memory / local store
+    if (!dbCrmCalls.some(c => c.id === callLog.id)) {
+      dbCrmCalls.push(callLog);
+      saveCalls();
+    }
 
-    // Sync call log to Supabase
-    syncCallLogToSupabase(callLog).catch(() => {});
+    // Await validated sync to Supabase (does NOT send emails)
+    const dbCallResult = await syncCallLogToSupabase(callLog);
 
     // Automatically update lead's metadata
     lead.last_contact_at = now;
@@ -1165,7 +1483,19 @@ crmRouter.post('/calls', async (req: Request, res: Response) => {
     // Sync updated lead to Supabase
     syncLeadToSupabase(lead).catch(() => {});
 
-    res.status(201).json({ success: true, callLog, lead: formatLeadWithAliases(lead) });
+    res.status(201).json({
+      success: true,
+      callLog,
+      lead: formatLeadWithAliases(lead),
+      storage: {
+        local_storage: true,
+        supabase_cloud: dbCallResult.persisted_to_supabase,
+        migration_pending: dbCallResult.migration_pending || false,
+        status_message: dbCallResult.persisted_to_supabase
+          ? 'Call history persisted to Supabase and CRM storage.'
+          : 'Call history saved securely to CRM server storage. Supabase crm_call_logs table pending migration.'
+      }
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error recording call' });
   }

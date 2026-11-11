@@ -1,1 +1,102 @@
-[]
+[
+  {
+    "id": "AUDIT-1794372895464",
+    "lead_id": "CRM-DISPOSABLE-TEST-01",
+    "action": "CREATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "customer_name": "[DISPOSABLE-TEST] Rahul Verma",
+      "phone": "+919876543201",
+      "source": "Website Enquiry",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-11T04:54:55.217Z"
+  },
+  {
+    "id": "AUDIT-1794372955907",
+    "lead_id": "CRM-DISPOSABLE-TEST-01",
+    "action": "UPDATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "updated_fields": [
+        "status",
+        "temperature",
+        "assigned_to",
+        "assigned_to_name",
+        "next_followup_date",
+        "next_followup_time",
+        "notes"
+      ]
+    },
+    "created_at": "2026-11-11T04:55:55.578Z"
+  },
+  {
+    "id": "AUDIT-1794372984307",
+    "lead_id": "CRM-DISPOSABLE-TEST-01",
+    "action": "DELETE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "deleted_name": "[DISPOSABLE-TEST] Rahul Verma",
+      "phone": "+919876543201",
+      "deletion_method": "soft_delete_db"
+    },
+    "created_at": "2026-11-11T04:56:24.307Z"
+  },
+  {
+    "id": "AUDIT-1794373103613",
+    "lead_id": "LEAD-090665-876",
+    "action": "DELETE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "deleted_name": "[PUBLIC-FORM-TEST] Sunita Rao",
+      "phone": "+91 98450 77881",
+      "deletion_method": "soft_delete_db"
+    },
+    "created_at": "2026-11-11T04:58:23.613Z"
+  },
+  {
+    "id": "AUDIT-1794375201113",
+    "lead_id": "CRM-ARCHIVE-TEST-01",
+    "action": "CREATE",
+    "performed_by": "system",
+    "performed_by_name": "Public Web / CRM",
+    "details": {
+      "customer_name": "Test Probe Archive",
+      "phone": "+919988776655",
+      "source": "Direct Phone",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-11T05:33:20.792Z"
+  },
+  {
+    "id": "AUDIT-1794375213730",
+    "lead_id": "CRM-ARCHIVE-TEST-02",
+    "action": "CREATE",
+    "performed_by": "system",
+    "performed_by_name": "Public Web / CRM",
+    "details": {
+      "customer_name": "Test Probe Archive 2",
+      "phone": "+919988776644",
+      "source": "Direct Phone",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-11T05:33:33.476Z"
+  },
+  {
+    "id": "AUDIT-1794375228740",
+    "lead_id": "CRM-ARCHIVE-TEST-02",
+    "action": "ARCHIVE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "archived_name": "Test Probe Archive 2",
+      "phone": "+919988776644",
+      "archive_method": "soft_delete_db"
+    },
+    "created_at": "2026-11-11T05:33:48.740Z"
+  }
+]

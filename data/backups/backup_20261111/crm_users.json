@@ -1,0 +1,35 @@
+{
+  "admin@royalepicinterior.com": {
+    "id": "crm_admin_primary",
+    "email": "admin@royalepicinterior.com",
+    "name": "Royal Epic Admin",
+    "phone": "+91 99166 33338",
+    "password": "Admin@RoyalEpic2026",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2026-11-06T09:39:58.739Z",
+    "updatedAt": "2026-11-06T09:39:58.740Z"
+  },
+  "royalepicfurnitur1@gmail.com": {
+    "id": "crm_admin_executive",
+    "email": "royalepicfurnitur1@gmail.com",
+    "name": "Royal Epic Executive Admin",
+    "phone": "+91 99166 33338",
+    "password": "Admin@RoyalEpic2026",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2026-11-06T09:39:58.739Z",
+    "updatedAt": "2026-11-06T09:39:58.740Z"
+  },
+  "telecaller1@gmail.com": {
+    "id": "crm_telecaller_1",
+    "email": "telecaller1@gmail.com",
+    "name": "Telecaller 1",
+    "phone": "+91 98450 11223",
+    "password": "telecaller1@123",
+    "role": "telecaller",
+    "status": "active",
+    "createdAt": "2026-11-06T09:48:00.000Z",
+    "updatedAt": "2026-11-06T09:48:00.000Z"
+  }
+}

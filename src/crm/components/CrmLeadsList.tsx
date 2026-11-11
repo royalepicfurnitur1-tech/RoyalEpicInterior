@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { 
   fetchCrmLeads, 
+  archiveCrmLead, 
   deleteCrmLead, 
   getCrmAuthHeaders 
 } from '../crmService';
@@ -31,6 +32,7 @@ import {
   RefreshCw, 
   PhoneCall, 
   Trash2, 
+  Archive, 
   Eye, 
   RotateCcw, 
   Copy, 
@@ -146,17 +148,17 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     setTimeout(() => setCopiedPhone(null), 2000);
   };
 
-  const handleDeleteLead = async (id: string, name: string, e: React.MouseEvent) => {
+  const handleArchiveLead = async (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isAdmin) return;
-    if (!window.confirm(`Are you sure you want to permanently delete lead for "${name}"?`)) {
+    if (!window.confirm(`Are you sure you want to archive lead for "${name}"?`)) {
       return;
     }
-    const res = await deleteCrmLead(id);
+    const res = await archiveCrmLead(id);
     if (res.success) {
       loadLeads();
     } else {
-      alert(res.error || 'Failed to delete lead');
+      alert(res.error || 'Failed to archive lead');
     }
   };
 
@@ -633,14 +635,14 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Delete Lead (Admin Only) */}
+                          {/* Archive Lead (Admin Only) */}
                           {isAdmin && (
                             <button
-                              onClick={(e) => handleDeleteLead(lead.id, lead.customer_name, e)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                              title="Delete Lead"
+                              onClick={(e) => handleArchiveLead(lead.id, lead.customer_name, e)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition cursor-pointer"
+                              title="Archive Lead"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Archive className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </div>
