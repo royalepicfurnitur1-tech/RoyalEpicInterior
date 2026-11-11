@@ -207,14 +207,14 @@ async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boole
         apikey: key,
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=representation'
+        'Prefer': 'return=minimal'
       },
       body: JSON.stringify(payload)
     });
 
     if (res.ok || res.status === 201 || res.status === 200) {
-      const inserted = await res.json().catch(() => null);
-      return { success: true, table: 'leads_and_inquiries', data: inserted };
+      const inserted = await res.json().catch(() => payload);
+      return { success: true, table: 'leads_and_inquiries', data: inserted || payload };
     } else {
       const errText = await res.text().catch(() => 'Unknown Supabase error');
       console.warn('❌ [Supabase Sync] leads_and_inquiries write rejected:', res.status, errText);

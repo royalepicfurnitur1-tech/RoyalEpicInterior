@@ -98,5 +98,19 @@
       "archive_method": "soft_delete_db"
     },
     "created_at": "2026-11-11T05:33:48.740Z"
+  },
+  {
+    "id": "AUDIT-1794398439250",
+    "lead_id": "CRM-2611-38554",
+    "action": "CREATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "customer_name": "Live Test Lead CRM",
+      "phone": "+919123456789",
+      "source": "Direct Phone",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-11T12:00:39.142Z"
   }
 ]

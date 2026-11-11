@@ -1285,13 +1285,13 @@ async function startServer() {
           apikey: supabaseKey,
           Authorization: `Bearer ${supabaseKey}`,
           "Content-Type": "application/json",
-          "Prefer": "return=representation"
+          "Prefer": "return=minimal"
         },
         body: JSON.stringify(leadRecord)
       });
 
       if (response.ok) {
-        const insertedData = await response.json();
+        const insertedData = await response.json().catch(() => [leadRecord]);
         console.log("✅ Successfully inserted lead into Supabase:", leadRecord.id);
 
         // Instantly ingest into Telecaller CRM
