@@ -31,5 +31,49 @@
     "status": "active",
     "createdAt": "2026-11-06T09:48:00.000Z",
     "updatedAt": "2026-11-06T09:48:00.000Z"
+  },
+  "adarshakk1234@gmail.com": {
+    "id": "crm_telecaller_adarsha",
+    "email": "adarshakk1234@gmail.com",
+    "name": "Adarsha",
+    "phone": "",
+    "password": "Adarsha@123",
+    "role": "telecaller",
+    "status": "active",
+    "createdAt": "2026-11-12T10:49:14.000Z",
+    "updatedAt": "2026-11-12T10:49:14.000Z"
+  },
+  "ummehani@gmail.com": {
+    "id": "crm_telecaller_ummehani",
+    "email": "ummehani@gmail.com",
+    "name": "Ummehani",
+    "phone": "",
+    "password": "Ummehani@123",
+    "role": "telecaller",
+    "status": "active",
+    "createdAt": "2026-11-12T10:49:14.000Z",
+    "updatedAt": "2026-11-12T10:49:14.000Z"
+  },
+  "rajesh@gmail.com": {
+    "id": "crm_telecaller_rajesh",
+    "email": "rajesh@gmail.com",
+    "name": "Rajesh",
+    "phone": "",
+    "password": "Rajesh@123",
+    "role": "telecaller",
+    "status": "active",
+    "createdAt": "2026-11-12T10:49:14.000Z",
+    "updatedAt": "2026-11-12T10:49:14.000Z"
+  },
+  "firdose@gmail.com": {
+    "id": "crm_telecaller_firdose",
+    "email": "firdose@gmail.com",
+    "name": "Firdose",
+    "phone": "",
+    "password": "Firdose@123",
+    "role": "telecaller",
+    "status": "active",
+    "createdAt": "2026-11-12T10:49:14.000Z",
+    "updatedAt": "2026-11-12T10:49:14.000Z"
   }
 }
