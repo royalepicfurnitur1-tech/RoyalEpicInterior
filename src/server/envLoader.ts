@@ -11,7 +11,8 @@
  * 1. Reads SUPABASE_SERVICE_ROLE_KEY directly from the server-side environment.
  * 2. Never uses or checks VITE_SUPABASE_SERVICE_ROLE_KEY.
  * 3. Never prints the key, partial key, or secret contents in logs or responses.
- * 4. Resolves across all possible Hostinger directory layouts (cwd, __dirname, ..).
+ * 4. Resolves across all possible Hostinger directory layouts (hbuilds, cwd,
+ *    domain root, public_html, sibling subdomains, user home).
  * 5. Sanitizes quotes, trailing \r, and whitespace from pasted keys.
  * ==============================================================================
  */
@@ -37,36 +38,81 @@ export function cleanEnvVar(val: string | undefined): string | undefined {
 }
 
 /**
- * Finds all candidate .env file locations across the deployment directory hierarchy.
+ * Finds all candidate .env file locations across the deployment directory hierarchy,
+ * including Hostinger hbuilds version trees, domain roots, and public_html.
  */
-export function getCandidateEnvPaths(): string[] {
-  const candidates: string[] = [
-    path.resolve(process.cwd(), '.env'),
-    path.resolve(process.cwd(), '.env.local'),
-    path.resolve(process.cwd(), '.env.production'),
-    path.resolve(process.cwd(), '..', '.env')
-  ];
+export function getCandidateEnvPaths(): { searched: string[]; found: string[] } {
+  const searched: string[] = [];
+  const found: string[] = [];
 
-  if (typeof __dirname !== 'undefined') {
-    candidates.push(
-      path.resolve(__dirname, '.env'),
-      path.resolve(__dirname, '..', '.env'),
-      path.resolve(__dirname, '..', '.env.production'),
-      path.resolve(__dirname, '..', '.env.local'),
-      path.resolve(__dirname, '..', '..', '.env')
-    );
+  const addPath = (filePath: string) => {
+    if (!filePath || searched.includes(filePath)) return;
+    searched.push(filePath);
+    try {
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        found.push(filePath);
+      }
+    } catch (_) {}
+  };
+
+  const fileNames = ['.env', '.env.production', '.env.local'];
+
+  // 1. Walk up from process.cwd() (handles hbuilds deep nesting up to 8 levels)
+  let curr = path.resolve(process.cwd());
+  for (let i = 0; i < 8; i++) {
+    for (const name of fileNames) {
+      addPath(path.join(curr, name));
+      addPath(path.join(curr, 'public_html', name));
+    }
+    const parent = path.dirname(curr);
+    if (!parent || parent === curr) break;
+    curr = parent;
   }
 
-  // Deduplicate and filter to existing files
-  const existing = Array.from(new Set(candidates)).filter(p => {
-    try {
-      return fs.existsSync(p) && fs.statSync(p).isFile();
-    } catch {
-      return false;
+  // 2. Walk up from __dirname if available
+  if (typeof __dirname !== 'undefined') {
+    let d = path.resolve(__dirname);
+    for (let i = 0; i < 8; i++) {
+      for (const name of fileNames) {
+        addPath(path.join(d, name));
+        addPath(path.join(d, 'public_html', name));
+      }
+      const parent = path.dirname(d);
+      if (!parent || parent === d) break;
+      d = parent;
     }
-  });
+  }
 
-  return existing;
+  // 3. Inspect Hostinger domains folder specifically if detected in path
+  const fullCwd = path.resolve(process.cwd());
+  const domainsIdx = fullCwd.indexOf('/domains/');
+  if (domainsIdx !== -1) {
+    const userRoot = fullCwd.substring(0, domainsIdx);
+    const domainsDir = path.join(userRoot, 'domains');
+
+    // Add user home .env (/home/u943712954/.env)
+    for (const name of fileNames) {
+      addPath(path.join(userRoot, name));
+    }
+
+    // Add royalepicinterior.com locations
+    const mainDomain = path.join(domainsDir, 'royalepicinterior.com');
+    for (const name of fileNames) {
+      addPath(path.join(mainDomain, name));
+      addPath(path.join(mainDomain, 'public_html', name));
+      addPath(path.join(mainDomain, 'hbuilds', name));
+    }
+
+    // Add tele.royalepicinterior.com locations
+    const teleDomain = path.join(domainsDir, 'tele.royalepicinterior.com');
+    for (const name of fileNames) {
+      addPath(path.join(teleDomain, name));
+      addPath(path.join(teleDomain, 'public_html', name));
+      addPath(path.join(teleDomain, 'hbuilds', name));
+    }
+  }
+
+  return { searched, found };
 }
 
 /**
@@ -74,9 +120,9 @@ export function getCandidateEnvPaths(): string[] {
  * and normalizes the server-side runtime variables.
  */
 export function ensureServerEnvLoaded(): void {
-  const existingFiles = getCandidateEnvPaths();
+  const { found } = getCandidateEnvPaths();
 
-  for (const envPath of existingFiles) {
+  for (const envPath of found) {
     try {
       dotenv.config({ path: envPath });
     } catch (_) {}
@@ -87,7 +133,7 @@ export function ensureServerEnvLoaded(): void {
     dotenv.config();
   } catch (_) {}
 
-  // Normalize SUPABASE_SERVICE_ROLE_KEY
+  // Normalize SUPABASE_SERVICE_ROLE_KEY from process.env or aliases
   const rawServiceKey = 
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SERVICE_KEY ||
@@ -125,7 +171,15 @@ export function getSafeEnvDiagnostics() {
   const isPresent = Boolean(rawKey && rawKey.trim().length > 0);
   const keyLength = rawKey ? rawKey.trim().length : 0;
   const isValidLength = keyLength > 20 && !rawKey?.includes('YOUR_');
-  const envFilesFound = getCandidateEnvPaths();
+  const { searched, found } = getCandidateEnvPaths();
+
+  // Extract Hostinger active domain from cwd
+  const fullCwd = path.resolve(process.cwd());
+  let detectedDomain = 'unknown';
+  const domainMatch = fullCwd.match(/\/domains\/([^\/]+)/);
+  if (domainMatch && domainMatch[1]) {
+    detectedDomain = domainMatch[1];
+  }
 
   return {
     serviceRoleKeyExists: isPresent,
@@ -133,9 +187,12 @@ export function getSafeEnvDiagnostics() {
     serviceRoleKeyValidFormat: isValidLength,
     serviceRoleKeyLength: isPresent ? keyLength : 0,
     processId: process.pid,
-    cwd: process.cwd(),
+    cwd: fullCwd,
     nodeEnv: process.env.NODE_ENV || 'development',
     supabaseUrlConfigured: Boolean(process.env.SUPABASE_URL),
-    envFilesLoaded: envFilesFound.map(f => path.basename(f))
+    detectedHostingerDomain: detectedDomain,
+    envFilesLoaded: found,
+    candidatePathsSearchedCount: searched.length,
+    sampleSearchedPaths: searched.slice(0, 8)
   };
 }

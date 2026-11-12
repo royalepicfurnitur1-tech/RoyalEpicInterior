@@ -1170,7 +1170,7 @@ crmRouter.post('/auth/logout', (req: Request, res: Response) => {
 // SAFE ENVIRONMENT DIAGNOSTIC ENDPOINT
 // Never exposes secret key contents or partial values
 // -----------------------------------------------------------------------------
-crmRouter.get('/debug/env-status', (_req: Request, res: Response) => {
+crmRouter.get('/debug/env-status', (req: Request, res: Response) => {
   const diag = getSafeEnvDiagnostics();
   let serverClientReady = false;
   try {
@@ -1179,6 +1179,8 @@ crmRouter.get('/debug/env-status', (_req: Request, res: Response) => {
       serverClientReady = true;
     }
   } catch (_) {}
+
+  const hostHeader = req.get('host') || req.hostname || 'unknown';
 
   res.json({
     success: true,
@@ -1191,8 +1193,15 @@ crmRouter.get('/debug/env-status', (_req: Request, res: Response) => {
       processId: diag.processId,
       cwd: diag.cwd,
       nodeEnv: diag.nodeEnv,
+      requestHost: hostHeader,
+      detectedHostingerApplicationDomain: diag.detectedHostingerDomain,
       supabaseUrl: process.env.SUPABASE_URL || 'https://lwrfoztfsyffgtybesia.supabase.co',
-      envFilesLoaded: diag.envFilesLoaded
+      envFilesLoaded: diag.envFilesLoaded,
+      candidatePathsSearchedCount: diag.candidatePathsSearchedCount,
+      sampleSearchedPaths: diag.sampleSearchedPaths,
+      hpanelConfigurationGuidance: diag.serviceRoleKeyExists
+        ? 'Environment variable SUPABASE_SERVICE_ROLE_KEY is correctly detected.'
+        : `The running Node.js process is hosted under '${diag.detectedHostingerDomain}'. In Hostinger hPanel, navigate to Websites > ${diag.detectedHostingerDomain} > Node.js > Environment Variables, and add SUPABASE_SERVICE_ROLE_KEY, then restart the application.`
     }
   });
 });
