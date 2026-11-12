@@ -25,11 +25,12 @@ if (!fs.existsSync(DB_DIR)) {
 
 export interface ServerCrmUser {
   id: string;
-  email: string;
+  email?: string;
   name: string;
   phone?: string;
+  pin?: string;
   password?: string;
-  role: 'admin' | 'telecaller';
+  role?: string;
   status: 'active' | 'suspended';
   createdAt: string;
   updatedAt: string;
@@ -666,57 +667,70 @@ if (dbCrmUsers['telecaller1@royalepicinterior.com']) {
   delete dbCrmUsers['telecaller1@royalepicinterior.com'];
 }
 
-// Seed default users
-const adminUser: ServerCrmUser = {
-  id: 'crm_admin_primary',
-  email: 'admin@royalepicinterior.com',
-  name: 'Royal Epic Admin',
-  phone: '+91 99166 33338',
-  password: 'Admin@RoyalEpic2026',
-  role: 'admin',
-  status: 'active',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-};
+// Seed default staff users with individual PINs
+const defaultStaffList: ServerCrmUser[] = [
+  {
+    id: 'crm_staff_admin',
+    email: 'admin@royalepicinterior.com',
+    name: 'Royal Epic Admin',
+    phone: '+91 99166 33338',
+    pin: '2026',
+    password: 'Admin@RoyalEpic2026',
+    role: 'staff',
+    status: 'active',
+    createdAt: '2026-11-06T09:39:58.739Z',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'crm_staff_executive',
+    email: 'royalepicfurnitur1@gmail.com',
+    name: 'Royal Epic Executive',
+    phone: '+91 99166 33338',
+    pin: '2026',
+    password: 'Admin@RoyalEpic2026',
+    role: 'staff',
+    status: 'active',
+    createdAt: '2026-11-06T09:39:58.739Z',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'crm_staff_telecaller1',
+    email: 'telecaller1@gmail.com',
+    name: 'Telecaller 1',
+    phone: '+91 98450 11223',
+    pin: '1234',
+    password: 'telecaller1@123',
+    role: 'staff',
+    status: 'active',
+    createdAt: '2026-11-06T09:48:00.000Z',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'crm_staff_telecaller2',
+    email: 'telecaller2@royalepicinterior.com',
+    name: 'Telecaller 2',
+    phone: '+91 98450 44556',
+    pin: '5678',
+    password: 'telecaller2@5678',
+    role: 'staff',
+    status: 'active',
+    createdAt: '2026-11-12T09:00:00.000Z',
+    updatedAt: new Date().toISOString()
+  }
+];
 
-const execAdminUser: ServerCrmUser = {
-  id: 'crm_admin_executive',
-  email: 'royalepicfurnitur1@gmail.com',
-  name: 'Royal Epic Executive Admin',
-  phone: '+91 99166 33338',
-  password: 'Admin@RoyalEpic2026',
-  role: 'admin',
-  status: 'active',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-};
-
-const telecaller1User: ServerCrmUser = {
-  id: 'crm_telecaller_1',
-  email: 'telecaller1@gmail.com',
-  name: 'Telecaller 1',
-  phone: '+91 98450 11223',
-  password: 'telecaller1@123',
-  role: 'telecaller',
-  status: 'active',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-};
-
-if (!dbCrmUsers['admin@royalepicinterior.com']) {
-  dbCrmUsers['admin@royalepicinterior.com'] = adminUser;
-}
-if (!dbCrmUsers['royalepicfurnitur1@gmail.com']) {
-  dbCrmUsers['royalepicfurnitur1@gmail.com'] = execAdminUser;
-}
-if (!dbCrmUsers['telecaller1@gmail.com']) {
-  dbCrmUsers['telecaller1@gmail.com'] = telecaller1User;
-} else {
-  dbCrmUsers['telecaller1@gmail.com'].password = 'telecaller1@123';
-  dbCrmUsers['telecaller1@gmail.com'].role = 'telecaller';
-  dbCrmUsers['telecaller1@gmail.com'].status = 'active';
-  dbCrmUsers['telecaller1@gmail.com'].name = 'Telecaller 1';
-}
+defaultStaffList.forEach(st => {
+  const key = st.email || st.name.toLowerCase().replace(/\s+/g, '');
+  if (!dbCrmUsers[key]) {
+    dbCrmUsers[key] = st;
+  } else {
+    // Ensure PIN is always populated
+    if (!dbCrmUsers[key].pin) {
+      dbCrmUsers[key].pin = st.pin;
+    }
+    dbCrmUsers[key].status = 'active';
+  }
+});
 
 saveUsers();
 
@@ -1022,9 +1036,9 @@ export function extractUserFromReq(req: Request): ServerCrmUser | null {
   const userIdHeader = req.headers['x-crm-user-id'] as string;
   const adminSecret = req.headers['x-admin-secret'] as string;
 
-  // Direct admin bypass for Admin Dashboard operations
+  // Direct bypass for system/admin operations
   if (adminSecret === 'RoyalEpicAdmin2026' || req.headers['x-admin-access'] === 'true') {
-    return dbCrmUsers['admin@royalepicinterior.com'] || dbCrmUsers['royalepicfurnitur1@gmail.com'] || Object.values(dbCrmUsers).find(u => u.role === 'admin') || null;
+    return dbCrmUsers['admin@royalepicinterior.com'] || Object.values(dbCrmUsers)[0] || null;
   }
 
   // Check token invalidation
@@ -1033,12 +1047,16 @@ export function extractUserFromReq(req: Request): ServerCrmUser | null {
     if (invalidatedCrmTokens.has(token)) {
       return null;
     }
-    const found = Object.values(dbCrmUsers).find(u => token.includes(u.id) || token.includes(u.email));
+    const found = Object.values(dbCrmUsers).find(u => 
+      token.includes(u.id) || 
+      (u.email && token.includes(u.email)) ||
+      token.includes(u.name.toLowerCase().replace(/\s+/g, ''))
+    );
     if (found && found.status === 'active') return found;
   }
 
   if (userIdHeader) {
-    const found = Object.values(dbCrmUsers).find(u => u.id === userIdHeader);
+    const found = Object.values(dbCrmUsers).find(u => u.id === userIdHeader || u.name === userIdHeader);
     if (found && found.status === 'active') return found;
   }
 
@@ -1046,33 +1064,66 @@ export function extractUserFromReq(req: Request): ServerCrmUser | null {
 }
 
 // -----------------------------------------------------------------------------
-// AUTH ENDPOINTS
+// AUTH ENDPOINTS (Staff Login & Session)
 // -----------------------------------------------------------------------------
+crmRouter.get('/auth/staff-list', (req: Request, res: Response) => {
+  const staff = Object.values(dbCrmUsers)
+    .filter(u => u.status === 'active')
+    .map(u => ({
+      id: u.id,
+      name: u.name,
+      phone: u.phone || ''
+    }));
+  res.json({ success: true, staff });
+});
+
 crmRouter.post('/auth/login', (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email and password are required.' });
+    const { name, pin, email, password } = req.body;
+    const identifier = (name || email || '').trim();
+    const secret = (pin || password || '').trim();
+
+    if (!identifier || !secret) {
+      return res.status(400).json({ success: false, error: 'Staff name and PIN are required.' });
     }
 
-    const normEmail = email.trim().toLowerCase();
-    const user = dbCrmUsers[normEmail];
+    const normId = identifier.toLowerCase();
+    // Search by staff name (case-insensitive exact or trimmed), or email, or id
+    const user = Object.values(dbCrmUsers).find(u => 
+      u.name.trim().toLowerCase() === normId ||
+      (u.email && u.email.trim().toLowerCase() === normId) ||
+      u.id === identifier
+    );
 
     if (!user) {
-      return res.status(401).json({ success: false, error: 'No approved account found for this email address.' });
+      return res.status(401).json({ 
+        success: false, 
+        error: `No authorized staff account found matching "${identifier}". Please check your name or contact management.` 
+      });
     }
 
     if (user.status !== 'active') {
-      return res.status(403).json({ success: false, error: 'Your account has been suspended by an administrator.' });
+      return res.status(403).json({ 
+        success: false, 
+        error: `Staff account for "${user.name}" is currently suspended. Please contact management.` 
+      });
     }
 
-    if (user.password && user.password !== password) {
-      return res.status(401).json({ success: false, error: 'Invalid password. Please verify your credentials.' });
+    // Verify PIN or password
+    const validPin = Boolean(user.pin && user.pin === secret);
+    const validPass = Boolean(user.password && user.password === secret);
+
+    if (!validPin && !validPass) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid PIN. Please enter your correct individual PIN and try again.' 
+      });
     }
 
-    const token = `crm_${user.role}_${user.id}_${Date.now()}`;
-    const safeUser = { ...user };
+    const token = `crm_staff_${user.id}_${Date.now()}`;
+    const safeUser: any = { ...user };
     delete safeUser.password;
+    delete safeUser.pin;
 
     res.json({
       success: true,
@@ -1089,8 +1140,9 @@ crmRouter.get('/auth/session', (req: Request, res: Response) => {
   if (!user) {
     return res.status(401).json({ success: false, error: 'Unauthorized or expired session.' });
   }
-  const safeUser = { ...user };
+  const safeUser: any = { ...user };
   delete safeUser.password;
+  delete safeUser.pin;
   res.json({ success: true, user: safeUser });
 });
 
@@ -1111,10 +1163,10 @@ crmRouter.post('/auth/logout', (req: Request, res: Response) => {
 // -----------------------------------------------------------------------------
 crmRouter.get('/debug/env-status', async (req: Request, res: Response) => {
   const user = extractUserFromReq(req);
-  if (!user || user.role !== 'admin') {
-    return res.status(403).json({
+  if (!user) {
+    return res.status(401).json({
       success: false,
-      error: 'Forbidden: Admin authorization required to access diagnostic information.'
+      error: 'Unauthorized: Staff session required to access diagnostic information.'
     });
   }
 
@@ -1155,6 +1207,14 @@ crmRouter.get('/debug/env-status', async (req: Request, res: Response) => {
 // GET /api/crm/leads
 crmRouter.get('/leads', async (req: Request, res: Response) => {
   try {
+    const user = extractUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized: Valid staff authentication required to access CRM leads.'
+      });
+    }
+
     // Sync with Supabase website leads (throttled every 15s)
     if (Date.now() - lastSupabaseSyncTimestamp > 15000) {
       lastSupabaseSyncTimestamp = Date.now();
@@ -1343,6 +1403,10 @@ crmRouter.get('/leads', async (req: Request, res: Response) => {
 
 // GET /api/crm/leads/:id
 crmRouter.get('/leads/:id', (req: Request, res: Response) => {
+  const user = extractUserFromReq(req);
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+  }
   const lead = dbCrmLeads[req.params.id];
   if (!lead) {
     return res.status(404).json({ success: false, error: 'Lead not found.' });
@@ -1401,16 +1465,29 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
     const existingLead = Object.values(dbCrmLeads).find(l => normalizePhone(l.phone) === normPhone);
     if (existingLead) {
       // If submitted from AI Consultant / Public website form, merge gracefully
-      if (rawSource.includes('AI') || rawSource.includes('Website Form')) {
-        existingLead.notes = `${existingLead.notes || ''}\n[Update ${new Date().toISOString().slice(0, 10)}]: ${rawNotes}`.trim();
+      if (body.source === 'Consultation AI' || body.source === 'Website AI Consultant' || body.source === 'Website Enquiry') {
         existingLead.updated_at = new Date().toISOString();
+        if (rawNotes) {
+          existingLead.notes = existingLead.notes ? `${existingLead.notes}\n[Consultation Update]: ${rawNotes}` : rawNotes;
+        }
+        if (rawService && rawService !== 'Residential Interior') {
+          existingLead.interested_service = rawService;
+        }
+        if (rawBudget) existingLead.budget = rawBudget;
+
+        const updateRes = await updateLeadInSupabase(existingLead);
+        if (!updateRes.success) {
+          return res.status(500).json({
+            success: false,
+            error: `Database update failed: Could not persist consultation details to Supabase PostgreSQL (${updateRes.error})`
+          });
+        }
         dbCrmLeads[existingLead.id] = existingLead;
         saveLeads();
-        updateLeadInSupabase(existingLead).catch(() => {});
         return res.json({
           success: true,
           leadId: existingLead.id,
-          message: 'Existing lead updated with new consultation details.',
+          message: 'Existing lead updated with new consultation details in Supabase database.',
           lead: formatLeadWithAliases(existingLead)
         });
       }
@@ -1509,10 +1586,10 @@ crmRouter.patch('/leads/:id', async (req: Request, res: Response) => {
 async function handleLeadUpdate(req: Request, res: Response) {
   try {
     const user = extractUserFromReq(req);
-    if (!user || (user.role !== 'admin' && user.role !== 'telecaller')) {
-      return res.status(403).json({
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        error: 'Forbidden: Unauthorized to edit CRM leads. Valid Admin or Telecaller session required.'
+        error: 'Unauthorized: Valid staff session required to edit CRM leads.'
       });
     }
 
@@ -1616,10 +1693,10 @@ async function handleLeadUpdate(req: Request, res: Response) {
 crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || (user.role !== 'admin' && user.role !== 'telecaller')) {
-      return res.status(403).json({
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        error: 'Forbidden: Unauthorized to archive CRM leads. Valid Admin or Telecaller session required.'
+        error: 'Unauthorized: Valid staff session required to archive CRM leads.'
       });
     }
 
@@ -1719,7 +1796,7 @@ crmRouter.get('/calls', async (_req: Request, res: Response) => {
 });
 
 // GET /api/crm/leads/:id/calls (Calls for specific lead)
-crmRouter.get('/leads/:id/calls', async (req: Request, res: Response) => {
+crmRouter.get(['/leads/:id/calls', '/calls/:id'], async (req: Request, res: Response) => {
   const leadId = req.params.id;
   await syncCallsFromSupabase().catch(() => {});
 
@@ -1745,10 +1822,10 @@ crmRouter.get('/leads/:id/calls', async (req: Request, res: Response) => {
 crmRouter.post('/calls', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || (user.role !== 'admin' && user.role !== 'telecaller')) {
-      return res.status(403).json({
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        error: 'Forbidden: Unauthorized to record call logs. Valid Admin or Telecaller session required.'
+        error: 'Unauthorized: Valid staff session required to record call logs.'
       });
     }
 
@@ -1787,16 +1864,23 @@ crmRouter.post('/calls', async (req: Request, res: Response) => {
       created_at: now
     };
 
-    // Deduplicate in memory / local store
+    // 1. Authoritative Supabase write MUST succeed before any local cache update
+    const dbCallResult = await syncCallLogToSupabase(callLog);
+    if (!dbCallResult.success || !dbCallResult.persisted_to_supabase) {
+      console.error('❌ [CRM Call Log] Supabase write failed:', dbCallResult.error);
+      return res.status(500).json({
+        success: false,
+        error: `Supabase Call Logging Failed: ${dbCallResult.error || 'Could not persist call log to Supabase PostgreSQL crm_call_logs table.'}`
+      });
+    }
+
+    // 2. Only after confirmed persistence in Supabase, update server cache
     if (!dbCrmCalls.some(c => c.id === callLog.id)) {
       dbCrmCalls.push(callLog);
       saveCalls();
     }
 
-    // Await validated sync to Supabase (does NOT send emails)
-    const dbCallResult = await syncCallLogToSupabase(callLog);
-
-    // Automatically update lead's metadata
+    // 3. Automatically update lead's metadata
     lead.last_contact_at = now;
     if (update_lead_status) lead.status = update_lead_status;
     if (update_lead_temperature) lead.temperature = update_lead_temperature;
@@ -1808,21 +1892,16 @@ crmRouter.post('/calls', async (req: Request, res: Response) => {
     dbCrmLeads[lead_id] = lead;
     saveLeads();
 
-    // Sync updated lead to Supabase using PATCH (never POST)
-    await updateLeadInSupabase(lead).catch(() => {});
+    // 4. Update lead in Supabase
+    await updateLeadInSupabase(lead).catch((err) => {
+      console.warn('⚠️ [CRM Call Log] Note on lead metadata sync:', err?.message || err);
+    });
 
     res.status(201).json({
       success: true,
       callLog,
       lead: formatLeadWithAliases(lead),
-      storage: {
-        local_storage: true,
-        supabase_cloud: dbCallResult.persisted_to_supabase,
-        migration_pending: dbCallResult.migration_pending || false,
-        status_message: dbCallResult.persisted_to_supabase
-          ? 'Call history persisted to Supabase and CRM storage.'
-          : 'Call history saved securely to CRM server storage. Supabase crm_call_logs table pending migration.'
-      }
+      message: 'Call log successfully persisted to Supabase database.'
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error recording call' });
@@ -2010,13 +2089,13 @@ crmRouter.get('/reports', (req: Request, res: Response) => {
 });
 
 // -----------------------------------------------------------------------------
-// CSV IMPORT ENDPOINT (Admin Only)
+// CSV IMPORT ENDPOINT
 // -----------------------------------------------------------------------------
 crmRouter.post('/import-csv', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Only administrators can import leads via CSV.' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required to import leads.' });
     }
 
     const { leads: incomingLeads } = req.body;
@@ -2095,17 +2174,18 @@ crmRouter.post('/import-csv', (req: Request, res: Response) => {
 });
 
 // -----------------------------------------------------------------------------
-// USER MANAGEMENT ENDPOINTS (Admin Only)
+// STAFF & USER MANAGEMENT ENDPOINTS
 // -----------------------------------------------------------------------------
 crmRouter.get('/users', (req: Request, res: Response) => {
   const user = extractUserFromReq(req);
-  if (!user || user.role !== 'admin') {
-    return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
   }
 
   const safeUsers = Object.values(dbCrmUsers).map(u => {
-    const c = { ...u };
+    const c: any = { ...u };
     delete c.password;
+    delete c.pin;
     return c;
   });
 
@@ -2115,129 +2195,164 @@ crmRouter.get('/users', (req: Request, res: Response) => {
 crmRouter.post('/users/role', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
     }
 
     const { userId, role } = req.body;
-    if (!userId || !role || (role !== 'admin' && role !== 'telecaller')) {
-      return res.status(400).json({ success: false, error: 'Valid userId and role are required.' });
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'Valid userId is required.' });
     }
 
     const target = Object.values(dbCrmUsers).find(u => u.id === userId);
     if (!target) {
-      return res.status(404).json({ success: false, error: 'User not found.' });
+      return res.status(404).json({ success: false, error: 'Staff member not found.' });
     }
 
-    target.role = role;
+    target.role = role || 'staff';
     target.updatedAt = new Date().toISOString();
     saveUsers();
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error updating user role' });
+    res.status(500).json({ success: false, error: err.message || 'Error updating staff profile' });
   }
 });
 
 crmRouter.post('/users/create', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
     }
 
-    const { name, email, password, phone, role = 'telecaller' } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
+    const { name, pin, password, phone, email, role = 'staff' } = req.body;
+    const staffPin = (pin || password || '').trim();
+    if (!name || !staffPin) {
+      return res.status(400).json({ success: false, error: 'Staff name and individual PIN are required.' });
     }
 
-    const normEmail = email.trim().toLowerCase();
-    if (dbCrmUsers[normEmail]) {
-      return res.status(409).json({ success: false, error: 'User with this email already exists.' });
+    const staffKey = (email || name).trim().toLowerCase();
+    if (dbCrmUsers[staffKey] || Object.values(dbCrmUsers).some(u => u.name.trim().toLowerCase() === name.trim().toLowerCase())) {
+      return res.status(409).json({ success: false, error: 'A staff member with this name or email already exists.' });
     }
 
     const newUser: ServerCrmUser = {
-      id: `crm_usr_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`,
-      email: normEmail,
+      id: `crm_staff_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`,
       name: name.trim(),
+      pin: staffPin,
+      password: staffPin,
+      email: email ? email.trim().toLowerCase() : `${name.trim().toLowerCase().replace(/\s+/g, '')}@royalepicinterior.com`,
       phone: phone?.trim() || '',
-      password,
-      role: role === 'admin' ? 'admin' : 'telecaller',
+      role: 'staff',
       status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    dbCrmUsers[normEmail] = newUser;
+    dbCrmUsers[staffKey] = newUser;
     saveUsers();
 
-    const safe = { ...newUser };
+    const safe: any = { ...newUser };
     delete safe.password;
+    delete safe.pin;
     res.status(201).json({ success: true, user: safe });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error creating user' });
+    res.status(500).json({ success: false, error: err.message || 'Error creating staff member' });
   }
 });
 
 crmRouter.delete('/users/:id', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
     }
 
     const { id } = req.params;
     const targetKey = Object.keys(dbCrmUsers).find(email => dbCrmUsers[email].id === id || email.toLowerCase() === id.toLowerCase());
     if (!targetKey) {
-      return res.status(404).json({ success: false, error: 'User not found.' });
+      return res.status(404).json({ success: false, error: 'Staff member not found.' });
     }
 
-    if (dbCrmUsers[targetKey].id === 'crm_admin_primary') {
-      return res.status(400).json({ success: false, error: 'Cannot delete primary root administrator account.' });
+    if (dbCrmUsers[targetKey].id === 'crm_staff_admin' || dbCrmUsers[targetKey].id === 'crm_admin_primary') {
+      return res.status(400).json({ success: false, error: 'Cannot delete primary root staff account.' });
     }
 
     const deletedName = dbCrmUsers[targetKey].name;
     delete dbCrmUsers[targetKey];
     saveUsers();
 
-    res.json({ success: true, message: `User "${deletedName}" has been removed.` });
+    res.json({ success: true, message: `Staff member "${deletedName}" has been removed.` });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error deleting user' });
+    res.status(500).json({ success: false, error: err.message || 'Error deleting staff member' });
   }
 });
 
-crmRouter.post('/users/password', (req: Request, res: Response) => {
+crmRouter.post('/users/pin', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
     }
 
-    const { userId, newPassword } = req.body;
-    if (!userId || !newPassword || newPassword.length < 6) {
-      return res.status(400).json({ success: false, error: 'Valid userId and new password (min 6 chars) required.' });
+    const { userId, newPin, newPassword } = req.body;
+    const pinVal = (newPin || newPassword || '').trim();
+    if (!userId || !pinVal || pinVal.length < 4) {
+      return res.status(400).json({ success: false, error: 'Valid userId and new PIN (min 4 digits) required.' });
     }
 
-    const target = Object.values(dbCrmUsers).find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase());
+    const target = Object.values(dbCrmUsers).find(u => u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase()));
     if (!target) {
-      return res.status(404).json({ success: false, error: 'User not found.' });
+      return res.status(404).json({ success: false, error: 'Staff member not found.' });
     }
 
-    target.password = newPassword;
+    target.pin = pinVal;
+    target.password = pinVal;
     target.updatedAt = new Date().toISOString();
     saveUsers();
 
-    res.json({ success: true, message: `Password for ${target.name} has been updated.` });
+    res.json({ success: true, message: `PIN for ${target.name} has been updated successfully.` });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error resetting password' });
+    res.status(500).json({ success: false, error: err.message || 'Error resetting PIN' });
+  }
+});
+
+// Alias for password reset compatibility
+crmRouter.post('/users/password', (req: Request, res: Response) => {
+  try {
+    const user = extractUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+    }
+
+    const { userId, newPassword, newPin } = req.body;
+    const pinVal = (newPin || newPassword || '').trim();
+    if (!userId || !pinVal) {
+      return res.status(400).json({ success: false, error: 'Valid userId and new PIN/password required.' });
+    }
+
+    const target = Object.values(dbCrmUsers).find(u => u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase()));
+    if (!target) {
+      return res.status(404).json({ success: false, error: 'Staff member not found.' });
+    }
+
+    target.pin = pinVal;
+    target.password = pinVal;
+    target.updatedAt = new Date().toISOString();
+    saveUsers();
+
+    res.json({ success: true, message: `Credentials for ${target.name} have been updated.` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Error updating credentials' });
   }
 });
 
 crmRouter.post('/users/status', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
     }
 
     const { userId, status } = req.body;
@@ -2245,16 +2360,16 @@ crmRouter.post('/users/status', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Valid userId and status (active/suspended) required.' });
     }
 
-    const target = Object.values(dbCrmUsers).find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase());
+    const target = Object.values(dbCrmUsers).find(u => u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase()));
     if (!target) {
-      return res.status(404).json({ success: false, error: 'User not found.' });
+      return res.status(404).json({ success: false, error: 'Staff member not found.' });
     }
 
     target.status = status;
     target.updatedAt = new Date().toISOString();
     saveUsers();
 
-    res.json({ success: true, message: `User status set to ${status}.` });
+    res.json({ success: true, message: `Staff status set to ${status}.` });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error updating status' });
   }
@@ -2265,8 +2380,8 @@ crmRouter.post('/users/status', (req: Request, res: Response) => {
 crmRouter.post('/migrate-to-supabase', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Admin authentication required to trigger migration.' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Staff authentication required to trigger migration.' });
     }
 
     const leads = Object.values(dbCrmLeads);

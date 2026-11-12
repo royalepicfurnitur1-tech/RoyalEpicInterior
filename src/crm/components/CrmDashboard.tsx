@@ -89,7 +89,7 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              {isAdmin ? 'Executive Administration' : 'Telecaller Console'}
+              Telecaller & Sales Console
             </span>
             <span className="text-slate-300">·</span>
             <span className="text-xs text-slate-500">

@@ -1,11 +1,12 @@
-export type CrmRole = 'admin' | 'telecaller';
+export type CrmRole = 'staff' | 'admin' | 'telecaller';
 
 export interface CrmUser {
   id: string;
-  email: string;
   name: string;
+  pin?: string;
+  email?: string;
   phone?: string;
-  role: CrmRole;
+  role?: CrmRole;
   status: 'active' | 'suspended';
   createdAt?: string;
   updatedAt?: string;

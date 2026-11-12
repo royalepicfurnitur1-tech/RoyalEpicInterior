@@ -1,35 +1,50 @@
 {
   "admin@royalepicinterior.com": {
-    "id": "crm_admin_primary",
+    "id": "crm_staff_admin",
     "email": "admin@royalepicinterior.com",
     "name": "Royal Epic Admin",
     "phone": "+91 99166 33338",
+    "pin": "2026",
     "password": "Admin@RoyalEpic2026",
-    "role": "admin",
+    "role": "staff",
     "status": "active",
     "createdAt": "2026-11-06T09:39:58.739Z",
-    "updatedAt": "2026-11-06T09:39:58.740Z"
+    "updatedAt": "2026-11-12T09:00:00.000Z"
   },
   "royalepicfurnitur1@gmail.com": {
-    "id": "crm_admin_executive",
+    "id": "crm_staff_executive",
     "email": "royalepicfurnitur1@gmail.com",
-    "name": "Royal Epic Executive Admin",
+    "name": "Royal Epic Executive",
     "phone": "+91 99166 33338",
+    "pin": "2026",
     "password": "Admin@RoyalEpic2026",
-    "role": "admin",
+    "role": "staff",
     "status": "active",
     "createdAt": "2026-11-06T09:39:58.739Z",
-    "updatedAt": "2026-11-06T09:39:58.740Z"
+    "updatedAt": "2026-11-12T09:00:00.000Z"
   },
   "telecaller1@gmail.com": {
-    "id": "crm_telecaller_1",
+    "id": "crm_staff_telecaller1",
     "email": "telecaller1@gmail.com",
     "name": "Telecaller 1",
     "phone": "+91 98450 11223",
+    "pin": "1234",
     "password": "telecaller1@123",
-    "role": "telecaller",
+    "role": "staff",
     "status": "active",
     "createdAt": "2026-11-06T09:48:00.000Z",
-    "updatedAt": "2026-11-06T09:48:00.000Z"
+    "updatedAt": "2026-11-12T09:00:00.000Z"
+  },
+  "telecaller2@royalepicinterior.com": {
+    "id": "crm_staff_telecaller2",
+    "email": "telecaller2@royalepicinterior.com",
+    "name": "Telecaller 2",
+    "phone": "+91 98450 44556",
+    "pin": "5678",
+    "password": "telecaller2@5678",
+    "role": "staff",
+    "status": "active",
+    "createdAt": "2026-11-12T09:00:00.000Z",
+    "updatedAt": "2026-11-12T09:00:00.000Z"
   }
 }

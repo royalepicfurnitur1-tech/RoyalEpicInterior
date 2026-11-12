@@ -352,69 +352,65 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               {!isSidebarCollapsed && <span>Reports</span>}
             </button>
 
-            {/* Admin-only Navigation */}
-            {isAdmin && (
-              <>
-                <div className="my-2 border-t border-[#E2E8F0]" />
+            {/* Team & Configuration Navigation */}
+            <div className="my-2 border-t border-[#E2E8F0]" />
 
-                {!isSidebarCollapsed && (
-                  <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                    Administration
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setActiveTab('users')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    activeTab === 'users'
-                      ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
-                  }`}
-                  title="User Management"
-                >
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  {!isSidebarCollapsed && <span>User Management</span>}
-                </button>
-
-                <button
-                  onClick={() => setIsCsvModalOpen(true)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-[#172033] transition-colors cursor-pointer"
-                  title="Import CSV"
-                >
-                  <FileSpreadsheet className="w-4 h-4 shrink-0" />
-                  {!isSidebarCollapsed && <span>Import CSV</span>}
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    activeTab === 'settings'
-                      ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
-                  }`}
-                  title="Settings"
-                >
-                  <Sliders className="w-4 h-4 shrink-0" />
-                  {!isSidebarCollapsed && <span>Settings</span>}
-                </button>
-              </>
+            {!isSidebarCollapsed && (
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Team & Tools
+              </div>
             )}
+
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                activeTab === 'users'
+                  ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
+              }`}
+              title="Staff Directory & PINs"
+            >
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span>Staff Directory</span>}
+            </button>
+
+            <button
+              onClick={() => setIsCsvModalOpen(true)}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-[#172033] transition-colors cursor-pointer"
+              title="Import CSV"
+            >
+              <FileSpreadsheet className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span>Import CSV</span>}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
+              }`}
+              title="Settings & Integrations"
+            >
+              <Sliders className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span>Settings</span>}
+            </button>
           </nav>
 
           {/* User profile & logout at bottom of sidebar */}
           <div className="p-3 border-t border-[#E2E8F0]">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-slate-200 text-[#172033] font-semibold text-xs flex items-center justify-center shrink-0">
-                  {user?.name?.slice(0, 2).toUpperCase() || 'U'}
+                <div className="w-8 h-8 rounded-full bg-[#172033] text-white font-semibold text-xs flex items-center justify-center shrink-0">
+                  {user?.name?.slice(0, 2).toUpperCase() || 'ST'}
                 </div>
                 {!isSidebarCollapsed && (
                   <div className="truncate">
                     <div className="text-xs font-semibold text-[#172033] truncate">
                       {user?.name}
                     </div>
-                    <div className="text-[10px] text-slate-500 capitalize truncate">
-                      {user?.role}
+                    <div className="text-[10px] text-emerald-600 font-medium truncate">
+                      Staff Member
                     </div>
                   </div>
                 )}
@@ -542,11 +538,11 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-[#172033] text-white font-semibold text-xs flex items-center justify-center shrink-0">
-                    {user?.name?.slice(0, 2).toUpperCase() || 'U'}
+                    {user?.name?.slice(0, 2).toUpperCase() || 'ST'}
                   </div>
                   <div className="hidden lg:block text-left text-xs leading-tight">
                     <div className="font-semibold text-slate-800 truncate max-w-[120px]">{user?.name}</div>
-                    <div className="text-[10px] text-slate-500 capitalize">{user?.role}</div>
+                    <div className="text-[10px] text-emerald-600 font-medium">Staff Member</div>
                   </div>
                 </div>
                 <button
@@ -615,11 +611,11 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               <CrmReportsView />
             )}
 
-            {activeTab === 'users' && isAdmin && (
+            {activeTab === 'users' && (
               <CrmUserManagement />
             )}
 
-            {activeTab === 'settings' && isAdmin && (
+            {activeTab === 'settings' && (
               <CrmIntegrationsView />
             )}
           </main>
@@ -755,45 +751,41 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 <span>Reports</span>
               </button>
 
-              {isAdmin && (
-                <>
-                  <div className="my-2 border-t border-[#E2E8F0]" />
-                  <button
-                    onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
-                      activeTab === 'users' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
-                    }`}
-                  >
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>User Management</span>
-                  </button>
+              <div className="my-2 border-t border-[#E2E8F0]" />
+              <button
+                onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
+                  activeTab === 'users' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Staff Directory & PINs</span>
+              </button>
 
-                  <button
-                    onClick={() => { setIsCsvModalOpen(true); setMobileMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-slate-600 text-left"
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    <span>Import CSV</span>
-                  </button>
+              <button
+                onClick={() => { setIsCsvModalOpen(true); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-slate-600 text-left"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Import CSV</span>
+              </button>
 
-                  <button
-                    onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
-                      activeTab === 'settings' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
-                    }`}
-                  >
-                    <Sliders className="w-4 h-4" />
-                    <span>Settings</span>
-                  </button>
-                </>
-              )}
+              <button
+                onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
+                  activeTab === 'settings' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
+                }`}
+              >
+                <Sliders className="w-4 h-4" />
+                <span>Settings</span>
+              </button>
             </div>
 
             {/* Mobile Footer */}
             <div className="p-4 border-t border-[#E2E8F0] flex items-center justify-between">
               <div>
                 <div className="text-xs font-semibold text-[#172033]">{user?.name}</div>
-                <div className="text-[10px] text-slate-500 capitalize">{user?.role}</div>
+                <div className="text-[10px] text-emerald-600 font-medium">Staff Member</div>
               </div>
               <button
                 onClick={() => {
@@ -845,15 +837,13 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
         }}
       />
 
-      {isAdmin && (
-        <CrmCsvImportModal
-          isOpen={isCsvModalOpen}
-          onClose={() => setIsCsvModalOpen(false)}
-          onImportComplete={() => {
-            triggerRefresh();
-          }}
-        />
-      )}
+      <CrmCsvImportModal
+        isOpen={isCsvModalOpen}
+        onClose={() => setIsCsvModalOpen(false)}
+        onImportComplete={() => {
+          triggerRefresh();
+        }}
+      />
 
       {/* Logout Confirmation Dialog Modal */}
       {showLogoutConfirm && (
@@ -869,7 +859,7 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               </div>
             </div>
             <p className="text-sm text-slate-600 mb-5 leading-relaxed">
-              Are you sure you want to log out as <strong className="text-slate-800">{user?.name}</strong> ({user?.role})? Your active session token and cached local storage will be cleared immediately.
+              Are you sure you want to log out as <strong className="text-slate-800">{user?.name}</strong>? Your active session token and cached local storage will be cleared immediately.
             </p>
             <div className="flex items-center justify-end gap-2.5">
               <button

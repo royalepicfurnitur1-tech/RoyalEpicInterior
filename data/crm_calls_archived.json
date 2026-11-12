@@ -51,5 +51,46 @@
     "archived_at": "2026-11-12T08:19:43.870Z",
     "archive_reason": "lead_archived",
     "deleted_by": "crm_telecaller_1"
+  },
+  {
+    "id": "CALL-261112-6581",
+    "lead_id": "CRM-2611-13972",
+    "call_date": "2026-11-12T09:43:44.470Z",
+    "outcome": "Connected - Interested",
+    "notes": "Discussed 3BHK turnkey interior in Whitefield",
+    "followup_date": "2026-11-20T14:30:00",
+    "logged_by": "crm_staff_telecaller1",
+    "logged_by_name": "Telecaller 1",
+    "created_at": "2026-11-12T09:43:44.470Z",
+    "archived_at": "2026-11-12T09:43:45.487Z",
+    "archive_reason": "lead_archived",
+    "deleted_by": "crm_staff_telecaller1"
+  },
+  {
+    "id": "CALL-261112-6736",
+    "lead_id": "CRM-2611-55865",
+    "call_date": "2026-11-12T09:44:47.189Z",
+    "outcome": "Connected - Interested",
+    "notes": "Discussed 3BHK turnkey interior in Whitefield",
+    "followup_date": "2026-11-20T14:30:00",
+    "logged_by": "crm_staff_telecaller1",
+    "logged_by_name": "Telecaller 1",
+    "created_at": "2026-11-12T09:44:47.189Z",
+    "archived_at": "2026-11-12T09:44:48.167Z",
+    "archive_reason": "lead_archived",
+    "deleted_by": "crm_staff_telecaller1"
+  },
+  {
+    "id": "CALL-261112-6729",
+    "lead_id": "CRM-2611-46066",
+    "call_date": "2026-11-12T09:56:48.219Z",
+    "outcome": "interested",
+    "notes": "Customer is very interested, site visit requested",
+    "logged_by": "crm_staff_telecaller1",
+    "logged_by_name": "Telecaller 1",
+    "created_at": "2026-11-12T09:56:48.219Z",
+    "archived_at": "2026-11-12T09:56:49.368Z",
+    "archive_reason": "lead_archived",
+    "deleted_by": "crm_staff_telecaller1"
   }
 ]

@@ -8,7 +8,7 @@ interface CrmAuthContextType {
   isAdmin: boolean;
   isTelecaller: boolean;
   isAuthenticated: boolean;
-  login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  login: (nameOrEmail: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -73,26 +73,31 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
-  const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (nameOrEmail: string, pin: string): Promise<{ success: boolean; error?: string }> => {
     setError(null);
     try {
       const res = await fetch('/api/crm/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password: pass })
+        body: JSON.stringify({
+          name: nameOrEmail.trim(),
+          email: nameOrEmail.trim(),
+          pin: pin.trim(),
+          password: pin.trim()
+        })
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        const errMsg = data.error || 'Authentication failed. Please verify credentials.';
+        const errMsg = data.error || 'Authentication failed. Please verify your Name and PIN.';
         setError(errMsg);
         return { success: false, error: errMsg };
       }
 
       setUser(data.user);
       localStorage.setItem('royal_epic_crm_session', JSON.stringify({
-        token: data.token || 'crm_token_' + Date.now(),
+        token: data.token || 'crm_staff_' + data.user.id + '_' + Date.now(),
         user: data.user
       }));
 
@@ -154,9 +159,10 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const clearError = () => setError(null);
 
-  const isAdmin = user?.role === 'admin';
-  const isTelecaller = user?.role === 'telecaller';
+  // Equal permissions for all active staff members
   const isAuthenticated = Boolean(user && user.status === 'active');
+  const isAdmin = isAuthenticated;
+  const isTelecaller = isAuthenticated;
 
   return (
     <CrmAuthContext.Provider
