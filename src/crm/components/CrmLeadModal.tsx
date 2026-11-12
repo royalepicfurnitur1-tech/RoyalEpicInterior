@@ -65,8 +65,6 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
   const [loadingCalls, setLoadingCalls] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedPhone, setCopiedPhone] = useState(false);
@@ -206,22 +204,17 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
     }
   };
 
-  const handleConfirmArchive = async () => {
-    setIsArchiving(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
+  const handleArchive = async () => {
+    if (!isAdmin) return;
+    if (!window.confirm(`Are you sure you want to archive lead for "${lead.customer_name}"?`)) {
+      return;
+    }
     const res = await archiveCrmLead(lead.id);
-    setIsArchiving(false);
-    setShowArchiveConfirm(false);
-
     if (res.success) {
-      setSuccessMessage(res.message || `Lead "${lead.customer_name}" archived successfully.`);
-      setTimeout(() => {
-        onLeadUpdated();
-        onClose();
-      }, 700);
+      onLeadUpdated();
+      onClose();
     } else {
-      setErrorMessage(res.error || 'Failed to archive lead in Supabase database.');
+      setErrorMessage(res.error || 'Failed to archive lead');
     }
   };
 
@@ -549,15 +542,17 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0]">
-                <button
-                  type="button"
-                  onClick={() => setShowArchiveConfirm(true)}
-                  className="text-xs text-amber-600 hover:text-amber-800 flex items-center gap-1.5 cursor-pointer font-medium transition-colors"
-                  title="Archive Lead"
-                >
-                  <Archive className="w-3.5 h-3.5" />
-                  <span>Archive Lead</span>
-                </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={handleArchive}
+                    className="text-xs text-amber-600 hover:text-amber-850 flex items-center gap-1.5 cursor-pointer font-medium"
+                    title="Archive Lead"
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    <span>Archive Lead</span>
+                  </button>
+                ) : <div />}
 
                 <div className="flex items-center gap-2">
                   <button
@@ -686,79 +681,10 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
 
               {/* 4. CALL HISTORY TIMELINE */}
               {renderCallHistory()}
-
-              {/* View Mode Action Footer */}
-              <div className="flex items-center justify-between pt-4 border-t border-[#E2E8F0]">
-                <button
-                  type="button"
-                  onClick={() => setShowArchiveConfirm(true)}
-                  className="text-xs text-amber-600 hover:text-amber-800 flex items-center gap-1.5 cursor-pointer font-medium transition-colors"
-                  title="Archive Lead"
-                >
-                  <Archive className="w-3.5 h-3.5" />
-                  <span>Archive Lead</span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-600 font-medium text-xs cursor-pointer"
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-1.5 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit Lead</span>
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Archive Lead Confirmation Modal */}
-      {showArchiveConfirm && (
-        <div className="fixed inset-0 z-60 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-[#E2E8F0] space-y-4">
-            <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
-              <Archive className="w-6 h-6" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-base font-bold text-[#172033]">Archive Lead</h3>
-              <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                Are you sure you want to archive the lead for <strong>&quot;{lead.customer_name}&quot;</strong> ({lead.phone})?
-              </p>
-              <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg mt-2 leading-normal">
-                This will soft-archive the lead in Supabase and remove it from active lists. All call history will be safely preserved.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                disabled={isArchiving}
-                onClick={() => setShowArchiveConfirm(false)}
-                className="flex-1 py-2.5 px-3 border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isArchiving}
-                onClick={handleConfirmArchive}
-                className="flex-1 py-2.5 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
-              >
-                {isArchiving ? 'Archiving...' : 'Yes, Archive'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

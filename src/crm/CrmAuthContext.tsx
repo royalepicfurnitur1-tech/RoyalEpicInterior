@@ -8,7 +8,7 @@ interface CrmAuthContextType {
   isAdmin: boolean;
   isTelecaller: boolean;
   isAuthenticated: boolean;
-  login: (nameOrEmail: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -56,48 +56,28 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     checkSession();
-
-    // Handle browser Back / Forward Navigation and bfcache restores
-    const handlePageShow = () => {
-      const stored = localStorage.getItem('royal_epic_crm_session');
-      if (!stored) {
-        setUser(null);
-      }
-    };
-
-    window.addEventListener('pageshow', handlePageShow);
-    window.addEventListener('popstate', handlePageShow);
-    return () => {
-      window.removeEventListener('pageshow', handlePageShow);
-      window.removeEventListener('popstate', handlePageShow);
-    };
   }, []);
 
-  const login = async (nameOrEmail: string, pin: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
     setError(null);
     try {
       const res = await fetch('/api/crm/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: nameOrEmail.trim(),
-          email: nameOrEmail.trim(),
-          pin: pin.trim(),
-          password: pin.trim()
-        })
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password: pass })
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        const errMsg = data.error || 'Authentication failed. Please verify your Name and PIN.';
+        const errMsg = data.error || 'Authentication failed. Please verify credentials.';
         setError(errMsg);
         return { success: false, error: errMsg };
       }
 
       setUser(data.user);
       localStorage.setItem('royal_epic_crm_session', JSON.stringify({
-        token: data.token || 'crm_staff_' + data.user.id + '_' + Date.now(),
+        token: data.token || 'crm_token_' + Date.now(),
         user: data.user
       }));
 
@@ -118,51 +98,21 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.token || ''}`,
-            'x-crm-user-id': session?.user?.id || ''
+            'Authorization': `Bearer ${session?.token || ''}`
           }
         }).catch(() => {});
       }
     } catch (_) {}
-
-    // Sign out from Supabase Auth if client exists
-    try {
-      const { getSupabase } = await import('../lib/supabase');
-      const sb = getSupabase();
-      if (sb && sb.auth) {
-        await sb.auth.signOut().catch(() => {});
-      }
-    } catch (_) {}
-
-    // Invalidate local storage and session cache
-    try {
-      localStorage.removeItem('royal_epic_crm_session');
-      sessionStorage.clear();
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && (k.startsWith('crm_') || k.startsWith('sb-') || k.includes('royal_epic_crm'))) {
-          keysToRemove.push(k);
-        }
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
-    } catch (_) {}
-
+    localStorage.removeItem('royal_epic_crm_session');
     setUser(null);
     setError(null);
-
-    // Replace current browser history state to prevent Back button from reopening authenticated workspace
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
   };
 
   const clearError = () => setError(null);
 
-  // Equal permissions for all active staff members
+  const isAdmin = user?.role === 'admin';
+  const isTelecaller = user?.role === 'telecaller';
   const isAuthenticated = Boolean(user && user.status === 'active');
-  const isAdmin = isAuthenticated;
-  const isTelecaller = isAuthenticated;
 
   return (
     <CrmAuthContext.Provider

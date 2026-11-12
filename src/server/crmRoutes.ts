@@ -1,11 +1,6 @@
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { ensureServerEnvLoaded, cleanEnvVar, getSafeEnvDiagnostics } from './envLoader';
-
-// Guarantee server-side environment is fully populated before route definition
-ensureServerEnvLoaded();
 
 export const crmRouter = express.Router();
 
@@ -25,12 +20,11 @@ if (!fs.existsSync(DB_DIR)) {
 
 export interface ServerCrmUser {
   id: string;
-  email?: string;
+  email: string;
   name: string;
   phone?: string;
-  pin?: string;
   password?: string;
-  role?: string;
+  role: 'admin' | 'telecaller';
   status: 'active' | 'suspended';
   createdAt: string;
   updatedAt: string;
@@ -119,220 +113,114 @@ export function getIstDayBoundaries(d: Date = new Date()): { startEpoch: number;
 }
 
 // -----------------------------------------------------------------------------
-// SUPABASE CLIENT & PRIVILEGED BACKEND PERSISTENCE
+// SUPABASE CLIENT & DUAL PERSISTENCE
 // -----------------------------------------------------------------------------
-let supabaseServerAdminClient: SupabaseClient | null = null;
-let lastUsedServerKey: string | null = null;
-
-export function getCrmServiceRoleKey(): string | undefined {
-  // Always trigger dynamic environment resolution on demand
-  ensureServerEnvLoaded();
-
-  const rawKey = 
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_KEY ||
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SERVICE_ROLE_KEY;
-
-  return cleanEnvVar(rawKey);
-}
-
-export function hasSupabaseServiceRoleKey(): boolean {
-  const k = getCrmServiceRoleKey();
-  return Boolean(k && k.length > 20 && !k.includes('YOUR_'));
-}
-
-export const getCrmServiceRoleCredentials = (): { url: string; key: string } => {
-  ensureServerEnvLoaded();
-
-  const url = (
-    cleanEnvVar(process.env.SUPABASE_URL) || 
-    cleanEnvVar(process.env.VITE_SUPABASE_URL) || 
-    'https://lwrfoztfsyffgtybesia.supabase.co'
-  ).replace(/\/+$/, '');
-
-  const key = getCrmServiceRoleKey();
-  if (!key || key.length < 20 || key.includes('YOUR_')) {
-    throw new Error(
-      'SUPABASE_SERVICE_ROLE_KEY is required for privileged CRM database operations. ' +
-      'Please configure SUPABASE_SERVICE_ROLE_KEY in your Hostinger environment variables. ' +
-      'Privileged CRM operations must not fall back to the public anon key.'
-    );
-  }
-  return { url, key };
-};
-
-/**
- * Returns the authoritative server-side Supabase client initialized
- * exclusively with the service-role key to execute privileged CRM operations.
- * Never uses the public anonymous key.
- */
-export function getSupabaseServerClient(): SupabaseClient {
-  const { url, key } = getCrmServiceRoleCredentials();
-
-  if (!supabaseServerAdminClient || lastUsedServerKey !== key) {
-    supabaseServerAdminClient = createClient(url, key, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-      }
-    });
-    lastUsedServerKey = key;
-    console.log(`✅ [Supabase Server Client] Shared service-role client initialized for ${url}`);
-  }
-  return supabaseServerAdminClient;
-}
-
-export const getPublicSupabaseCredentials = (): { url: string; key: string } => {
-  ensureServerEnvLoaded();
-  const url = (
-    cleanEnvVar(process.env.SUPABASE_URL) || 
-    cleanEnvVar(process.env.VITE_SUPABASE_URL) || 
-    'https://lwrfoztfsyffgtybesia.supabase.co'
-  ).replace(/\/+$/, '');
-
+const getSupabaseCredentials = () => {
+  const url = 
+    process.env.VITE_SUPABASE_URL || 
+    process.env.SUPABASE_URL || 
+    'https://lwrfoztfsyffgtybesia.supabase.co';
   const key = 
-    cleanEnvVar(process.env.VITE_SUPABASE_ANON_KEY) || 
-    cleanEnvVar(process.env.VITE_SUPABASE_PUBLISHABLE_KEY) || 
-    cleanEnvVar(process.env.SUPABASE_ANON_KEY) || 
+    process.env.VITE_SUPABASE_ANON_KEY || 
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+    process.env.SUPABASE_ANON_KEY || 
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
-  return { url, key };
+  return { url: url.replace(/\/+$/, ''), key };
 };
 
 // Check if a specific table exists in Supabase
 async function testSupabaseTable(tableName: string): Promise<boolean> {
-  if (!hasSupabaseServiceRoleKey()) return false;
+  const { url, key } = getSupabaseCredentials();
   try {
-    const client = getSupabaseServerClient();
-    const { error } = await client.from(tableName).select('*', { count: 'exact', head: true });
-    return !error;
+    const res = await fetch(`${url}/rest/v1/${tableName}?select=*&limit=1`, {
+      method: 'GET',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`
+      }
+    });
+    return res.ok;
   } catch {
     return false;
   }
 }
 
-// Check if a lead exists in Supabase leads_and_inquiries
-export async function checkLeadExistsInSupabase(id: string): Promise<boolean> {
-  if (!hasSupabaseServiceRoleKey()) return false;
-  try {
-    const client = getSupabaseServerClient();
-    const { data } = await client.from('leads_and_inquiries').select('id').eq('id', id).single();
-    return Boolean(data && data.id);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Builds the canonical database payload for leads_and_inquiries table.
- * Enforces PostgreSQL CHECK constraint (status IN ('new', 'contacted', 'site_visit_scheduled', 'boq_sent', 'converted', 'archived')).
- * Packs full CRM metadata into raw_details JSONB for complete fidelity.
- */
-export function buildSupabaseLeadPayload(lead: ServerCrmLead, isUpdate: boolean = false): Record<string, any> {
+// Authoritative Supabase Cloud Persistence for CRM Leads
+async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boolean; table: string; error?: string; data?: any }> {
+  const { url, key } = getSupabaseCredentials();
   const normPhone = normalizePhone(lead.phone);
 
-  let dbStatus = 'new';
-  const st = (lead.status || '').toLowerCase();
-  if (st.includes('converted') || st.includes('closed') || st.includes('won')) dbStatus = 'converted';
-  else if (st.includes('site visit')) dbStatus = 'site_visit_scheduled';
-  else if (st.includes('quotation') || st.includes('boq')) dbStatus = 'boq_sent';
-  else if (st.includes('contact') || st.includes('follow')) dbStatus = 'contacted';
-  else if (st.includes('archive') || st.includes('delete')) dbStatus = 'archived';
-
-  const crmDetails = {
-    customer_name: lead.customer_name,
-    normalized_phone: normPhone,
-    alternate_phone: lead.alternate_phone || null,
-    custom_source: lead.custom_source || null,
-    custom_service: lead.custom_service || null,
-    project_address: lead.project_address || null,
-    temperature: lead.temperature || 'Warm',
-    crm_status: lead.status || 'New Lead',
-    assigned_to: lead.assigned_to || null,
-    assigned_to_name: lead.assigned_to_name || null,
-    last_contact_at: lead.last_contact_at || null,
-    next_followup_at: lead.next_followup_at || null,
-    next_followup_date: lead.next_followup_date || null,
-    next_followup_time: lead.next_followup_time || null,
-    created_by: lead.created_by || null,
-    created_by_name: lead.created_by_name || null,
-    last_updated_by: lead.last_updated_by || null,
-    last_updated_by_name: lead.last_updated_by_name || null,
-    ...(lead.raw_payload || {})
-  };
-
-  const payload: Record<string, any> = {
-    full_name: lead.customer_name,
-    phone: lead.phone,
-    email: lead.email || null,
-    city: lead.city || 'Bengaluru',
-    service_type: lead.interested_service || 'Residential Interior',
-    estimated_budget: lead.budget || null,
-    project_scope: lead.notes || null,
-    source: lead.source || 'CRM Lead',
-    status: dbStatus,
-    preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
-    notes: lead.notes || null,
-    raw_details: crmDetails,
-    updated_at: new Date().toISOString()
-  };
-
-  if (!isUpdate) {
-    payload.id = lead.id;
-    payload.created_at = lead.created_at || new Date().toISOString();
-  }
-
-  return payload;
-}
-
-// Authoritative Supabase Cloud Persistence for CRM Leads (uses service_role when available, anon for INSERT-only website leads)
-async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boolean; table: string; error?: string; data?: any }> {
-  const payload = buildSupabaseLeadPayload(lead, false);
-
-  // 1. Privileged server client with service-role key
-  if (hasSupabaseServiceRoleKey()) {
-    try {
-      const client = getSupabaseServerClient();
-      const { data, error } = await client
-        .from('leads_and_inquiries')
-        .insert([payload])
-        .select()
-        .single();
-
-      if (error) {
-        console.warn('❌ [Supabase Client Insert] Insert rejected:', error.message, error.details);
-        return { success: false, table: 'leads_and_inquiries', error: error.message };
-      }
-      return { success: true, table: 'leads_and_inquiries', data: data || payload };
-    } catch (err: any) {
-      console.error('❌ [Supabase Client Insert] Exception:', err?.message || err);
-      return { success: false, table: 'leads_and_inquiries', error: err?.message || 'Error inserting into Supabase' };
-    }
-  }
-
-  // 2. Public anonymous insert fallback (e.g. public website forms before service role is set)
   try {
-    const creds = getPublicSupabaseCredentials();
-    const res = await fetch(`${creds.url}/rest/v1/leads_and_inquiries`, {
+    let dbStatus = 'new';
+    const st = (lead.status || '').toLowerCase();
+    if (st.includes('converted') || st.includes('closed')) dbStatus = 'converted';
+    else if (st.includes('site visit')) dbStatus = 'site_visit_scheduled';
+    else if (st.includes('quotation') || st.includes('boq')) dbStatus = 'boq_sent';
+    else if (st.includes('contact')) dbStatus = 'contacted';
+    else if (st.includes('archive') || st.includes('delete')) dbStatus = 'archived';
+
+    // Comprehensive CRM metadata embedded in JSONB raw_details for complete fidelity
+    const crmDetails = {
+      customer_name: lead.customer_name,
+      normalized_phone: normPhone,
+      alternate_phone: lead.alternate_phone || null,
+      custom_source: lead.custom_source || null,
+      custom_service: lead.custom_service || null,
+      project_address: lead.project_address || null,
+      temperature: lead.temperature || 'Warm',
+      crm_status: lead.status || 'New Lead',
+      assigned_to: lead.assigned_to || null,
+      assigned_to_name: lead.assigned_to_name || null,
+      last_contact_at: lead.last_contact_at || null,
+      next_followup_at: lead.next_followup_at || null,
+      next_followup_date: lead.next_followup_date || null,
+      next_followup_time: lead.next_followup_time || null,
+      created_by: lead.created_by || null,
+      created_by_name: lead.created_by_name || null,
+      last_updated_by: lead.last_updated_by || null,
+      last_updated_by_name: lead.last_updated_by_name || null,
+      ...(lead.raw_payload || {})
+    };
+
+    const payload = {
+      id: lead.id,
+      full_name: lead.customer_name,
+      phone: lead.phone,
+      email: lead.email || null,
+      city: lead.city || 'Bengaluru',
+      service_type: lead.interested_service || 'Residential Interior',
+      estimated_budget: lead.budget || null,
+      project_scope: lead.notes || null,
+      source: lead.source || 'CRM Lead',
+      status: dbStatus,
+      preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
+      notes: lead.notes || null,
+      raw_details: crmDetails,
+      created_at: lead.created_at,
+      updated_at: lead.updated_at || new Date().toISOString()
+    };
+
+    const res = await fetch(`${url}/rest/v1/leads_and_inquiries`, {
       method: 'POST',
       headers: {
-        apikey: creds.key,
-        Authorization: `Bearer ${creds.key}`,
+        apikey: key,
+        Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Prefer': 'resolution=merge-duplicates,return=representation'
       },
       body: JSON.stringify(payload)
     });
 
-    if (res.ok || res.status === 201 || res.status === 200 || res.status === 204) {
-      return { success: true, table: 'leads_and_inquiries', data: payload };
+    if (res.ok || res.status === 201 || res.status === 200) {
+      const inserted = await res.json().catch(() => null);
+      return { success: true, table: 'leads_and_inquiries', data: inserted };
     } else {
       const errText = await res.text().catch(() => 'Unknown Supabase error');
       console.warn('❌ [Supabase Sync] leads_and_inquiries write rejected:', res.status, errText);
       return { success: false, table: 'leads_and_inquiries', error: `HTTP ${res.status}: ${errText}` };
     }
   } catch (err: any) {
+    console.error('❌ [Supabase Sync] Network exception:', err?.message || err);
     return { success: false, table: 'leads_and_inquiries', error: err.message || 'Network error reaching Supabase' };
   }
 }
@@ -340,160 +228,93 @@ async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boole
 interface SupabaseDeleteResult {
   success: boolean;
   deleted_count: number;
-  method?: 'rpc' | 'rpc_archive' | 'hard_delete' | 'soft_delete_db';
+  method?: 'rpc' | 'hard_delete' | 'soft_delete_db';
   error?: string;
 }
 
-// Update an existing lead in Supabase PostgreSQL using RPC or PATCH (never POST)
-// Strictly requires SUPABASE_SERVICE_ROLE_KEY to prevent unauthorized modification attempts
-async function updateLeadInSupabase(lead: ServerCrmLead): Promise<{ success: boolean; error?: string }> {
-  ensureServerEnvLoaded();
-  if (!hasSupabaseServiceRoleKey()) {
-    return {
-      success: false,
-      error: 'SUPABASE_SERVICE_ROLE_KEY is required for CRM lead updates. Please configure SUPABASE_SERVICE_ROLE_KEY in Hostinger environment variables.'
-    };
-  }
+// Secure server-side deletion from Supabase database
+async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult> {
+  const { url, key } = getSupabaseCredentials();
 
-  const client = getSupabaseServerClient();
-  const updatePayload = buildSupabaseLeadPayload(lead, true);
-
+  // 1. First, attempt via delete_crm_lead RPC if installed in database
   try {
-    // 1. Try atomic RPC update_crm_lead
-    try {
-      const { data: rpcData, error: rpcErr } = await client.rpc('update_crm_lead', {
-        p_lead_id: lead.id,
-        p_full_name: lead.customer_name,
-        p_phone: lead.phone,
-        p_email: lead.email || null,
-        p_city: lead.city || 'Bengaluru',
-        p_service_type: lead.interested_service || 'Residential Interior',
-        p_estimated_budget: lead.budget || null,
-        p_project_scope: lead.notes || null,
-        p_source: lead.source || 'CRM Lead',
-        p_status: updatePayload.status,
-        p_preferred_date: updatePayload.preferred_date || null,
-        p_notes: lead.notes || null,
-        p_raw_details: updatePayload.raw_details,
-        p_updated_by: lead.last_updated_by || 'admin',
-        p_updated_by_name: lead.last_updated_by_name || 'Royal Epic User'
-      });
-
-      if (!rpcErr && rpcData && (rpcData.success || rpcData.id)) {
-        console.log(`✅ [Supabase Update] Successfully updated lead ${lead.id} via RPC update_crm_lead.`);
-        return { success: true };
-      }
-    } catch (_) {
-      // Fall through to PATCH
-    }
-
-    // 2. Direct UPDATE with .eq('id', lead.id) — strictly PATCH/UPDATE
-    const { data: updateData, error: updateErr } = await client
-      .from('leads_and_inquiries')
-      .update(updatePayload)
-      .eq('id', lead.id)
-      .select();
-
-    if (updateErr) {
-      console.warn(`❌ [Supabase Update] UPDATE rejected for lead ${lead.id}:`, updateErr.message);
-      return { success: false, error: updateErr.message };
-    }
-
-    // If 0 rows updated, record may not exist in Supabase yet (legacy local lead)
-    if (!updateData || updateData.length === 0) {
-      console.log(`ℹ️ [Supabase Update] Lead ${lead.id} not found in Supabase. Inserting with existing ID...`);
-      const insertPayload = {
-        ...updatePayload,
-        id: lead.id,
-        created_at: lead.created_at || new Date().toISOString()
-      };
-      const { error: insertErr } = await client
-        .from('leads_and_inquiries')
-        .insert([insertPayload]);
-
-      if (insertErr) {
-        console.warn(`❌ [Supabase Update -> Initial Insert] Failed:`, insertErr.message);
-        return { success: false, error: insertErr.message };
-      }
-      console.log(`✅ [Supabase Update] Lead ${lead.id} inserted into Supabase with original ID.`);
-      return { success: true };
-    }
-
-    console.log(`✅ [Supabase Update] Successfully updated lead ${lead.id} via Supabase client.`);
-    return { success: true };
-  } catch (err: any) {
-    console.error('❌ [Supabase Update] Exception:', err?.message || err);
-    return { success: false, error: err?.message || 'Network error reaching Supabase' };
-  }
-}
-
-// Secure server-side archiving in Supabase database
-// Strictly requires SUPABASE_SERVICE_ROLE_KEY to prevent unauthorized archive attempts
-async function deleteLeadFromSupabase(id: string, actorId: string = 'admin', actorName?: string): Promise<SupabaseDeleteResult> {
-  ensureServerEnvLoaded();
-  if (!hasSupabaseServiceRoleKey()) {
-    return {
-      success: false,
-      deleted_count: 0,
-      error: 'SUPABASE_SERVICE_ROLE_KEY is required for CRM lead archiving. Please configure SUPABASE_SERVICE_ROLE_KEY in Hostinger environment variables.'
-    };
-  }
-
-  const client = getSupabaseServerClient();
-  const effectiveActorName = actorName || actorId;
-  const now = new Date().toISOString();
-
-  // 1. First attempt: RPC archive_crm_lead
-  try {
-    const { data: rpcData, error: rpcErr } = await client.rpc('archive_crm_lead', {
-      p_lead_id: id,
-      p_archived_by: actorId,
-      p_archived_by_name: effectiveActorName
+    const rpcRes = await fetch(`${url}/rest/v1/rpc/delete_crm_lead`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_lead_id: id })
     });
-
-    if (!rpcErr && rpcData && (rpcData.success || rpcData.archived || rpcData.deleted_count === 1)) {
-      console.log(`✅ [Supabase Archive] Archived lead ${id} via RPC archive_crm_lead by ${actorId}.`);
-      return { success: true, deleted_count: 1, method: 'rpc_archive' };
+    if (rpcRes.ok) {
+      const rpcData = await rpcRes.json().catch(() => null);
+      if (rpcData && (rpcData.success || rpcData.deleted_count === 1)) {
+        console.log(`✅ [Supabase Delete] Deleted lead ${id} via RPC delete_crm_lead.`);
+        return { success: true, deleted_count: 1, method: 'rpc' };
+      }
     }
   } catch (_) {
-    // Fall through to direct table update
+    // Continue to direct REST deletion attempt
   }
 
-  // 2. Direct table soft-archive via .update().eq('id', id)
+  // 2. Direct hard delete on leads_and_inquiries with Prefer: return=representation
   try {
-    const archivePayload = {
-      status: 'archived',
-      updated_at: now,
-      raw_details: {
-        is_deleted: true,
-        deleted_at: now,
-        archived_by: actorId,
-        archived_by_name: effectiveActorName
-      },
-      notes: `[ARCHIVED]: Archived by ${effectiveActorName} (${actorId}) from Telecaller CRM at ${now}`
-    };
+    const delRes = await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Prefer': 'return=representation'
+      }
+    });
 
-    const { data, error } = await client
-      .from('leads_and_inquiries')
-      .update(archivePayload)
-      .eq('id', id)
-      .select();
-
-    if (error) {
-      console.warn(`❌ [Supabase Archive] Soft-archive rejected for lead ${id}:`, error.message);
-      return { success: false, deleted_count: 0, error: error.message };
+    if (delRes.ok) {
+      const deletedRows = await delRes.json().catch(() => []);
+      if (Array.isArray(deletedRows) && deletedRows.length === 1) {
+        console.log(`✅ [Supabase Delete] Hard-deleted lead ${id} from leads_and_inquiries (1 row affected).`);
+        return { success: true, deleted_count: 1, method: 'hard_delete' };
+      }
     }
-
-    if (!data || data.length === 0) {
-      console.log(`ℹ️ [Supabase Archive] Lead ${id} was not present in Supabase. Marking archived in CRM.`);
-      return { success: true, deleted_count: 1, method: 'soft_delete_db' };
-    }
-
-    console.log(`✅ [Supabase Archive] Soft-archived lead ${id} in leads_and_inquiries by ${actorId}.`);
-    return { success: true, deleted_count: 1, method: 'soft_delete_db' };
   } catch (err: any) {
-    return { success: false, deleted_count: 0, error: err?.message || 'Error reaching Supabase' };
+    console.warn('Direct hard delete failed:', err?.message || err);
   }
+
+  // 3. Fallback: If RLS blocked hard delete, perform database-level archive/delete via PATCH
+  // on leads_and_inquiries (marking status = 'archived' and embedding is_deleted flag in raw_details)
+  try {
+    const patchRes = await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        status: 'archived',
+        notes: `[ARCHIVED BY ADMIN]: Archived from Telecaller CRM at ${new Date().toISOString()}`,
+        raw_details: { is_deleted: true, deleted_at: new Date().toISOString() },
+        updated_at: new Date().toISOString()
+      })
+    });
+
+    if (patchRes.ok) {
+      const patchedRows = await patchRes.json().catch(() => []);
+      if (Array.isArray(patchedRows) && patchedRows.length === 1) {
+        console.log(`✅ [Supabase Archive] Database-archived lead ${id} in leads_and_inquiries (1 row updated).`);
+        return { success: true, deleted_count: 1, method: 'soft_delete_db' };
+      }
+    }
+  } catch (err2: any) {
+    console.warn('Database archive fallback failed:', err2?.message || err2);
+  }
+
+  return {
+    success: false,
+    deleted_count: 0,
+    error: 'Failed to archive record in Supabase database: 0 rows affected or permission denied.'
+  };
 }
 
 export interface SupabaseCallSyncResult {
@@ -504,82 +325,90 @@ export interface SupabaseCallSyncResult {
   error?: string;
 }
 
-// Persist call logs into Supabase crm_call_logs table
-// Strictly requires SUPABASE_SERVICE_ROLE_KEY because crm_call_logs is restricted exclusively to service_role
 async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<SupabaseCallSyncResult> {
-  ensureServerEnvLoaded();
-  if (!hasSupabaseServiceRoleKey()) {
+  const { url, key } = getSupabaseCredentials();
+  try {
+    const res = await fetch(`${url}/rest/v1/crm_call_logs`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        id: call.id,
+        lead_id: call.lead_id,
+        call_date: call.call_date,
+        outcome: call.outcome,
+        notes: call.notes || null,
+        followup_date: call.followup_date || null,
+        logged_by: call.logged_by || null,
+        logged_by_name: call.logged_by_name || null,
+        duration_seconds: call.duration_seconds || 0,
+        created_at: call.created_at
+      })
+    });
+
+    if (res.ok || res.status === 201) {
+      console.log(`✅ [Supabase Calls] Successfully persisted call ${call.id} to public.crm_call_logs.`);
+      return { success: true, persisted_to_supabase: true, status: 'synced_to_supabase' };
+    }
+
+    const errText = await res.text().catch(() => '');
+    if (res.status === 404 || errText.includes('42P01') || errText.includes('PGRST205')) {
+      return {
+        success: false,
+        persisted_to_supabase: false,
+        migration_pending: true,
+        status: 'table_pending_migration',
+        error: "Table 'public.crm_call_logs' does not exist in Supabase yet. Call saved securely to server storage."
+      };
+    }
+
+    console.warn(`⚠️ [Supabase Calls] PostgREST insert note (${res.status}):`, errText);
     return {
       success: false,
       persisted_to_supabase: false,
       status: 'error',
-      error: 'SUPABASE_SERVICE_ROLE_KEY is required for CRM call log persistence.'
+      error: errText
     };
-  }
-
-  try {
-    const client = getSupabaseServerClient();
-    const callRecord = {
-      id: call.id,
-      lead_id: call.lead_id,
-      call_date: call.call_date,
-      outcome: call.outcome,
-      notes: call.notes || null,
-      followup_date: call.followup_date || null,
-      logged_by: call.logged_by || null,
-      logged_by_name: call.logged_by_name || null,
-      duration_seconds: call.duration_seconds || 0,
-      created_at: call.created_at || call.call_date
-    };
-
-    const { error } = await client
-      .from('crm_call_logs')
-      .insert([callRecord]);
-
-    if (error) {
-      if (error.code === '42P01' || error.message?.includes('does not exist')) {
-        return {
-          success: false,
-          persisted_to_supabase: false,
-          migration_pending: true,
-          status: 'table_pending_migration',
-          error: "Table 'public.crm_call_logs' does not exist in Supabase yet. Call saved securely to server storage."
-        };
-      }
-      console.warn('⚠️ [Supabase Calls] Insert note:', error.message);
-      return { success: false, persisted_to_supabase: false, status: 'error', error: error.message };
-    }
-
-    console.log(`✅ [Supabase Calls] Successfully persisted call ${call.id} to public.crm_call_logs.`);
-    return { success: true, persisted_to_supabase: true, status: 'synced_to_supabase' };
   } catch (err: any) {
-    return { success: false, persisted_to_supabase: false, status: 'network_error', error: err?.message || String(err) };
+    return {
+      success: false,
+      persisted_to_supabase: false,
+      status: 'network_error',
+      error: err?.message || String(err)
+    };
   }
 }
 
 // Background synchronization of calls from Supabase when table exists
 let lastSupabaseCallSyncTimestamp = 0;
 async function syncCallsFromSupabase(): Promise<{ synced: number; tableAvailable: boolean }> {
-  if (!hasSupabaseServiceRoleKey()) {
-    return { synced: 0, tableAvailable: false };
-  }
-
   // Throttle queries to once every 15 seconds
   if (Date.now() - lastSupabaseCallSyncTimestamp < 15000) {
     return { synced: 0, tableAvailable: false };
   }
   lastSupabaseCallSyncTimestamp = Date.now();
 
+  const { url, key } = getSupabaseCredentials();
   try {
-    const client = getSupabaseServerClient();
-    const { data: rows, error } = await client
-      .from('crm_call_logs')
-      .select('*')
-      .order('call_date', { ascending: false })
-      .limit(500);
+    const res = await fetch(`${url}/rest/v1/crm_call_logs?select=*&order=call_date.desc&limit=500`, {
+      method: 'GET',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`
+      }
+    });
 
-    if (error || !Array.isArray(rows) || rows.length === 0) {
-      return { synced: 0, tableAvailable: !error };
+    if (!res.ok) {
+      return { synced: 0, tableAvailable: false };
+    }
+
+    const rows = await res.json().catch(() => []);
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return { synced: 0, tableAvailable: true };
     }
 
     let newCount = 0;
@@ -602,10 +431,12 @@ async function syncCallsFromSupabase(): Promise<{ synced: number; tableAvailable
         newCount++;
       }
     }
+
     if (newCount > 0) {
       saveCalls();
-      console.log(`📥 [Supabase Call Sync] Synced ${newCount} historical calls from Supabase.`);
+      console.log(`✅ [CRM Call Sync] Synced ${newCount} call logs from Supabase.`);
     }
+
     return { synced: newCount, tableAvailable: true };
   } catch {
     return { synced: 0, tableAvailable: false };
@@ -667,70 +498,57 @@ if (dbCrmUsers['telecaller1@royalepicinterior.com']) {
   delete dbCrmUsers['telecaller1@royalepicinterior.com'];
 }
 
-// Seed default staff users with individual PINs
-const defaultStaffList: ServerCrmUser[] = [
-  {
-    id: 'crm_staff_admin',
-    email: 'admin@royalepicinterior.com',
-    name: 'Royal Epic Admin',
-    phone: '+91 99166 33338',
-    pin: '2026',
-    password: 'Admin@RoyalEpic2026',
-    role: 'staff',
-    status: 'active',
-    createdAt: '2026-11-06T09:39:58.739Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'crm_staff_executive',
-    email: 'royalepicfurnitur1@gmail.com',
-    name: 'Royal Epic Executive',
-    phone: '+91 99166 33338',
-    pin: '2026',
-    password: 'Admin@RoyalEpic2026',
-    role: 'staff',
-    status: 'active',
-    createdAt: '2026-11-06T09:39:58.739Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'crm_staff_telecaller1',
-    email: 'telecaller1@gmail.com',
-    name: 'Telecaller 1',
-    phone: '+91 98450 11223',
-    pin: '1234',
-    password: 'telecaller1@123',
-    role: 'staff',
-    status: 'active',
-    createdAt: '2026-11-06T09:48:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'crm_staff_telecaller2',
-    email: 'telecaller2@royalepicinterior.com',
-    name: 'Telecaller 2',
-    phone: '+91 98450 44556',
-    pin: '5678',
-    password: 'telecaller2@5678',
-    role: 'staff',
-    status: 'active',
-    createdAt: '2026-11-12T09:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  }
-];
+// Seed default users
+const adminUser: ServerCrmUser = {
+  id: 'crm_admin_primary',
+  email: 'admin@royalepicinterior.com',
+  name: 'Royal Epic Admin',
+  phone: '+91 99166 33338',
+  password: 'Admin@RoyalEpic2026',
+  role: 'admin',
+  status: 'active',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
 
-defaultStaffList.forEach(st => {
-  const key = st.email || st.name.toLowerCase().replace(/\s+/g, '');
-  if (!dbCrmUsers[key]) {
-    dbCrmUsers[key] = st;
-  } else {
-    // Ensure PIN is always populated
-    if (!dbCrmUsers[key].pin) {
-      dbCrmUsers[key].pin = st.pin;
-    }
-    dbCrmUsers[key].status = 'active';
-  }
-});
+const execAdminUser: ServerCrmUser = {
+  id: 'crm_admin_executive',
+  email: 'royalepicfurnitur1@gmail.com',
+  name: 'Royal Epic Executive Admin',
+  phone: '+91 99166 33338',
+  password: 'Admin@RoyalEpic2026',
+  role: 'admin',
+  status: 'active',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
+
+const telecaller1User: ServerCrmUser = {
+  id: 'crm_telecaller_1',
+  email: 'telecaller1@gmail.com',
+  name: 'Telecaller 1',
+  phone: '+91 98450 11223',
+  password: 'telecaller1@123',
+  role: 'telecaller',
+  status: 'active',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
+
+if (!dbCrmUsers['admin@royalepicinterior.com']) {
+  dbCrmUsers['admin@royalepicinterior.com'] = adminUser;
+}
+if (!dbCrmUsers['royalepicfurnitur1@gmail.com']) {
+  dbCrmUsers['royalepicfurnitur1@gmail.com'] = execAdminUser;
+}
+if (!dbCrmUsers['telecaller1@gmail.com']) {
+  dbCrmUsers['telecaller1@gmail.com'] = telecaller1User;
+} else {
+  dbCrmUsers['telecaller1@gmail.com'].password = 'telecaller1@123';
+  dbCrmUsers['telecaller1@gmail.com'].role = 'telecaller';
+  dbCrmUsers['telecaller1@gmail.com'].status = 'active';
+  dbCrmUsers['telecaller1@gmail.com'].name = 'Telecaller 1';
+}
 
 saveUsers();
 
@@ -904,89 +722,61 @@ let isSupabaseSyncInProgress = false;
 
 // Pull existing website public enquiries from Supabase leads_and_inquiries into Telecaller CRM
 export async function syncLeadsFromSupabase(): Promise<number> {
-  if (!hasSupabaseServiceRoleKey()) {
-    return 0; // Skip polling if service role is not set up
-  }
   if (isSupabaseSyncInProgress) {
     return 0; // Concurrency guard: avoid interleaving sync operations
   }
   isSupabaseSyncInProgress = true;
+  const { url, key } = getSupabaseCredentials();
   let syncedCount = 0;
 
   try {
-    const client = getSupabaseServerClient();
-    const { data: rows, error } = await client
-      .from('leads_and_inquiries')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(300);
-
-    if (!error && Array.isArray(rows) && rows.length > 0) {
-      let purgeCount = 0;
-      rows.forEach((r: any) => {
-        // 1. Strict tombstone check: If deleted/archived, purge from memory
-        if (dbCrmDeletedLeadIds.has(r.id)) {
-          if (dbCrmLeads[r.id]) {
-            delete dbCrmLeads[r.id];
-            purgeCount++;
+    const res = await fetch(`${url}/rest/v1/leads_and_inquiries?select=*&order=created_at.desc&limit=200`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` }
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length > 0) {
+        rows.forEach((r: any) => {
+          // 1. Strict tombstone check: If deleted by admin, never re-ingest
+          if (dbCrmDeletedLeadIds.has(r.id)) {
+            return;
           }
-          return;
-        }
-        // 2. Strict archive check
-        if (r.status === 'archived' || r.is_deleted === true || r.raw_details?.is_deleted === true) {
-          dbCrmDeletedLeadIds.add(r.id);
-          if (dbCrmLeads[r.id]) {
-            delete dbCrmLeads[r.id];
-            purgeCount++;
+          // 2. Strict archive check
+          if (r.status === 'archived' || r.raw_details?.is_deleted === true) {
+            return;
           }
-          return;
-        }
-        const custName = r.full_name || r.customer_name || '';
-        // 3. Skip developer test / probe entries
-        if (isDeveloperTestRecord(custName, r.phone)) {
-          return;
-        }
-        // 4. Ingest new leads
-        if (!dbCrmLeads[r.id]) {
-          ingestPublicWebsiteLead(r);
-          syncedCount++;
-        } else {
-          // 5. Update local lead if Supabase has newer update timestamp
-          const local = dbCrmLeads[r.id];
-          const rUpdated = new Date(r.updated_at || r.created_at).getTime();
-          const lUpdated = new Date(local.updated_at || local.created_at).getTime();
-          if (rUpdated >= lUpdated && r.raw_details) {
-            const rd = r.raw_details;
-            if (rd.temperature) local.temperature = rd.temperature;
-            if (rd.assigned_to) local.assigned_to = rd.assigned_to;
-            if (rd.assigned_to_name) local.assigned_to_name = rd.assigned_to_name;
-            if (rd.next_followup_at) local.next_followup_at = rd.next_followup_at;
-            if (rd.next_followup_date) local.next_followup_date = rd.next_followup_date;
-            if (rd.next_followup_time) local.next_followup_time = rd.next_followup_time;
-            if (rd.crm_status) local.status = rd.crm_status;
-            if (r.full_name) {
-              local.customer_name = r.full_name;
-              local.name = r.full_name;
-            }
-            if (r.phone) {
-              local.phone = r.phone;
-              local.normalized_phone = normalizePhone(r.phone);
-            }
-            if (r.city) local.city = r.city;
-            if (r.service_type) local.interested_service = r.service_type;
-            if (r.estimated_budget) local.budget = r.estimated_budget;
-            if (r.notes) local.notes = r.notes;
-            local.updated_at = r.updated_at || new Date().toISOString();
+          const custName = r.full_name || r.customer_name || '';
+          // 3. Skip developer test / probe entries
+          if (isDeveloperTestRecord(custName, r.phone)) {
+            return;
+          }
+          // 4. Ingest new leads
+          if (!dbCrmLeads[r.id]) {
+            ingestPublicWebsiteLead(r);
             syncedCount++;
+          } else {
+            // 5. Update local lead if Supabase has newer update timestamp
+            const local = dbCrmLeads[r.id];
+            const rUpdated = new Date(r.updated_at || r.created_at).getTime();
+            const lUpdated = new Date(local.updated_at || local.created_at).getTime();
+            if (rUpdated > lUpdated && r.raw_details) {
+              const rd = r.raw_details;
+              if (rd.temperature) local.temperature = rd.temperature;
+              if (rd.assigned_to) local.assigned_to = rd.assigned_to;
+              if (rd.assigned_to_name) local.assigned_to_name = rd.assigned_to_name;
+              if (rd.next_followup_at) local.next_followup_at = rd.next_followup_at;
+              if (rd.next_followup_date) local.next_followup_date = rd.next_followup_date;
+              if (rd.next_followup_time) local.next_followup_time = rd.next_followup_time;
+              if (rd.crm_status) local.status = rd.crm_status;
+              local.updated_at = r.updated_at;
+              syncedCount++;
+            }
           }
+        });
+        if (syncedCount > 0) {
+          saveLeads();
+          console.log(`✅ [CRM Sync] Synchronized ${syncedCount} website enquiries with Telecaller CRM.`);
         }
-      });
-      if (purgeCount > 0) {
-        saveDeletedLeadIds();
-      }
-      if (syncedCount > 0 || purgeCount > 0) {
-        saveLeads();
-        console.log(`✅ [CRM Sync] Synchronized ${syncedCount} website enquiries with Telecaller CRM (purged ${purgeCount} archived).`);
       }
     }
   } catch (err: any) {
@@ -1029,34 +819,24 @@ function formatLeadWithAliases(lead: ServerCrmLead) {
 // -----------------------------------------------------------------------------
 // AUTHENTICATION & SESSION EXTRACTION
 // -----------------------------------------------------------------------------
-export const invalidatedCrmTokens = new Set<string>();
-
 export function extractUserFromReq(req: Request): ServerCrmUser | null {
   const authHeader = req.headers['authorization'];
   const userIdHeader = req.headers['x-crm-user-id'] as string;
   const adminSecret = req.headers['x-admin-secret'] as string;
 
-  // Direct bypass for system/admin operations
+  // Direct admin bypass for Admin Dashboard operations
   if (adminSecret === 'RoyalEpicAdmin2026' || req.headers['x-admin-access'] === 'true') {
-    return dbCrmUsers['admin@royalepicinterior.com'] || Object.values(dbCrmUsers)[0] || null;
-  }
-
-  // Check token invalidation
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    if (invalidatedCrmTokens.has(token)) {
-      return null;
-    }
-    const found = Object.values(dbCrmUsers).find(u => 
-      token.includes(u.id) || 
-      (u.email && token.includes(u.email)) ||
-      token.includes(u.name.toLowerCase().replace(/\s+/g, ''))
-    );
-    if (found && found.status === 'active') return found;
+    return dbCrmUsers['admin@royalepicinterior.com'] || dbCrmUsers['royalepicfurnitur1@gmail.com'] || Object.values(dbCrmUsers).find(u => u.role === 'admin') || null;
   }
 
   if (userIdHeader) {
-    const found = Object.values(dbCrmUsers).find(u => u.id === userIdHeader || u.name === userIdHeader);
+    const found = Object.values(dbCrmUsers).find(u => u.id === userIdHeader);
+    if (found && found.status === 'active') return found;
+  }
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    const found = Object.values(dbCrmUsers).find(u => token.includes(u.id) || token.includes(u.email));
     if (found && found.status === 'active') return found;
   }
 
@@ -1064,66 +844,33 @@ export function extractUserFromReq(req: Request): ServerCrmUser | null {
 }
 
 // -----------------------------------------------------------------------------
-// AUTH ENDPOINTS (Staff Login & Session)
+// AUTH ENDPOINTS
 // -----------------------------------------------------------------------------
-crmRouter.get('/auth/staff-list', (req: Request, res: Response) => {
-  const staff = Object.values(dbCrmUsers)
-    .filter(u => u.status === 'active')
-    .map(u => ({
-      id: u.id,
-      name: u.name,
-      phone: u.phone || ''
-    }));
-  res.json({ success: true, staff });
-});
-
 crmRouter.post('/auth/login', (req: Request, res: Response) => {
   try {
-    const { name, pin, email, password } = req.body;
-    const identifier = (name || email || '').trim();
-    const secret = (pin || password || '').trim();
-
-    if (!identifier || !secret) {
-      return res.status(400).json({ success: false, error: 'Staff name and PIN are required.' });
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required.' });
     }
 
-    const normId = identifier.toLowerCase();
-    // Search by staff name (case-insensitive exact or trimmed), or email, or id
-    const user = Object.values(dbCrmUsers).find(u => 
-      u.name.trim().toLowerCase() === normId ||
-      (u.email && u.email.trim().toLowerCase() === normId) ||
-      u.id === identifier
-    );
+    const normEmail = email.trim().toLowerCase();
+    const user = dbCrmUsers[normEmail];
 
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        error: `No authorized staff account found matching "${identifier}". Please check your name or contact management.` 
-      });
+      return res.status(401).json({ success: false, error: 'No approved account found for this email address.' });
     }
 
     if (user.status !== 'active') {
-      return res.status(403).json({ 
-        success: false, 
-        error: `Staff account for "${user.name}" is currently suspended. Please contact management.` 
-      });
+      return res.status(403).json({ success: false, error: 'Your account has been suspended by an administrator.' });
     }
 
-    // Verify PIN or password
-    const validPin = Boolean(user.pin && user.pin === secret);
-    const validPass = Boolean(user.password && user.password === secret);
-
-    if (!validPin && !validPass) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid PIN. Please enter your correct individual PIN and try again.' 
-      });
+    if (user.password && user.password !== password) {
+      return res.status(401).json({ success: false, error: 'Invalid password. Please verify your credentials.' });
     }
 
-    const token = `crm_staff_${user.id}_${Date.now()}`;
-    const safeUser: any = { ...user };
+    const token = `crm_${user.role}_${user.id}_${Date.now()}`;
+    const safeUser = { ...user };
     delete safeUser.password;
-    delete safeUser.pin;
 
     res.json({
       success: true,
@@ -1140,64 +887,13 @@ crmRouter.get('/auth/session', (req: Request, res: Response) => {
   if (!user) {
     return res.status(401).json({ success: false, error: 'Unauthorized or expired session.' });
   }
-  const safeUser: any = { ...user };
+  const safeUser = { ...user };
   delete safeUser.password;
-  delete safeUser.pin;
   res.json({ success: true, user: safeUser });
 });
 
-crmRouter.post('/auth/logout', (req: Request, res: Response) => {
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    if (token) {
-      invalidatedCrmTokens.add(token);
-    }
-  }
-  res.json({ success: true, message: 'Successfully logged out.' });
-});
-
-// -----------------------------------------------------------------------------
-// SAFE ENVIRONMENT DIAGNOSTIC ENDPOINT
-// Never exposes secret key contents or partial values
-// -----------------------------------------------------------------------------
-crmRouter.get('/debug/env-status', async (req: Request, res: Response) => {
-  const user = extractUserFromReq(req);
-  if (!user) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized: Staff session required to access diagnostic information.'
-    });
-  }
-
-  const diag = getSafeEnvDiagnostics();
-  let serverClientReady = false;
-  let databaseConnected = false;
-
-  try {
-    if (hasSupabaseServiceRoleKey()) {
-      const client = getSupabaseServerClient();
-      serverClientReady = true;
-      const { error } = await client.from('leads_and_inquiries').select('*', { count: 'exact', head: true });
-      if (!error) {
-        databaseConnected = true;
-      }
-    }
-  } catch (_) {}
-
-  // Sanitized response: strictly NO filesystem paths, NO environment variable key arrays
-  res.json({
-    success: true,
-    diagnostics: {
-      serviceRoleKeyExists: diag.serviceRoleKeyExists,
-      serviceRoleKeyValidFormat: diag.serviceRoleKeyValidFormat,
-      supabaseServerClientReady: serverClientReady,
-      databaseConnected,
-      nodeEnv: diag.nodeEnv,
-      processUptimeSeconds: diag.processUptimeSeconds,
-      timestamp: new Date().toISOString()
-    }
-  });
+crmRouter.post('/auth/logout', (_req: Request, res: Response) => {
+  res.json({ success: true });
 });
 
 // -----------------------------------------------------------------------------
@@ -1205,20 +901,12 @@ crmRouter.get('/debug/env-status', async (req: Request, res: Response) => {
 // -----------------------------------------------------------------------------
 
 // GET /api/crm/leads
-crmRouter.get('/leads', async (req: Request, res: Response) => {
+crmRouter.get('/leads', (req: Request, res: Response) => {
   try {
-    const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Valid staff authentication required to access CRM leads.'
-      });
-    }
-
-    // Sync with Supabase website leads (throttled every 15s)
+    // Non-blocking background sync with Supabase website leads (throttled every 15s)
     if (Date.now() - lastSupabaseSyncTimestamp > 15000) {
       lastSupabaseSyncTimestamp = Date.now();
-      await syncLeadsFromSupabase().catch(() => {});
+      syncLeadsFromSupabase().catch(() => {});
     }
 
     const search = ((req.query.search as string) || '').toLowerCase().trim();
@@ -1403,10 +1091,6 @@ crmRouter.get('/leads', async (req: Request, res: Response) => {
 
 // GET /api/crm/leads/:id
 crmRouter.get('/leads/:id', (req: Request, res: Response) => {
-  const user = extractUserFromReq(req);
-  if (!user) {
-    return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
-  }
   const lead = dbCrmLeads[req.params.id];
   if (!lead) {
     return res.status(404).json({ success: false, error: 'Lead not found.' });
@@ -1419,14 +1103,6 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
     const body = req.body || {};
-
-    // IDEMPOTENCY / UPDATE ROUTING GUARD:
-    // If client supplied an existing lead ID to POST /leads, delegate to update handler so we NEVER attempt a duplicate INSERT!
-    if (body.id && (dbCrmLeads[body.id] || (hasSupabaseServiceRoleKey() && await checkLeadExistsInSupabase(body.id)))) {
-      console.log(`ℹ️ [CRM Leads POST] Received existing lead ID "${body.id}" on POST route; delegating to update handler to prevent duplicate key constraint violation.`);
-      req.params.id = body.id;
-      return handleLeadUpdate(req, res);
-    }
 
     const rawName = body.customer_name || body.name || '';
     const rawPhone = body.phone || '';
@@ -1465,29 +1141,16 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
     const existingLead = Object.values(dbCrmLeads).find(l => normalizePhone(l.phone) === normPhone);
     if (existingLead) {
       // If submitted from AI Consultant / Public website form, merge gracefully
-      if (body.source === 'Consultation AI' || body.source === 'Website AI Consultant' || body.source === 'Website Enquiry') {
+      if (rawSource.includes('AI') || rawSource.includes('Website Form')) {
+        existingLead.notes = `${existingLead.notes || ''}\n[Update ${new Date().toISOString().slice(0, 10)}]: ${rawNotes}`.trim();
         existingLead.updated_at = new Date().toISOString();
-        if (rawNotes) {
-          existingLead.notes = existingLead.notes ? `${existingLead.notes}\n[Consultation Update]: ${rawNotes}` : rawNotes;
-        }
-        if (rawService && rawService !== 'Residential Interior') {
-          existingLead.interested_service = rawService;
-        }
-        if (rawBudget) existingLead.budget = rawBudget;
-
-        const updateRes = await updateLeadInSupabase(existingLead);
-        if (!updateRes.success) {
-          return res.status(500).json({
-            success: false,
-            error: `Database update failed: Could not persist consultation details to Supabase PostgreSQL (${updateRes.error})`
-          });
-        }
         dbCrmLeads[existingLead.id] = existingLead;
         saveLeads();
+        syncLeadToSupabase(existingLead).catch(() => {});
         return res.json({
           success: true,
           leadId: existingLead.id,
-          message: 'Existing lead updated with new consultation details in Supabase database.',
+          message: 'Existing lead updated with new consultation details.',
           lead: formatLeadWithAliases(existingLead)
         });
       }
@@ -1506,7 +1169,7 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString();
-    const id = `CRM-${now.slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
+    const id = body.id || `CRM-${now.slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const newLead: ServerCrmLead = {
       id,
@@ -1586,25 +1249,7 @@ crmRouter.patch('/leads/:id', async (req: Request, res: Response) => {
 async function handleLeadUpdate(req: Request, res: Response) {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Valid staff session required to edit CRM leads.'
-      });
-    }
-
-    let lead = dbCrmLeads[req.params.id];
-    if (!lead && hasSupabaseServiceRoleKey()) {
-      try {
-        const client = getSupabaseServerClient();
-        const { data: dbRow } = await client.from('leads_and_inquiries').select('*').eq('id', req.params.id).single();
-        if (dbRow) {
-          ingestPublicWebsiteLead(dbRow);
-          lead = dbCrmLeads[req.params.id];
-        }
-      } catch (_) {}
-    }
-
+    const lead = dbCrmLeads[req.params.id];
     if (!lead) {
       return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
     }
@@ -1658,12 +1303,12 @@ async function handleLeadUpdate(req: Request, res: Response) {
     lead.updated_at = new Date().toISOString();
 
     // 1. Await Supabase cloud update BEFORE updating local memory/cache
-    const updateRes = await updateLeadInSupabase(lead);
-    if (!updateRes.success) {
-      console.error('❌ [CRM Update] Aborting local update because Supabase write failed:', updateRes.error);
+    const syncRes = await syncLeadToSupabase(lead);
+    if (!syncRes.success) {
+      console.error('❌ [CRM Update] Aborting local update because Supabase write failed:', syncRes.error);
       return res.status(500).json({
         success: false,
-        error: `Database update failed: Could not persist changes to Supabase PostgreSQL (${updateRes.error})`
+        error: `Database update failed: Could not persist changes to Supabase PostgreSQL (${syncRes.error})`
       });
     }
 
@@ -1689,36 +1334,25 @@ async function handleLeadUpdate(req: Request, res: Response) {
   }
 }
 
-// DELETE /api/crm/leads/:id (Archive Lead - Authorized for Admin and Telecaller)
+// DELETE /api/crm/leads/:id (Archive Lead - Strictly Admin-Only)
 crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({
         success: false,
-        error: 'Unauthorized: Valid staff session required to archive CRM leads.'
+        error: 'Forbidden: Only administrators are authorized to archive CRM leads.'
       });
     }
 
     const leadId = req.params.id;
-    let lead = dbCrmLeads[leadId];
-    if (!lead && hasSupabaseServiceRoleKey()) {
-      try {
-        const client = getSupabaseServerClient();
-        const { data: dbRow } = await client.from('leads_and_inquiries').select('*').eq('id', leadId).single();
-        if (dbRow) {
-          ingestPublicWebsiteLead(dbRow);
-          lead = dbCrmLeads[leadId];
-        }
-      } catch (_) {}
-    }
-
+    const lead = dbCrmLeads[leadId];
     if (!lead) {
       return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
     }
 
     // 1. Await database archiving in Supabase first
-    const dbResult = await deleteLeadFromSupabase(leadId, user.id, user.name);
+    const dbResult = await deleteLeadFromSupabase(leadId);
     if (!dbResult.success || dbResult.deleted_count === 0) {
       console.error(`❌ [CRM Archive] Supabase archiving failed for lead ${leadId}:`, dbResult.error);
       return res.status(500).json({
@@ -1796,7 +1430,7 @@ crmRouter.get('/calls', async (_req: Request, res: Response) => {
 });
 
 // GET /api/crm/leads/:id/calls (Calls for specific lead)
-crmRouter.get(['/leads/:id/calls', '/calls/:id'], async (req: Request, res: Response) => {
+crmRouter.get('/leads/:id/calls', async (req: Request, res: Response) => {
   const leadId = req.params.id;
   await syncCallsFromSupabase().catch(() => {});
 
@@ -1822,31 +1456,13 @@ crmRouter.get(['/leads/:id/calls', '/calls/:id'], async (req: Request, res: Resp
 crmRouter.post('/calls', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Valid staff session required to record call logs.'
-      });
-    }
-
     const { lead_id, outcome, notes, followup_date, update_lead_status, update_lead_temperature } = req.body;
 
     if (!lead_id || !outcome) {
       return res.status(400).json({ success: false, error: 'lead_id and outcome are required.' });
     }
 
-    let lead = dbCrmLeads[lead_id];
-    if (!lead && hasSupabaseServiceRoleKey()) {
-      try {
-        const client = getSupabaseServerClient();
-        const { data: dbRow } = await client.from('leads_and_inquiries').select('*').eq('id', lead_id).single();
-        if (dbRow) {
-          ingestPublicWebsiteLead(dbRow);
-          lead = dbCrmLeads[lead_id];
-        }
-      } catch (_) {}
-    }
-
+    const lead = dbCrmLeads[lead_id];
     if (!lead) {
       return res.status(404).json({ success: false, error: 'Lead not found.' });
     }
@@ -1859,49 +1475,47 @@ crmRouter.post('/calls', async (req: Request, res: Response) => {
       outcome,
       notes: notes?.trim() || undefined,
       followup_date: followup_date || undefined,
-      logged_by: user.id,
-      logged_by_name: user.name,
+      logged_by: user?.id,
+      logged_by_name: user?.name,
       created_at: now
     };
 
-    // 1. Authoritative Supabase write MUST succeed before any local cache update
-    const dbCallResult = await syncCallLogToSupabase(callLog);
-    if (!dbCallResult.success || !dbCallResult.persisted_to_supabase) {
-      console.error('❌ [CRM Call Log] Supabase write failed:', dbCallResult.error);
-      return res.status(500).json({
-        success: false,
-        error: `Supabase Call Logging Failed: ${dbCallResult.error || 'Could not persist call log to Supabase PostgreSQL crm_call_logs table.'}`
-      });
-    }
-
-    // 2. Only after confirmed persistence in Supabase, update server cache
+    // Deduplicate in memory / local store
     if (!dbCrmCalls.some(c => c.id === callLog.id)) {
       dbCrmCalls.push(callLog);
       saveCalls();
     }
 
-    // 3. Automatically update lead's metadata
+    // Await validated sync to Supabase (does NOT send emails)
+    const dbCallResult = await syncCallLogToSupabase(callLog);
+
+    // Automatically update lead's metadata
     lead.last_contact_at = now;
     if (update_lead_status) lead.status = update_lead_status;
     if (update_lead_temperature) lead.temperature = update_lead_temperature;
     if (followup_date) lead.next_followup_at = followup_date;
-    lead.last_updated_by = user.id;
-    lead.last_updated_by_name = user.name;
+    lead.last_updated_by = user?.id;
+    lead.last_updated_by_name = user?.name;
     lead.updated_at = now;
 
     dbCrmLeads[lead_id] = lead;
     saveLeads();
 
-    // 4. Update lead in Supabase
-    await updateLeadInSupabase(lead).catch((err) => {
-      console.warn('⚠️ [CRM Call Log] Note on lead metadata sync:', err?.message || err);
-    });
+    // Sync updated lead to Supabase
+    syncLeadToSupabase(lead).catch(() => {});
 
     res.status(201).json({
       success: true,
       callLog,
       lead: formatLeadWithAliases(lead),
-      message: 'Call log successfully persisted to Supabase database.'
+      storage: {
+        local_storage: true,
+        supabase_cloud: dbCallResult.persisted_to_supabase,
+        migration_pending: dbCallResult.migration_pending || false,
+        status_message: dbCallResult.persisted_to_supabase
+          ? 'Call history persisted to Supabase and CRM storage.'
+          : 'Call history saved securely to CRM server storage. Supabase crm_call_logs table pending migration.'
+      }
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error recording call' });
@@ -2089,13 +1703,13 @@ crmRouter.get('/reports', (req: Request, res: Response) => {
 });
 
 // -----------------------------------------------------------------------------
-// CSV IMPORT ENDPOINT
+// CSV IMPORT ENDPOINT (Admin Only)
 // -----------------------------------------------------------------------------
 crmRouter.post('/import-csv', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required to import leads.' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Only administrators can import leads via CSV.' });
     }
 
     const { leads: incomingLeads } = req.body;
@@ -2174,18 +1788,17 @@ crmRouter.post('/import-csv', (req: Request, res: Response) => {
 });
 
 // -----------------------------------------------------------------------------
-// STAFF & USER MANAGEMENT ENDPOINTS
+// USER MANAGEMENT ENDPOINTS (Admin Only)
 // -----------------------------------------------------------------------------
 crmRouter.get('/users', (req: Request, res: Response) => {
   const user = extractUserFromReq(req);
-  if (!user) {
-    return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
   }
 
   const safeUsers = Object.values(dbCrmUsers).map(u => {
-    const c: any = { ...u };
+    const c = { ...u };
     delete c.password;
-    delete c.pin;
     return c;
   });
 
@@ -2195,164 +1808,129 @@ crmRouter.get('/users', (req: Request, res: Response) => {
 crmRouter.post('/users/role', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
     }
 
     const { userId, role } = req.body;
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'Valid userId is required.' });
+    if (!userId || !role || (role !== 'admin' && role !== 'telecaller')) {
+      return res.status(400).json({ success: false, error: 'Valid userId and role are required.' });
     }
 
     const target = Object.values(dbCrmUsers).find(u => u.id === userId);
     if (!target) {
-      return res.status(404).json({ success: false, error: 'Staff member not found.' });
+      return res.status(404).json({ success: false, error: 'User not found.' });
     }
 
-    target.role = role || 'staff';
+    target.role = role;
     target.updatedAt = new Date().toISOString();
     saveUsers();
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error updating staff profile' });
+    res.status(500).json({ success: false, error: err.message || 'Error updating user role' });
   }
 });
 
 crmRouter.post('/users/create', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
     }
 
-    const { name, pin, password, phone, email, role = 'staff' } = req.body;
-    const staffPin = (pin || password || '').trim();
-    if (!name || !staffPin) {
-      return res.status(400).json({ success: false, error: 'Staff name and individual PIN are required.' });
+    const { name, email, password, phone, role = 'telecaller' } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
     }
 
-    const staffKey = (email || name).trim().toLowerCase();
-    if (dbCrmUsers[staffKey] || Object.values(dbCrmUsers).some(u => u.name.trim().toLowerCase() === name.trim().toLowerCase())) {
-      return res.status(409).json({ success: false, error: 'A staff member with this name or email already exists.' });
+    const normEmail = email.trim().toLowerCase();
+    if (dbCrmUsers[normEmail]) {
+      return res.status(409).json({ success: false, error: 'User with this email already exists.' });
     }
 
     const newUser: ServerCrmUser = {
-      id: `crm_staff_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`,
+      id: `crm_usr_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`,
+      email: normEmail,
       name: name.trim(),
-      pin: staffPin,
-      password: staffPin,
-      email: email ? email.trim().toLowerCase() : `${name.trim().toLowerCase().replace(/\s+/g, '')}@royalepicinterior.com`,
       phone: phone?.trim() || '',
-      role: 'staff',
+      password,
+      role: role === 'admin' ? 'admin' : 'telecaller',
       status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    dbCrmUsers[staffKey] = newUser;
+    dbCrmUsers[normEmail] = newUser;
     saveUsers();
 
-    const safe: any = { ...newUser };
+    const safe = { ...newUser };
     delete safe.password;
-    delete safe.pin;
     res.status(201).json({ success: true, user: safe });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error creating staff member' });
+    res.status(500).json({ success: false, error: err.message || 'Error creating user' });
   }
 });
 
 crmRouter.delete('/users/:id', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
     }
 
     const { id } = req.params;
     const targetKey = Object.keys(dbCrmUsers).find(email => dbCrmUsers[email].id === id || email.toLowerCase() === id.toLowerCase());
     if (!targetKey) {
-      return res.status(404).json({ success: false, error: 'Staff member not found.' });
+      return res.status(404).json({ success: false, error: 'User not found.' });
     }
 
-    if (dbCrmUsers[targetKey].id === 'crm_staff_admin' || dbCrmUsers[targetKey].id === 'crm_admin_primary') {
-      return res.status(400).json({ success: false, error: 'Cannot delete primary root staff account.' });
+    if (dbCrmUsers[targetKey].id === 'crm_admin_primary') {
+      return res.status(400).json({ success: false, error: 'Cannot delete primary root administrator account.' });
     }
 
     const deletedName = dbCrmUsers[targetKey].name;
     delete dbCrmUsers[targetKey];
     saveUsers();
 
-    res.json({ success: true, message: `Staff member "${deletedName}" has been removed.` });
+    res.json({ success: true, message: `User "${deletedName}" has been removed.` });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error deleting staff member' });
+    res.status(500).json({ success: false, error: err.message || 'Error deleting user' });
   }
 });
 
-crmRouter.post('/users/pin', (req: Request, res: Response) => {
-  try {
-    const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
-    }
-
-    const { userId, newPin, newPassword } = req.body;
-    const pinVal = (newPin || newPassword || '').trim();
-    if (!userId || !pinVal || pinVal.length < 4) {
-      return res.status(400).json({ success: false, error: 'Valid userId and new PIN (min 4 digits) required.' });
-    }
-
-    const target = Object.values(dbCrmUsers).find(u => u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase()));
-    if (!target) {
-      return res.status(404).json({ success: false, error: 'Staff member not found.' });
-    }
-
-    target.pin = pinVal;
-    target.password = pinVal;
-    target.updatedAt = new Date().toISOString();
-    saveUsers();
-
-    res.json({ success: true, message: `PIN for ${target.name} has been updated successfully.` });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error resetting PIN' });
-  }
-});
-
-// Alias for password reset compatibility
 crmRouter.post('/users/password', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
     }
 
-    const { userId, newPassword, newPin } = req.body;
-    const pinVal = (newPin || newPassword || '').trim();
-    if (!userId || !pinVal) {
-      return res.status(400).json({ success: false, error: 'Valid userId and new PIN/password required.' });
+    const { userId, newPassword } = req.body;
+    if (!userId || !newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'Valid userId and new password (min 6 chars) required.' });
     }
 
-    const target = Object.values(dbCrmUsers).find(u => u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase()));
+    const target = Object.values(dbCrmUsers).find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase());
     if (!target) {
-      return res.status(404).json({ success: false, error: 'Staff member not found.' });
+      return res.status(404).json({ success: false, error: 'User not found.' });
     }
 
-    target.pin = pinVal;
-    target.password = pinVal;
+    target.password = newPassword;
     target.updatedAt = new Date().toISOString();
     saveUsers();
 
-    res.json({ success: true, message: `Credentials for ${target.name} have been updated.` });
+    res.json({ success: true, message: `Password for ${target.name} has been updated.` });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Error updating credentials' });
+    res.status(500).json({ success: false, error: err.message || 'Error resetting password' });
   }
 });
 
 crmRouter.post('/users/status', (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Valid staff session required.' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
     }
 
     const { userId, status } = req.body;
@@ -2360,16 +1938,16 @@ crmRouter.post('/users/status', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Valid userId and status (active/suspended) required.' });
     }
 
-    const target = Object.values(dbCrmUsers).find(u => u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase()));
+    const target = Object.values(dbCrmUsers).find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase());
     if (!target) {
-      return res.status(404).json({ success: false, error: 'Staff member not found.' });
+      return res.status(404).json({ success: false, error: 'User not found.' });
     }
 
     target.status = status;
     target.updatedAt = new Date().toISOString();
     saveUsers();
 
-    res.json({ success: true, message: `Staff status set to ${status}.` });
+    res.json({ success: true, message: `User status set to ${status}.` });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error updating status' });
   }
@@ -2380,8 +1958,8 @@ crmRouter.post('/users/status', (req: Request, res: Response) => {
 crmRouter.post('/migrate-to-supabase', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Staff authentication required to trigger migration.' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Forbidden: Admin authentication required to trigger migration.' });
     }
 
     const leads = Object.values(dbCrmLeads);

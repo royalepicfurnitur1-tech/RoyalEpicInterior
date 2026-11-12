@@ -1,4 +1,3 @@
-import "./src/server/envLoader";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -1252,7 +1251,6 @@ async function startServer() {
       process.env.SUPABASE_URL || 
       "https://lwrfoztfsyffgtybesia.supabase.co";
     const supabaseKey = 
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
       process.env.VITE_SUPABASE_ANON_KEY || 
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
       process.env.SUPABASE_ANON_KEY || 
@@ -1286,13 +1284,13 @@ async function startServer() {
           apikey: supabaseKey,
           Authorization: `Bearer ${supabaseKey}`,
           "Content-Type": "application/json",
-          "Prefer": "return=minimal"
+          "Prefer": "return=representation"
         },
         body: JSON.stringify(leadRecord)
       });
 
       if (response.ok) {
-        const insertedData = await response.json().catch(() => [leadRecord]);
+        const insertedData = await response.json();
         console.log("✅ Successfully inserted lead into Supabase:", leadRecord.id);
 
         // Instantly ingest into Telecaller CRM

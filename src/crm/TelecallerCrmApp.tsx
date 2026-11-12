@@ -70,7 +70,6 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Load counts on mount and refresh
   useEffect(() => {
@@ -352,75 +351,78 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               {!isSidebarCollapsed && <span>Reports</span>}
             </button>
 
-            {/* Team & Configuration Navigation */}
-            <div className="my-2 border-t border-[#E2E8F0]" />
+            {/* Admin-only Navigation */}
+            {isAdmin && (
+              <>
+                <div className="my-2 border-t border-[#E2E8F0]" />
 
-            {!isSidebarCollapsed && (
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Team & Tools
-              </div>
+                {!isSidebarCollapsed && (
+                  <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    Administration
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    activeTab === 'users'
+                      ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
+                  }`}
+                  title="User Management"
+                >
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  {!isSidebarCollapsed && <span>User Management</span>}
+                </button>
+
+                <button
+                  onClick={() => setIsCsvModalOpen(true)}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-[#172033] transition-colors cursor-pointer"
+                  title="Import CSV"
+                >
+                  <FileSpreadsheet className="w-4 h-4 shrink-0" />
+                  {!isSidebarCollapsed && <span>Import CSV</span>}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    activeTab === 'settings'
+                      ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
+                  }`}
+                  title="Settings"
+                >
+                  <Sliders className="w-4 h-4 shrink-0" />
+                  {!isSidebarCollapsed && <span>Settings</span>}
+                </button>
+              </>
             )}
-
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                activeTab === 'users'
-                  ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
-              }`}
-              title="Staff Directory & PINs"
-            >
-              <ShieldCheck className="w-4 h-4 shrink-0" />
-              {!isSidebarCollapsed && <span>Staff Directory</span>}
-            </button>
-
-            <button
-              onClick={() => setIsCsvModalOpen(true)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-[#172033] transition-colors cursor-pointer"
-              title="Import CSV"
-            >
-              <FileSpreadsheet className="w-4 h-4 shrink-0" />
-              {!isSidebarCollapsed && <span>Import CSV</span>}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
-              }`}
-              title="Settings & Integrations"
-            >
-              <Sliders className="w-4 h-4 shrink-0" />
-              {!isSidebarCollapsed && <span>Settings</span>}
-            </button>
           </nav>
 
           {/* User profile & logout at bottom of sidebar */}
           <div className="p-3 border-t border-[#E2E8F0]">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-[#172033] text-white font-semibold text-xs flex items-center justify-center shrink-0">
-                  {user?.name?.slice(0, 2).toUpperCase() || 'ST'}
+                <div className="w-8 h-8 rounded-full bg-slate-200 text-[#172033] font-semibold text-xs flex items-center justify-center shrink-0">
+                  {user?.name?.slice(0, 2).toUpperCase() || 'U'}
                 </div>
                 {!isSidebarCollapsed && (
                   <div className="truncate">
                     <div className="text-xs font-semibold text-[#172033] truncate">
                       {user?.name}
                     </div>
-                    <div className="text-[10px] text-emerald-600 font-medium truncate">
-                      Staff Member
+                    <div className="text-[10px] text-slate-500 capitalize truncate">
+                      {user?.role}
                     </div>
                   </div>
                 )}
               </div>
 
               <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                onClick={() => logout()}
+                className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-slate-100 transition-colors cursor-pointer"
                 title="Log Out"
-                aria-label="Log Out"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -534,27 +536,6 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 </button>
               )}
 
-              {/* User badge & Logout in top header */}
-              <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-[#172033] text-white font-semibold text-xs flex items-center justify-center shrink-0">
-                    {user?.name?.slice(0, 2).toUpperCase() || 'ST'}
-                  </div>
-                  <div className="hidden lg:block text-left text-xs leading-tight">
-                    <div className="font-semibold text-slate-800 truncate max-w-[120px]">{user?.name}</div>
-                    <div className="text-[10px] text-emerald-600 font-medium">Staff Member</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-rose-600 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
-                  title="Sign out of CRM"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Logout</span>
-                </button>
-              </div>
-
               {/* Mobile Quick Add Lead */}
               <button
                 onClick={() => setIsCreateModalOpen(true)}
@@ -611,11 +592,11 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               <CrmReportsView />
             )}
 
-            {activeTab === 'users' && (
+            {activeTab === 'users' && isAdmin && (
               <CrmUserManagement />
             )}
 
-            {activeTab === 'settings' && (
+            {activeTab === 'settings' && isAdmin && (
               <CrmIntegrationsView />
             )}
           </main>
@@ -751,51 +732,51 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 <span>Reports</span>
               </button>
 
-              <div className="my-2 border-t border-[#E2E8F0]" />
-              <button
-                onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
-                  activeTab === 'users' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Staff Directory & PINs</span>
-              </button>
+              {isAdmin && (
+                <>
+                  <div className="my-2 border-t border-[#E2E8F0]" />
+                  <button
+                    onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
+                      activeTab === 'users' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
+                    }`}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>User Management</span>
+                  </button>
 
-              <button
-                onClick={() => { setIsCsvModalOpen(true); setMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-slate-600 text-left"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span>Import CSV</span>
-              </button>
+                  <button
+                    onClick={() => { setIsCsvModalOpen(true); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-slate-600 text-left"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Import CSV</span>
+                  </button>
 
-              <button
-                onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
-                  activeTab === 'settings' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
-                }`}
-              >
-                <Sliders className="w-4 h-4" />
-                <span>Settings</span>
-              </button>
+                  <button
+                    onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left ${
+                      activeTab === 'settings' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4" />
+                    <span>Settings</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Mobile Footer */}
             <div className="p-4 border-t border-[#E2E8F0] flex items-center justify-between">
               <div>
                 <div className="text-xs font-semibold text-[#172033]">{user?.name}</div>
-                <div className="text-[10px] text-emerald-600 font-medium">Staff Member</div>
+                <div className="text-[10px] text-slate-500 capitalize">{user?.role}</div>
               </div>
               <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setShowLogoutConfirm(true);
-                }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                onClick={() => logout()}
+                className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Logout</span>
               </button>
             </div>
           </div>
@@ -837,52 +818,14 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
         }}
       />
 
-      <CrmCsvImportModal
-        isOpen={isCsvModalOpen}
-        onClose={() => setIsCsvModalOpen(false)}
-        onImportComplete={() => {
-          triggerRefresh();
-        }}
-      />
-
-      {/* Logout Confirmation Dialog Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3 mb-3 text-rose-600">
-              <div className="p-2.5 rounded-full bg-rose-50 border border-rose-100">
-                <LogOut className="w-5 h-5 text-rose-600" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Confirm Sign Out</h3>
-                <p className="text-xs text-slate-500">Royal Epic Telecaller CRM</p>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mb-5 leading-relaxed">
-              Are you sure you want to log out as <strong className="text-slate-800">{user?.name}</strong>? Your active session token and cached local storage will be cleared immediately.
-            </p>
-            <div className="flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setShowLogoutConfirm(false);
-                  await logout();
-                }}
-                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Log Out</span>
-              </button>
-            </div>
-          </div>
-        </div>
+      {isAdmin && (
+        <CrmCsvImportModal
+          isOpen={isCsvModalOpen}
+          onClose={() => setIsCsvModalOpen(false)}
+          onImportComplete={() => {
+            triggerRefresh();
+          }}
+        />
       )}
     </div>
   );

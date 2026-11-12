@@ -1,19 +1,15 @@
-export type CrmRole = 'staff' | 'admin' | 'telecaller';
+export type CrmRole = 'admin' | 'telecaller';
 
 export interface CrmUser {
   id: string;
+  email: string;
   name: string;
-  pin?: string;
-  email?: string;
   phone?: string;
-  role?: CrmRole;
+  role: CrmRole;
   status: 'active' | 'suspended';
   createdAt?: string;
   updatedAt?: string;
 }
-
-// App-specific alias for compatibility
-export type CrmUserProfile = CrmUser;
 
 // 1. Lead Source Options
 export const LEAD_SOURCES = [
@@ -51,17 +47,6 @@ export const SERVICES_REQUIRED = [
 ] as const;
 
 export type ServiceRequired = (typeof SERVICES_REQUIRED)[number] | string;
-
-export const POPULAR_SERVICES = [
-  'Turnkey Interior (Complete Home)',
-  'Modular Kitchen',
-  'Luxury Living Room & Italian Marble',
-  'Master Bedroom & Wardrobes',
-  'WPC Waterproof & Bathroom Doors',
-  'Solid Teak Main Entrance Doors',
-  'Commercial / Office Interiors',
-  'Architectural Woodwork & Paneling'
-] as const;
 
 // 3. Lead Status Options
 export const LEAD_STATUSES = [
@@ -181,19 +166,6 @@ export interface CrmDashboardMetrics {
   lostLeads: number;
 }
 
-export interface CrmDashboardStats {
-  totalLeads: number;
-  newLeads: number;
-  contactedLeads: number;
-  interestedLeads: number;
-  siteVisitsScheduled: number;
-  quotationsSent: number;
-  convertedLeads: number;
-  lostLeads: number;
-  followupsDueToday: number;
-  conversionRate: number;
-}
-
 // Multi-Filter State
 export interface CrmFilterState {
   search: string; // Customer name or mobile number
@@ -209,21 +181,6 @@ export interface CrmFilterState {
   sortBy: 'created_desc' | 'created_asc' | 'followup_asc' | 'followup_desc' | 'name_asc';
   page: number;
   pageSize: number;
-}
-
-export interface CrmFilterParams {
-  search?: string;
-  status?: string;
-  source?: string;
-  temperature?: string;
-  service?: string;
-  assigned_to?: string;
-  followup?: string;
-  dateRange?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
 }
 
 // Justdial Types (Preserved for compatibility)
@@ -267,3 +224,4 @@ export interface JustdialStats {
   lastReceivedAt?: string;
   status?: 'NOT_CONNECTED' | 'PENDING_SETUP' | 'CONNECTED' | 'ERROR';
 }
+

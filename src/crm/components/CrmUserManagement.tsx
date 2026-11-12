@@ -1,43 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { CrmUser } from '../types';
-import { fetchCrmUsers, getCrmAuthHeaders } from '../crmService';
+import { fetchCrmUsers, updateCrmUserRole, getCrmAuthHeaders } from '../crmService';
 import { useCrmAuth } from '../CrmAuthContext';
 import { 
   Users, 
-  ShieldCheck, 
+  Shield, 
+  UserCheck, 
   UserPlus, 
   AlertCircle, 
   CheckCircle2, 
   RefreshCw,
   Mail,
-  KeyRound,
+  Lock,
+  Key,
   Trash2,
   Copy,
   Check,
   Phone,
-  X,
-  UserCheck
+  X
 } from 'lucide-react';
 
 export const CrmUserManagement: React.FC = () => {
-  const { user: currentUser } = useCrmAuth();
+  const { isAdmin } = useCrmAuth();
   const [users, setUsers] = useState<CrmUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  // New staff form state
+  // New user form state
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newPin, setNewPin] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newRole, setNewRole] = useState<'admin' | 'telecaller'>('telecaller');
   const [isAdding, setIsAdding] = useState(false);
 
-  // Reset PIN state
-  const [resetStaff, setResetStaff] = useState<CrmUser | null>(null);
-  const [resetPinValue, setResetPinValue] = useState('');
+  // Reset password state
+  const [resetUser, setResetUser] = useState<CrmUser | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
   const loadUsers = async () => {
@@ -51,7 +53,7 @@ export const CrmUserManagement: React.FC = () => {
         setUsers(res.users);
       }
     } catch (err: any) {
-      setError(err.message || 'Error fetching staff members');
+      setError(err.message || 'Error fetching users');
     } finally {
       setLoading(false);
     }
@@ -65,6 +67,26 @@ export const CrmUserManagement: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopiedText(label);
     setTimeout(() => setCopiedText(null), 2500);
+  };
+
+  const handleRoleToggle = async (userId: string, currentRole: 'admin' | 'telecaller') => {
+    if (!isAdmin) {
+      setError('Only administrators can change role permissions.');
+      return;
+    }
+    const newRole = currentRole === 'admin' ? 'telecaller' : 'admin';
+    const confirmed = window.confirm(`Change role to "${newRole.toUpperCase()}" for this user?`);
+    if (!confirmed) return;
+
+    setError(null);
+    const res = await updateCrmUserRole(userId, newRole);
+    if (!res.success) {
+      setError(res.error || 'Failed to update user role');
+    } else {
+      setSuccess(`User role updated to ${newRole}.`);
+      loadUsers();
+      setTimeout(() => setSuccess(null), 3000);
+    }
   };
 
   const handleStatusToggle = async (u: CrmUser) => {
@@ -81,7 +103,7 @@ export const CrmUserManagement: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSuccess(`Staff status for "${u.name}" updated to ${nextStatus}.`);
+        setSuccess(`User status updated to ${nextStatus}.`);
         loadUsers();
         setTimeout(() => setSuccess(null), 3000);
       } else {
@@ -92,12 +114,12 @@ export const CrmUserManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteStaff = async (u: CrmUser) => {
-    if (u.id === 'crm_staff_admin' || u.id === 'crm_admin_primary') {
-      alert('The root primary staff account cannot be deleted.');
+  const handleDeleteUser = async (u: CrmUser) => {
+    if (u.id === 'crm_admin_primary') {
+      alert('The root administrator account cannot be deleted.');
       return;
     }
-    const confirmed = window.confirm(`Are you sure you want to remove staff member "${u.name}"?`);
+    const confirmed = window.confirm(`Are you sure you want to permanently delete user "${u.name}" (${u.email})?`);
     if (!confirmed) return;
 
     setError(null);
@@ -108,26 +130,21 @@ export const CrmUserManagement: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSuccess(`Staff member "${u.name}" was successfully removed.`);
+        setSuccess(`User "${u.name}" was successfully deleted.`);
         loadUsers();
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError(data.error || 'Failed to delete staff member');
+        setError(data.error || 'Failed to delete user');
       }
     } catch (err: any) {
-      setError(err.message || 'Error deleting staff member');
+      setError(err.message || 'Error deleting user');
     }
   };
 
-  const handleCreateStaff = async (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !newPin.trim()) {
-      setError('Staff Name and 4-digit PIN are required.');
-      return;
-    }
-
-    if (newPin.trim().length < 4) {
-      setError('PIN must be at least 4 characters long.');
+    if (!newEmail.trim() || !newName.trim() || !newPassword.trim()) {
+      setError('Please fill in all required fields.');
       return;
     }
 
@@ -140,10 +157,10 @@ export const CrmUserManagement: React.FC = () => {
         headers: getCrmAuthHeaders(),
         body: JSON.stringify({
           name: newName.trim(),
-          pin: newPin.trim(),
-          email: newEmail.trim() ? newEmail.trim().toLowerCase() : undefined,
-          phone: newPhone.trim() || undefined,
-          role: 'staff'
+          email: newEmail.trim().toLowerCase(),
+          password: newPassword,
+          phone: newPhone.trim(),
+          role: newRole
         })
       });
 
@@ -151,42 +168,37 @@ export const CrmUserManagement: React.FC = () => {
       setIsAdding(false);
 
       if (!res.ok || !data.success) {
-        setError(data.error || 'Failed to create staff member');
+        setError(data.error || 'Failed to create user');
       } else {
-        setSuccess(`Staff member "${newName}" successfully authorized with login PIN.`);
+        setSuccess(`User "${newName}" successfully created with role ${newRole}.`);
         setShowAddUserModal(false);
         setNewName('');
-        setNewPin('');
         setNewEmail('');
+        setNewPassword('');
         setNewPhone('');
         loadUsers();
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err: any) {
       setIsAdding(false);
-      setError(err.message || 'Network error creating staff member');
+      setError(err.message || 'Network error creating user');
     }
   };
 
-  const handleResetPin = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetStaff || !resetPinValue.trim()) return;
-
-    if (resetPinValue.trim().length < 4) {
-      setError('PIN must be at least 4 characters long.');
-      return;
-    }
+    if (!resetUser || !resetPassword.trim()) return;
 
     setIsResetting(true);
     setError(null);
 
     try {
-      const res = await fetch('/api/crm/users/pin', {
+      const res = await fetch('/api/crm/users/password', {
         method: 'POST',
         headers: getCrmAuthHeaders(),
         body: JSON.stringify({
-          userId: resetStaff.id,
-          newPin: resetPinValue.trim()
+          userId: resetUser.id,
+          newPassword: resetPassword.trim()
         })
       });
 
@@ -194,18 +206,30 @@ export const CrmUserManagement: React.FC = () => {
       setIsResetting(false);
 
       if (res.ok && data.success) {
-        setSuccess(`Individual PIN for "${resetStaff.name}" successfully updated!`);
-        setResetStaff(null);
-        setResetPinValue('');
+        setSuccess(`Password for "${resetUser.name}" successfully updated!`);
+        setResetUser(null);
+        setResetPassword('');
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError(data.error || 'Failed to update PIN');
+        setError(data.error || 'Failed to reset password');
       }
     } catch (err: any) {
       setIsResetting(false);
-      setError(err.message || 'Error updating PIN');
+      setError(err.message || 'Error resetting password');
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="bg-rose-50 border border-rose-200 p-8 rounded-xl text-center text-rose-800">
+        <Shield className="w-8 h-8 text-rose-600 mx-auto mb-2" />
+        <h2 className="text-sm font-bold uppercase tracking-wider">Access Restricted</h2>
+        <p className="text-xs text-slate-500 mt-1">
+          User & role management is restricted strictly to administrators.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -214,14 +238,14 @@ export const CrmUserManagement: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <h1 className="text-xl font-bold text-[#172033] tracking-tight">
-              Staff Directory & Security PINs
+              User Access & Permissions
             </h1>
-            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Equal Access
+            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              Admin Only
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            Authorized staff roster with individual PINs. All active staff members have identical CRM permissions.
+            Manage approved telecallers and administrators with granular CRM access.
           </p>
         </div>
 
@@ -230,7 +254,7 @@ export const CrmUserManagement: React.FC = () => {
             onClick={loadUsers}
             disabled={loading}
             className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-[#E2E8F0] text-slate-600 transition cursor-pointer"
-            title="Refresh Staff Roster"
+            title="Refresh Users"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -240,23 +264,23 @@ export const CrmUserManagement: React.FC = () => {
             className="px-3.5 py-2 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Add Staff Member</span>
+            <span>Add Telecaller Account</span>
           </button>
         </div>
       </div>
 
-      {/* Roster Summary */}
+      {/* Portal Status & Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border border-[#E2E8F0] p-4 rounded-xl flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[11px] font-semibold uppercase text-slate-500 tracking-wider block mb-0.5">
-              Authorized Staff Members
+              Portal Access Summary
             </span>
             <div className="text-sm font-bold text-[#172033]">
-              {users.filter(u => u.status === 'active').length} Active Accounts
+              {users.filter(u => u.status === 'active' && u.role === 'telecaller').length} Active Telecaller Accounts
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5">
-              Log in with Staff Name and individual 4-digit PIN.
+              Strict authentication required. No autofill credentials permitted.
             </div>
           </div>
         </div>
@@ -264,7 +288,7 @@ export const CrmUserManagement: React.FC = () => {
         <div className="bg-white border border-[#E2E8F0] p-4 rounded-xl flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[11px] font-semibold uppercase text-slate-500 tracking-wider block mb-0.5">
-              Telecaller Portal Link
+              Direct Subdomain Link
             </span>
             <div className="text-xs text-[#356AE6] font-mono font-medium">
               https://tele.royalepicinteriors.com
@@ -294,26 +318,26 @@ export const CrmUserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Staff Table */}
+      {/* Users Table */}
       <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden shadow-xs">
         {loading ? (
           <div className="py-16 text-center text-xs text-slate-400">
             <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#356AE6]" />
-            Loading authorized staff roster...
+            Loading CRM user registry...
           </div>
         ) : users.length === 0 ? (
           <div className="py-12 text-center text-xs text-slate-400">
-            No staff accounts found.
+            No CRM users found.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead className="bg-slate-50 border-b border-[#E2E8F0] text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="py-3 px-4">Staff Member</th>
-                  <th className="py-3 px-4">Contact Phone</th>
-                  <th className="py-3 px-4">Email / Record</th>
-                  <th className="py-3 px-4">Permission Level</th>
+                  <th className="py-3 px-4">User</th>
+                  <th className="py-3 px-4">Work Email</th>
+                  <th className="py-3 px-4">Phone</th>
+                  <th className="py-3 px-4">Role</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -323,27 +347,26 @@ export const CrmUserManagement: React.FC = () => {
                   <tr key={u.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-4 font-semibold text-[#172033]">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 text-[#172033] flex items-center justify-center font-bold text-xs uppercase border border-slate-200">
+                        <div className="w-6 h-6 rounded-md bg-slate-100 text-[#172033] flex items-center justify-center font-bold text-xs uppercase border border-slate-200">
                           {u.name.slice(0, 1)}
                         </div>
-                        <div>
-                          <div>{u.name}</div>
-                          {currentUser?.id === u.id && (
-                            <span className="text-[10px] text-[#356AE6] font-medium">(You)</span>
-                          )}
-                        </div>
+                        <span>{u.name}</span>
                       </div>
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 font-mono">
+                      {u.email}
                     </td>
                     <td className="py-3 px-4 text-slate-600 font-mono">
                       {u.phone || '-'}
                     </td>
-                    <td className="py-3 px-4 text-slate-600 font-mono">
-                      {u.email || '-'}
-                    </td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                        <UserCheck className="w-3 h-3" />
-                        <span>Staff Member</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border ${
+                        u.role === 'admin'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                        {u.role === 'admin' ? <Shield className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
+                        <span>{u.role === 'admin' ? 'Administrator' : 'Telecaller'}</span>
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -358,15 +381,22 @@ export const CrmUserManagement: React.FC = () => {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => {
-                            setResetStaff(u);
-                            setResetPinValue('');
-                          }}
-                          className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition cursor-pointer flex items-center gap-1"
-                          title="Change PIN"
+                          onClick={() => handleRoleToggle(u.id, u.role)}
+                          className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition cursor-pointer"
+                          title="Toggle Role"
                         >
-                          <KeyRound className="w-3 h-3 text-slate-500" />
-                          <span>Change PIN</span>
+                          Make {u.role === 'admin' ? 'Telecaller' : 'Admin'}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setResetUser(u);
+                            setResetPassword('');
+                          }}
+                          className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition cursor-pointer"
+                          title="Reset Password"
+                        >
+                          <Key className="w-3.5 h-3.5" />
                         </button>
 
                         <button
@@ -381,11 +411,11 @@ export const CrmUserManagement: React.FC = () => {
                           {u.status === 'active' ? 'Suspend' : 'Activate'}
                         </button>
 
-                        {u.id !== 'crm_staff_admin' && u.id !== 'crm_admin_primary' && (
+                        {u.id !== 'crm_admin_primary' && (
                           <button
-                            onClick={() => handleDeleteStaff(u)}
+                            onClick={() => handleDeleteUser(u)}
                             className="p-1 rounded bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                            title="Remove Staff Member"
+                            title="Delete User"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -400,12 +430,12 @@ export const CrmUserManagement: React.FC = () => {
         )}
       </div>
 
-      {/* Add Staff Modal */}
+      {/* Add User Modal */}
       {showAddUserModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white border border-[#E2E8F0] rounded-xl max-w-md w-full p-6 text-[#172033] shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] mb-4">
-              <h2 className="text-sm font-bold text-[#172033]">Add Authorized Staff Member</h2>
+              <h2 className="text-sm font-bold text-[#172033]">Add Approved CRM User</h2>
               <button
                 onClick={() => setShowAddUserModal(false)}
                 className="p-1 rounded text-slate-400 hover:text-[#172033]"
@@ -414,40 +444,45 @@ export const CrmUserManagement: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateStaff} className="space-y-3.5 text-xs">
+            <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Full Staff Name *
-                </label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Telecaller 3"
+                  placeholder="e.g. Telecaller 2"
                   className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Individual Security PIN (4-6 Digits) *
-                </label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Work Email Address *</label>
                 <input
-                  type="text"
+                  type="email"
                   required
-                  maxLength={8}
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="e.g. 7890"
-                  className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs font-mono tracking-wider"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="e.g. telecaller2@gmail.com"
+                  className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Phone Number (Optional)
-                </label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Password *</label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter secure password"
+                  className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Phone Number (Optional)</label>
                 <input
                   type="tel"
                   value={newPhone}
@@ -458,32 +493,31 @@ export const CrmUserManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Email Address (Optional)
-                </label>
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="e.g. staff@royalepicinterior.com"
-                  className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs font-mono"
-                />
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Role *</label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs"
+                >
+                  <option value="telecaller">Telecaller (Manual Lead Entry, Call Logging, Follow-ups)</option>
+                  <option value="admin">Administrator (Full Access & User Management)</option>
+                </select>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E2E8F0]">
                 <button
                   type="button"
                   onClick={() => setShowAddUserModal(false)}
-                  className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] text-slate-600 hover:bg-slate-50"
+                  className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-600 text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isAdding}
-                  className="px-4 py-1.5 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs shadow-xs disabled:opacity-50"
                 >
-                  {isAdding ? 'Adding...' : 'Save Staff Member'}
+                  {isAdding ? 'Creating...' : 'Create Account'}
                 </button>
               </div>
             </form>
@@ -491,53 +525,42 @@ export const CrmUserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Reset PIN Modal */}
-      {resetStaff && (
+      {/* Reset Password Modal */}
+      {resetUser && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E2E8F0] rounded-xl max-w-sm w-full p-5 text-[#172033] shadow-xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] mb-3">
-              <h2 className="text-sm font-bold text-[#172033]">
-                Update PIN for {resetStaff.name}
-              </h2>
-              <button
-                onClick={() => setResetStaff(null)}
-                className="p-1 rounded text-slate-400 hover:text-[#172033]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="bg-white border border-[#E2E8F0] rounded-xl max-w-sm w-full p-6 text-[#172033] shadow-xl">
+            <h2 className="text-sm font-bold text-[#172033] mb-1">Reset Account Password</h2>
+            <p className="text-xs text-slate-500 mb-3">
+              Set a new secure password for <strong className="text-[#172033]">{resetUser.name}</strong> ({resetUser.email}).
+            </p>
 
-            <form onSubmit={handleResetPin} className="space-y-3 text-xs">
+            <form onSubmit={handleResetPassword} className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  New 4-Digit PIN *
-                </label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">New Password *</label>
                 <input
-                  type="text"
+                  type="password"
                   required
-                  maxLength={8}
-                  value={resetPinValue}
-                  onChange={(e) => setResetPinValue(e.target.value)}
-                  placeholder="Enter new PIN (e.g. 4321)"
-                  autoFocus
-                  className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs font-mono tracking-wider"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-[#E2E8F0] focus:border-[#356AE6] rounded-lg text-xs font-mono"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E2E8F0]">
                 <button
                   type="button"
-                  onClick={() => setResetStaff(null)}
-                  className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] text-slate-600 hover:bg-slate-50"
+                  onClick={() => setResetUser(null)}
+                  className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-600 text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isResetting || !resetPinValue.trim()}
-                  className="px-4 py-1.5 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium disabled:opacity-50"
+                  disabled={isResetting}
+                  className="px-4 py-1.5 rounded-lg bg-[#356AE6] hover:bg-[#2D5AC2] text-white font-medium text-xs shadow-xs disabled:opacity-50"
                 >
-                  {isResetting ? 'Saving...' : 'Update PIN'}
+                  {isResetting ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
             </form>

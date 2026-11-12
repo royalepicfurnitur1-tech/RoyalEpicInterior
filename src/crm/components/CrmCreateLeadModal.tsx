@@ -90,9 +90,12 @@ export const CrmCreateLeadModal: React.FC<CrmCreateLeadModalProps> = ({
         .then(d => {
           if (d.success && Array.isArray(d.users) && d.users.length > 0) {
             setUsersList(d.users);
-            // Default to first active staff member
-            if (!assignedTo && d.users.length > 0) {
-              setAssignedTo(d.users[0].id);
+            // Default to first active telecaller or admin
+            if (!assignedTo) {
+              const tele = d.users.find((u: any) => u.role === 'telecaller') || d.users[0];
+              if (tele) {
+                setAssignedTo(tele.id);
+              }
             }
           }
         })
@@ -392,7 +395,7 @@ export const CrmCreateLeadModal: React.FC<CrmCreateLeadModalProps> = ({
                 >
                   <option value="">Unassigned</option>
                   {usersList.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
+                    <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
                   ))}
                 </select>
               </div>
