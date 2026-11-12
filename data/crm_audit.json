@@ -251,5 +251,61 @@
       "archive_method": "soft_delete_db"
     },
     "created_at": "2026-11-12T05:50:19.756Z"
+  },
+  {
+    "id": "AUDIT-1794465454895",
+    "lead_id": "CRM-2611-93184",
+    "action": "CREATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "customer_name": "TEST VERIFY CLIENT",
+      "phone": "+919876501234",
+      "source": "Website Enquiry",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-12T06:37:34.619Z"
+  },
+  {
+    "id": "AUDIT-1794465455248",
+    "lead_id": "CRM-2611-93184",
+    "action": "UPDATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "updated_fields": [
+        "budget",
+        "temperature",
+        "notes"
+      ]
+    },
+    "created_at": "2026-11-12T06:37:34.900Z"
+  },
+  {
+    "id": "AUDIT-1794465455700",
+    "lead_id": "CRM-2611-93184",
+    "action": "UPDATE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "updated_fields": [
+        "temperature",
+        "notes"
+      ]
+    },
+    "created_at": "2026-11-12T06:37:35.254Z"
+  },
+  {
+    "id": "AUDIT-1794465456168",
+    "lead_id": "CRM-2611-93184",
+    "action": "ARCHIVE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "archived_name": "TEST VERIFY CLIENT",
+      "phone": "+919876501234",
+      "archive_method": "soft_delete_db"
+    },
+    "created_at": "2026-11-12T06:37:36.168Z"
   }
 ]

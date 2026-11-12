@@ -1189,19 +1189,27 @@ crmRouter.get('/debug/env-status', (req: Request, res: Response) => {
       serviceRoleKeyNonEmpty: diag.serviceRoleKeyNonEmpty,
       serviceRoleKeyValidFormat: diag.serviceRoleKeyValidFormat,
       serviceRoleKeyLength: diag.serviceRoleKeyLength,
+      serviceRoleKeySource: diag.serviceRoleKeySource,
       supabaseServerClientReady: serverClientReady,
       processId: diag.processId,
+      processParentId: diag.processParentId,
+      processUptimeSeconds: diag.processUptimeSeconds,
+      processStartedAt: diag.processStartedAt,
+      entryPoint: diag.entryPoint,
+      execPath: diag.execPath,
+      nodeVersion: diag.nodeVersion,
       cwd: diag.cwd,
       nodeEnv: diag.nodeEnv,
       requestHost: hostHeader,
       detectedHostingerApplicationDomain: diag.detectedHostingerDomain,
       supabaseUrl: process.env.SUPABASE_URL || 'https://lwrfoztfsyffgtybesia.supabase.co',
       envFilesLoaded: diag.envFilesLoaded,
+      htaccessFilesFound: diag.htaccessFilesFound,
       candidatePathsSearchedCount: diag.candidatePathsSearchedCount,
-      sampleSearchedPaths: diag.sampleSearchedPaths,
+      allEnvKeysInProcess: diag.allEnvKeysInProcess,
       hpanelConfigurationGuidance: diag.serviceRoleKeyExists
-        ? 'Environment variable SUPABASE_SERVICE_ROLE_KEY is correctly detected.'
-        : `The running Node.js process is hosted under '${diag.detectedHostingerDomain}'. In Hostinger hPanel, navigate to Websites > ${diag.detectedHostingerDomain} > Node.js > Environment Variables, and add SUPABASE_SERVICE_ROLE_KEY, then restart the application.`
+        ? 'Environment variable SUPABASE_SERVICE_ROLE_KEY is correctly detected and active.'
+        : `The running Node.js process is hosted under '${diag.detectedHostingerDomain}'. In Hostinger hPanel, navigate to Websites > ${diag.detectedHostingerDomain} > Node.js > Environment Variables, verify SUPABASE_SERVICE_ROLE_KEY is present, and then click RESTART on the Node.js application (uptime: ${diag.processUptimeSeconds}s).`
     }
   });
 });
