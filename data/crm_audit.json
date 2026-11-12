@@ -112,5 +112,33 @@
       "status": "New Lead"
     },
     "created_at": "2026-11-11T12:00:39.142Z"
+  },
+  {
+    "id": "AUDIT-1794457621774",
+    "lead_id": "CRM-2611-58200",
+    "action": "CREATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "customer_name": "Disposable Test Alpha",
+      "phone": "+919888811111",
+      "source": "Direct Phone",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-12T04:27:01.629Z"
+  },
+  {
+    "id": "AUDIT-1794459237607",
+    "lead_id": "CRM-2611-51818",
+    "action": "CREATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "customer_name": "Temporary Verification Probe",
+      "phone": "+919800011223",
+      "source": "Manual Entry",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-12T04:53:57.284Z"
   }
 ]

@@ -50,17 +50,21 @@ interface BackfillReport {
 }
 
 const getSupabaseCredentials = () => {
-  const url = 
-    process.env.VITE_SUPABASE_URL || 
+  const url = (
     process.env.SUPABASE_URL || 
-    'https://lwrfoztfsyffgtybesia.supabase.co';
-  const key = 
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY || 
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
-    process.env.SUPABASE_ANON_KEY || 
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
-  return { url: url.replace(/\/+$/, ''), key };
+    process.env.VITE_SUPABASE_URL || 
+    'https://lwrfoztfsyffgtybesia.supabase.co'
+  ).replace(/\/+$/, '');
+
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key || !key.trim() || key.length < 20 || key.includes('YOUR_')) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is required to backfill call logs into public.crm_call_logs.\n' +
+      'In accordance with database security policy, crm_call_logs is restricted exclusively to the service_role.\n' +
+      'Please export SUPABASE_SERVICE_ROLE_KEY in your environment before running this script.'
+    );
+  }
+  return { url, key: key.trim() };
 };
 
 export async function runCallLogsBackfill(): Promise<BackfillReport> {

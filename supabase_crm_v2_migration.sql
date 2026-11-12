@@ -203,24 +203,89 @@ BEGIN
 END;
 $$;
 
--- CRITICAL SECURITY: Revoke execution privileges from public, anon, and authenticated roles.
--- Ordinary telecallers and public web users CANNOT invoke this RPC directly via client APIs.
-REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM public;
-REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM authenticated;
+-- Security Hardening: Revoke execution from public, anon, and authenticated roles
+REVOKE ALL ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM anon;
+REVOKE ALL ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) FROM authenticated;
 
--- Grant execution strictly to service_role (Express backend admin verification required)
+-- Grant execution strictly to service_role (authenticated Express backend)
 GRANT EXECUTE ON FUNCTION public.archive_crm_lead(TEXT, TEXT, TEXT) TO service_role;
 
 -- -----------------------------------------------------------------------------
--- 6. RLS POLICIES & PERMISSION AUDIT ON LEADS_AND_INQUIRIES (WRITE-ONLY PUBLIC)
+-- 5B. SECURE ATOMIC UPDATE FUNCTION (SECURITY DEFINER WITH FOR UPDATE LOCK)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.update_crm_lead(
+    p_lead_id TEXT,
+    p_full_name TEXT,
+    p_phone TEXT,
+    p_email TEXT DEFAULT NULL,
+    p_city TEXT DEFAULT 'Bengaluru',
+    p_service_type TEXT DEFAULT 'Residential Interior',
+    p_estimated_budget TEXT DEFAULT NULL,
+    p_project_scope TEXT DEFAULT NULL,
+    p_source TEXT DEFAULT 'CRM Lead',
+    p_status TEXT DEFAULT 'new',
+    p_preferred_date TEXT DEFAULT NULL,
+    p_notes TEXT DEFAULT NULL,
+    p_raw_details JSONB DEFAULT '{}'::JSONB,
+    p_updated_by TEXT DEFAULT 'admin',
+    p_updated_by_name TEXT DEFAULT 'Royal Epic Admin'
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $$
+DECLARE
+    v_lead RECORD;
+BEGIN
+    SELECT id INTO v_lead
+    FROM public.leads_and_inquiries
+    WHERE id = p_lead_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN pg_catalog.jsonb_build_object('success', false, 'error', 'Lead record not found in leads_and_inquiries');
+    END IF;
+
+    UPDATE public.leads_and_inquiries
+    SET 
+        full_name = p_full_name,
+        phone = p_phone,
+        email = p_email,
+        city = p_city,
+        service_type = p_service_type,
+        estimated_budget = p_estimated_budget,
+        project_scope = p_project_scope,
+        source = p_source,
+        status = p_status,
+        preferred_date = p_preferred_date,
+        notes = p_notes,
+        raw_details = p_raw_details,
+        last_updated_by = p_updated_by,
+        last_updated_by_name = p_updated_by_name,
+        updated_at = pg_catalog.now()
+    WHERE id = p_lead_id;
+
+    RETURN pg_catalog.jsonb_build_object('success', true, 'id', p_lead_id, 'updated_by', p_updated_by);
+END;
+$$;
+
+-- Security Hardening: Revoke execution from public, anon, and authenticated roles
+REVOKE ALL ON FUNCTION public.update_crm_lead(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.update_crm_lead(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, TEXT) FROM anon;
+REVOKE ALL ON FUNCTION public.update_crm_lead(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, TEXT) FROM authenticated;
+
+-- Grant execution strictly to service_role (authenticated Express backend)
+GRANT EXECUTE ON FUNCTION public.update_crm_lead(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, TEXT) TO service_role;
+
+-- -----------------------------------------------------------------------------
+-- 6. RLS POLICIES & PERMISSION AUDIT ON LEADS_AND_INQUIRIES
 -- -----------------------------------------------------------------------------
 -- Ensure RLS is enabled on leads_and_inquiries
 ALTER TABLE public.leads_and_inquiries ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Audit & Cleanup: Drop EVERY existing policy on leads_and_inquiries regardless of name
--- This eliminates all legacy policies, default templates ("Enable read access for all users"),
--- and any non-standard policies that may have permitted public SELECT, UPDATE, or DELETE.
 DO $$
 DECLARE
     pol RECORD;
@@ -235,14 +300,14 @@ BEGIN
 END;
 $$;
 
--- CRITICAL PRIVILEGE HARDENING:
--- Anonymous web visitors can ONLY INSERT new enquiries (write-only).
--- All SELECT, UPDATE, and DELETE privileges are explicitly REVOKED from public, anon, and authenticated.
+-- PRIVILEGE HARDENING:
+-- Deny SELECT, UPDATE, and DELETE from anon/public/authenticated (customer data privacy protected)
 REVOKE ALL ON TABLE public.leads_and_inquiries FROM anon;
 REVOKE ALL ON TABLE public.leads_and_inquiries FROM public;
 REVOKE ALL ON TABLE public.leads_and_inquiries FROM authenticated;
 
--- Explicitly grant only INSERT to anon and authenticated (required by public website enquiry forms)
+-- Allow INSERT ONLY for anonymous and authenticated visitors (public website enquiry forms)
+-- Absolutely NO SELECT, UPDATE, or DELETE privileges granted to anon or authenticated
 GRANT INSERT ON TABLE public.leads_and_inquiries TO anon, authenticated;
 
 -- Full table privileges granted exclusively to service_role (used by authenticated Express backend)
