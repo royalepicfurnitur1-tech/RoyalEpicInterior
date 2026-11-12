@@ -150,15 +150,14 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
 
   const handleArchiveLead = async (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
-    if (!window.confirm(`Are you sure you want to archive lead for "${name}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete lead for "${name}"? This cannot be undone.`)) {
       return;
     }
     const res = await archiveCrmLead(id);
     if (res.success) {
       loadLeads();
     } else {
-      alert(res.error || 'Failed to archive lead');
+      alert(res.error || 'Failed to delete lead');
     }
   };
 
@@ -635,16 +634,14 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Archive Lead (Admin Only) */}
-                          {isAdmin && (
-                            <button
-                              onClick={(e) => handleArchiveLead(lead.id, lead.customer_name, e)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition cursor-pointer"
-                              title="Archive Lead"
-                            >
-                              <Archive className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          {/* Delete Lead (All users) */}
+                          <button
+                            onClick={(e) => handleArchiveLead(lead.id, lead.customer_name, e)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                            title="Delete Lead"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>

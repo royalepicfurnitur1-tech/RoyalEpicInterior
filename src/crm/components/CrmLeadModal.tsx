@@ -205,8 +205,7 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
   };
 
   const handleArchive = async () => {
-    if (!isAdmin) return;
-    if (!window.confirm(`Are you sure you want to archive lead for "${lead.customer_name}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete lead for "${lead.customer_name}"? This cannot be undone.`)) {
       return;
     }
     const res = await archiveCrmLead(lead.id);
@@ -214,7 +213,7 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
       onLeadUpdated();
       onClose();
     } else {
-      setErrorMessage(res.error || 'Failed to archive lead');
+      setErrorMessage(res.error || 'Failed to delete lead');
     }
   };
 
@@ -542,17 +541,16 @@ export const CrmLeadModal: React.FC<CrmLeadModalProps> = ({
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0]">
-                {isAdmin ? (
-                  <button
-                    type="button"
-                    onClick={handleArchive}
-                    className="text-xs text-amber-600 hover:text-amber-850 flex items-center gap-1.5 cursor-pointer font-medium"
-                    title="Archive Lead"
-                  >
-                    <Archive className="w-3.5 h-3.5" />
-                    <span>Archive Lead</span>
-                  </button>
-                ) : <div />}
+                {/* Delete Lead — visible to all users */}
+                <button
+                  type="button"
+                  onClick={handleArchive}
+                  className="text-xs text-rose-600 hover:text-rose-800 flex items-center gap-1.5 cursor-pointer font-medium"
+                  title="Delete Lead"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Lead</span>
+                </button>
 
                 <div className="flex items-center gap-2">
                   <button
