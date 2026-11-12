@@ -241,5 +241,26 @@
     "created_by_name": "Royal Epic Admin",
     "created_at": "2026-11-11T12:00:39.142Z",
     "updated_at": "2026-11-12T04:53:18.502Z"
+  },
+  "CRM-2611-58200": {
+    "id": "CRM-2611-58200",
+    "customer_name": "Disposable Test Alpha",
+    "name": "Disposable Test Alpha",
+    "phone": "+919888811111",
+    "normalized_phone": "+919888811111",
+    "source": "Direct Phone",
+    "interested_service": "Modular Kitchen",
+    "projectType": "Modular Kitchen",
+    "city": "Bengaluru",
+    "location": "Bengaluru",
+    "budget": "To be discussed",
+    "temperature": "Warm",
+    "status": "New Lead",
+    "notes": "Disposable test lead for update and archive verification | Disposable test lead for update and archive verification",
+    "next_followup_time": "10:00",
+    "created_by": "crm_admin_primary",
+    "created_by_name": "Royal Epic Admin",
+    "created_at": "2026-11-12T04:27:01.629+00:00",
+    "updated_at": "2026-11-12T04:27:01.629+00:00"
   }
 }

@@ -454,7 +454,7 @@ async function deleteLeadFromSupabase(id: string, actorId: string = 'admin', act
         deleted_at: new Date().toISOString(),
         last_updated_by: actorId,
         last_updated_by_name: actorName || actorId,
-        notes: `[ARCHIVED BY ADMIN]: Archived by ${actorName || actorId} from Telecaller CRM at ${new Date().toISOString()}`,
+        notes: `[ARCHIVED]: Archived by ${actorName || actorId} (${actorId}) from Telecaller CRM at ${new Date().toISOString()}`,
         raw_details: { 
           is_deleted: true, 
           deleted_at: new Date().toISOString(),
@@ -1002,6 +1002,8 @@ function formatLeadWithAliases(lead: ServerCrmLead) {
 // -----------------------------------------------------------------------------
 // AUTHENTICATION & SESSION EXTRACTION
 // -----------------------------------------------------------------------------
+export const invalidatedCrmTokens = new Set<string>();
+
 export function extractUserFromReq(req: Request): ServerCrmUser | null {
   const authHeader = req.headers['authorization'];
   const userIdHeader = req.headers['x-crm-user-id'] as string;
@@ -1012,14 +1014,18 @@ export function extractUserFromReq(req: Request): ServerCrmUser | null {
     return dbCrmUsers['admin@royalepicinterior.com'] || dbCrmUsers['royalepicfurnitur1@gmail.com'] || Object.values(dbCrmUsers).find(u => u.role === 'admin') || null;
   }
 
-  if (userIdHeader) {
-    const found = Object.values(dbCrmUsers).find(u => u.id === userIdHeader);
+  // Check token invalidation
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    if (invalidatedCrmTokens.has(token)) {
+      return null;
+    }
+    const found = Object.values(dbCrmUsers).find(u => token.includes(u.id) || token.includes(u.email));
     if (found && found.status === 'active') return found;
   }
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    const found = Object.values(dbCrmUsers).find(u => token.includes(u.id) || token.includes(u.email));
+  if (userIdHeader) {
+    const found = Object.values(dbCrmUsers).find(u => u.id === userIdHeader);
     if (found && found.status === 'active') return found;
   }
 
@@ -1075,8 +1081,15 @@ crmRouter.get('/auth/session', (req: Request, res: Response) => {
   res.json({ success: true, user: safeUser });
 });
 
-crmRouter.post('/auth/logout', (_req: Request, res: Response) => {
-  res.json({ success: true });
+crmRouter.post('/auth/logout', (req: Request, res: Response) => {
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    if (token) {
+      invalidatedCrmTokens.add(token);
+    }
+  }
+  res.json({ success: true, message: 'Successfully logged out.' });
 });
 
 // -----------------------------------------------------------------------------
@@ -1432,6 +1445,13 @@ crmRouter.patch('/leads/:id', async (req: Request, res: Response) => {
 async function handleLeadUpdate(req: Request, res: Response) {
   try {
     const user = extractUserFromReq(req);
+    if (!user || (user.role !== 'admin' && user.role !== 'telecaller')) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden: Unauthorized to edit CRM leads. Valid Admin or Telecaller session required.'
+      });
+    }
+
     const lead = dbCrmLeads[req.params.id];
     if (!lead) {
       return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
@@ -1517,14 +1537,14 @@ async function handleLeadUpdate(req: Request, res: Response) {
   }
 }
 
-// DELETE /api/crm/leads/:id (Archive Lead - Strictly Admin-Only)
+// DELETE /api/crm/leads/:id (Archive Lead - Authorized for Admin and Telecaller)
 crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'telecaller')) {
       return res.status(403).json({
         success: false,
-        error: 'Forbidden: Only administrators are authorized to archive CRM leads.'
+        error: 'Forbidden: Unauthorized to archive CRM leads. Valid Admin or Telecaller session required.'
       });
     }
 

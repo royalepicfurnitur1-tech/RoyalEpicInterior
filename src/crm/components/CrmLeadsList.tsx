@@ -65,6 +65,8 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [usersList, setUsersList] = useState<Array<{ id: string; name: string }>>([]);
   const [showFiltersBar, setShowFiltersBar] = useState(true);
+  const [archiveTargetLead, setArchiveTargetLead] = useState<{ id: string; name: string } | null>(null);
+  const [isArchiving, setIsArchiving] = useState<boolean>(false);
 
   const [filters, setFilters] = useState<CrmFilterState>({
     search: initialFilters?.search || '',
@@ -148,17 +150,21 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     setTimeout(() => setCopiedPhone(null), 2000);
   };
 
-  const handleArchiveLead = async (id: string, name: string, e: React.MouseEvent) => {
+  const handleArchiveLead = (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
-    if (!window.confirm(`Are you sure you want to archive lead for "${name}"?`)) {
-      return;
-    }
-    const res = await archiveCrmLead(id);
+    setArchiveTargetLead({ id, name });
+  };
+
+  const handleConfirmArchive = async () => {
+    if (!archiveTargetLead) return;
+    setIsArchiving(true);
+    const res = await archiveCrmLead(archiveTargetLead.id);
+    setIsArchiving(false);
     if (res.success) {
+      setArchiveTargetLead(null);
       loadLeads();
     } else {
-      alert(res.error || 'Failed to archive lead');
+      alert(res.error || 'Failed to archive lead in Supabase database.');
     }
   };
 
@@ -635,16 +641,14 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Archive Lead (Admin Only) */}
-                          {isAdmin && (
-                            <button
-                              onClick={(e) => handleArchiveLead(lead.id, lead.customer_name, e)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition cursor-pointer"
-                              title="Archive Lead"
-                            >
-                              <Archive className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          {/* Archive Lead (Authorized for both Admin and Telecaller) */}
+                          <button
+                            onClick={(e) => handleArchiveLead(lead.id, lead.customer_name, e)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition cursor-pointer"
+                            title="Archive Lead"
+                          >
+                            <Archive className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -689,6 +693,44 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Archive Confirmation Dialog Modal */}
+      {archiveTargetLead && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-[#E2E8F0] space-y-4">
+            <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+              <Archive className="w-6 h-6" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-base font-bold text-[#172033]">Archive Lead</h3>
+              <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Are you sure you want to archive the lead for <strong>&quot;{archiveTargetLead.name}&quot;</strong>?
+              </p>
+              <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg mt-2 leading-normal">
+                The lead will be removed from active lists and dashboards while permanently retaining all call history.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isArchiving}
+                onClick={() => setArchiveTargetLead(null)}
+                className="flex-1 py-2.5 px-3 border border-[#E2E8F0] rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isArchiving}
+                onClick={handleConfirmArchive}
+                className="flex-1 py-2.5 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
+              >
+                {isArchiving ? 'Archiving...' : 'Yes, Archive'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

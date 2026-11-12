@@ -187,7 +187,7 @@ BEGIN
             'archived_by', p_archived_by,
             'archived_by_name', p_archived_by_name
         ),
-        notes = pg_catalog.coalesce(notes, '') || E'\n[ARCHIVED BY ADMIN]: Archived by ' || p_archived_by_name || ' (' || p_archived_by || ') at ' || pg_catalog.now()::TEXT
+        notes = pg_catalog.coalesce(notes, '') || E'\n[ARCHIVED]: Archived by ' || p_archived_by_name || ' (' || p_archived_by || ') at ' || pg_catalog.now()::TEXT
     WHERE id = p_lead_id;
 
     RETURN pg_catalog.jsonb_build_object(

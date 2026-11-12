@@ -56,6 +56,21 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     checkSession();
+
+    // Handle browser Back / Forward Navigation and bfcache restores
+    const handlePageShow = () => {
+      const stored = localStorage.getItem('royal_epic_crm_session');
+      if (!stored) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('popstate', handlePageShow);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('popstate', handlePageShow);
+    };
   }, []);
 
   const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
@@ -98,14 +113,43 @@ export const CrmAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.token || ''}`
+            'Authorization': `Bearer ${session?.token || ''}`,
+            'x-crm-user-id': session?.user?.id || ''
           }
         }).catch(() => {});
       }
     } catch (_) {}
-    localStorage.removeItem('royal_epic_crm_session');
+
+    // Sign out from Supabase Auth if client exists
+    try {
+      const { getSupabase } = await import('../lib/supabase');
+      const sb = getSupabase();
+      if (sb && sb.auth) {
+        await sb.auth.signOut().catch(() => {});
+      }
+    } catch (_) {}
+
+    // Invalidate local storage and session cache
+    try {
+      localStorage.removeItem('royal_epic_crm_session');
+      sessionStorage.clear();
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('crm_') || k.startsWith('sb-') || k.includes('royal_epic_crm'))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
+
     setUser(null);
     setError(null);
+
+    // Replace current browser history state to prevent Back button from reopening authenticated workspace
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
   };
 
   const clearError = () => setError(null);
