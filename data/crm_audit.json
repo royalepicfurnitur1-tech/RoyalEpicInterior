@@ -198,5 +198,58 @@
       "archive_method": "soft_delete_db"
     },
     "created_at": "2026-11-12T05:14:09.272Z"
+  },
+  {
+    "id": "AUDIT-1794462618479",
+    "lead_id": "CRM-2611-15156",
+    "action": "CREATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "customer_name": "ENV DETECTION TEST LEAD",
+      "phone": "+919988776655",
+      "source": "Website Enquiry",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-12T05:50:18.201Z"
+  },
+  {
+    "id": "AUDIT-1794462618965",
+    "lead_id": "CRM-2611-15156",
+    "action": "UPDATE",
+    "performed_by": "crm_admin_primary",
+    "performed_by_name": "Royal Epic Admin",
+    "details": {
+      "updated_fields": [
+        "budget"
+      ]
+    },
+    "created_at": "2026-11-12T05:50:18.485Z"
+  },
+  {
+    "id": "AUDIT-1794462619425",
+    "lead_id": "CRM-2611-15156",
+    "action": "UPDATE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "updated_fields": [
+        "notes"
+      ]
+    },
+    "created_at": "2026-11-12T05:50:18.970Z"
+  },
+  {
+    "id": "AUDIT-1794462619756",
+    "lead_id": "CRM-2611-15156",
+    "action": "ARCHIVE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "archived_name": "ENV DETECTION TEST LEAD",
+      "phone": "+919988776655",
+      "archive_method": "soft_delete_db"
+    },
+    "created_at": "2026-11-12T05:50:19.756Z"
   }
 ]

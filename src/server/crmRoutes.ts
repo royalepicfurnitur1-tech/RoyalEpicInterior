@@ -1,6 +1,11 @@
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { ensureServerEnvLoaded, cleanEnvVar, getSafeEnvDiagnostics } from './envLoader';
+
+// Guarantee server-side environment is fully populated before route definition
+ensureServerEnvLoaded();
 
 export const crmRouter = express.Router();
 
@@ -115,40 +120,80 @@ export function getIstDayBoundaries(d: Date = new Date()): { startEpoch: number;
 // -----------------------------------------------------------------------------
 // SUPABASE CLIENT & PRIVILEGED BACKEND PERSISTENCE
 // -----------------------------------------------------------------------------
+let supabaseServerAdminClient: SupabaseClient | null = null;
+let lastUsedServerKey: string | null = null;
+
+export function getCrmServiceRoleKey(): string | undefined {
+  // Always trigger dynamic environment resolution on demand
+  ensureServerEnvLoaded();
+
+  const rawKey = 
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SERVICE_ROLE_KEY;
+
+  return cleanEnvVar(rawKey);
+}
+
 export function hasSupabaseServiceRoleKey(): boolean {
-  const k = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return Boolean(k && k.trim().length > 20 && !k.includes('YOUR_'));
+  const k = getCrmServiceRoleKey();
+  return Boolean(k && k.length > 20 && !k.includes('YOUR_'));
 }
 
 export const getCrmServiceRoleCredentials = (): { url: string; key: string } => {
+  ensureServerEnvLoaded();
+
   const url = (
-    process.env.SUPABASE_URL || 
-    process.env.VITE_SUPABASE_URL || 
+    cleanEnvVar(process.env.SUPABASE_URL) || 
+    cleanEnvVar(process.env.VITE_SUPABASE_URL) || 
     'https://lwrfoztfsyffgtybesia.supabase.co'
   ).replace(/\/+$/, '');
 
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key || !key.trim() || key.length < 20 || key.includes('YOUR_')) {
+  const key = getCrmServiceRoleKey();
+  if (!key || key.length < 20 || key.includes('YOUR_')) {
     throw new Error(
       'SUPABASE_SERVICE_ROLE_KEY is required for privileged CRM database operations. ' +
       'Please configure SUPABASE_SERVICE_ROLE_KEY in your Hostinger environment variables. ' +
       'Privileged CRM operations must not fall back to the public anon key.'
     );
   }
-  return { url, key: key.trim() };
+  return { url, key };
 };
 
+/**
+ * Returns the authoritative server-side Supabase client initialized
+ * exclusively with the service-role key to execute privileged CRM operations.
+ * Never uses the public anonymous key.
+ */
+export function getSupabaseServerClient(): SupabaseClient {
+  const { url, key } = getCrmServiceRoleCredentials();
+
+  if (!supabaseServerAdminClient || lastUsedServerKey !== key) {
+    supabaseServerAdminClient = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    });
+    lastUsedServerKey = key;
+  }
+  return supabaseServerAdminClient;
+}
+
 export const getPublicSupabaseCredentials = (): { url: string; key: string } => {
+  ensureServerEnvLoaded();
   const url = (
-    process.env.SUPABASE_URL || 
-    process.env.VITE_SUPABASE_URL || 
+    cleanEnvVar(process.env.SUPABASE_URL) || 
+    cleanEnvVar(process.env.VITE_SUPABASE_URL) || 
     'https://lwrfoztfsyffgtybesia.supabase.co'
   ).replace(/\/+$/, '');
 
   const key = 
-    process.env.VITE_SUPABASE_ANON_KEY || 
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
-    process.env.SUPABASE_ANON_KEY || 
+    cleanEnvVar(process.env.VITE_SUPABASE_ANON_KEY) || 
+    cleanEnvVar(process.env.VITE_SUPABASE_PUBLISHABLE_KEY) || 
+    cleanEnvVar(process.env.SUPABASE_ANON_KEY) || 
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cmZvenRmc3lmZmd0eWJlc2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NTE3NTUsImV4cCI6MjEwMjUyNzc1NX0.j2dssIopMDXyQP0AKUjhukpjcpuUc5Asg0k2pqSV6fc';
   return { url, key };
 };
@@ -274,6 +319,16 @@ interface SupabaseDeleteResult {
 // Update an existing lead in Supabase PostgreSQL using RPC or PATCH (never POST)
 // Strictly requires SUPABASE_SERVICE_ROLE_KEY to prevent unauthorized modification attempts
 async function updateLeadInSupabase(lead: ServerCrmLead): Promise<{ success: boolean; error?: string }> {
+  ensureServerEnvLoaded();
+  const diag = getSafeEnvDiagnostics();
+
+  console.log(
+    `[CRM Lead Update] Initiating database update for lead ID: ${lead.id} | ` +
+    `PID: ${diag.processId} | ` +
+    `Service Role Configured: ${diag.serviceRoleKeyExists ? 'YES' : 'NO'} | ` +
+    `Key Length: ${diag.serviceRoleKeyLength}`
+  );
+
   if (!hasSupabaseServiceRoleKey()) {
     return {
       success: false,
@@ -401,6 +456,16 @@ async function updateLeadInSupabase(lead: ServerCrmLead): Promise<{ success: boo
 // Secure server-side archiving in Supabase database
 // Strictly requires SUPABASE_SERVICE_ROLE_KEY to prevent unauthorized archive attempts
 async function deleteLeadFromSupabase(id: string, actorId: string = 'admin', actorName?: string): Promise<SupabaseDeleteResult> {
+  ensureServerEnvLoaded();
+  const diag = getSafeEnvDiagnostics();
+
+  console.log(
+    `[CRM Lead Archive] Initiating database archive for lead ID: ${id} by ${actorName || actorId} | ` +
+    `PID: ${diag.processId} | ` +
+    `Service Role Configured: ${diag.serviceRoleKeyExists ? 'YES' : 'NO'} | ` +
+    `Key Length: ${diag.serviceRoleKeyLength}`
+  );
+
   if (!hasSupabaseServiceRoleKey()) {
     return {
       success: false,
@@ -495,6 +560,15 @@ export interface SupabaseCallSyncResult {
 // Persist call logs into Supabase crm_call_logs table
 // Strictly requires SUPABASE_SERVICE_ROLE_KEY because crm_call_logs is restricted exclusively to service_role
 async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<SupabaseCallSyncResult> {
+  ensureServerEnvLoaded();
+  const diag = getSafeEnvDiagnostics();
+
+  console.log(
+    `[CRM Call Log Sync] Syncing call log ID: ${call.id} for lead: ${call.lead_id} | ` +
+    `PID: ${diag.processId} | ` +
+    `Service Role Configured: ${diag.serviceRoleKeyExists ? 'YES' : 'NO'}`
+  );
+
   if (!hasSupabaseServiceRoleKey()) {
     return {
       success: false,
@@ -1090,6 +1164,37 @@ crmRouter.post('/auth/logout', (req: Request, res: Response) => {
     }
   }
   res.json({ success: true, message: 'Successfully logged out.' });
+});
+
+// -----------------------------------------------------------------------------
+// SAFE ENVIRONMENT DIAGNOSTIC ENDPOINT
+// Never exposes secret key contents or partial values
+// -----------------------------------------------------------------------------
+crmRouter.get('/debug/env-status', (_req: Request, res: Response) => {
+  const diag = getSafeEnvDiagnostics();
+  let serverClientReady = false;
+  try {
+    if (hasSupabaseServiceRoleKey()) {
+      getSupabaseServerClient();
+      serverClientReady = true;
+    }
+  } catch (_) {}
+
+  res.json({
+    success: true,
+    diagnostics: {
+      serviceRoleKeyExists: diag.serviceRoleKeyExists,
+      serviceRoleKeyNonEmpty: diag.serviceRoleKeyNonEmpty,
+      serviceRoleKeyValidFormat: diag.serviceRoleKeyValidFormat,
+      serviceRoleKeyLength: diag.serviceRoleKeyLength,
+      supabaseServerClientReady: serverClientReady,
+      processId: diag.processId,
+      cwd: diag.cwd,
+      nodeEnv: diag.nodeEnv,
+      supabaseUrl: process.env.SUPABASE_URL || 'https://lwrfoztfsyffgtybesia.supabase.co',
+      envFilesLoaded: diag.envFilesLoaded
+    }
+  });
 });
 
 // -----------------------------------------------------------------------------

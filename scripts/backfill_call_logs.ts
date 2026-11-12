@@ -24,8 +24,10 @@
  * ==============================================================================
  */
 
+import '../src/server/envLoader';
 import fs from 'fs';
 import path from 'path';
+import { cleanEnvVar, ensureServerEnvLoaded } from '../src/server/envLoader';
 
 interface CallRecord {
   id: string;
@@ -50,21 +52,28 @@ interface BackfillReport {
 }
 
 const getSupabaseCredentials = () => {
+  ensureServerEnvLoaded();
   const url = (
-    process.env.SUPABASE_URL || 
-    process.env.VITE_SUPABASE_URL || 
+    cleanEnvVar(process.env.SUPABASE_URL) || 
+    cleanEnvVar(process.env.VITE_SUPABASE_URL) || 
     'https://lwrfoztfsyffgtybesia.supabase.co'
   ).replace(/\/+$/, '');
 
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key || !key.trim() || key.length < 20 || key.includes('YOUR_')) {
+  const rawKey = 
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SERVICE_ROLE_KEY;
+
+  const key = cleanEnvVar(rawKey);
+  if (!key || key.length < 20 || key.includes('YOUR_')) {
     throw new Error(
       'SUPABASE_SERVICE_ROLE_KEY is required to backfill call logs into public.crm_call_logs.\n' +
       'In accordance with database security policy, crm_call_logs is restricted exclusively to the service_role.\n' +
-      'Please export SUPABASE_SERVICE_ROLE_KEY in your environment before running this script.'
+      'Please configure SUPABASE_SERVICE_ROLE_KEY in your Hostinger environment before running this script.'
     );
   }
-  return { url, key: key.trim() };
+  return { url, key };
 };
 
 export async function runCallLogsBackfill(): Promise<BackfillReport> {
