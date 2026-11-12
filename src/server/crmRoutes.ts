@@ -1199,21 +1199,11 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
       updated_at: now
     };
 
-    // 1. Await Supabase cloud persistence BEFORE saving to local state
-    const syncRes = await syncLeadToSupabase(newLead);
-    if (!syncRes.success) {
-      console.error('❌ [CRM Create] Aborting local save because Supabase write failed:', syncRes.error);
-      return res.status(500).json({
-        success: false,
-        error: `Database write failed: Could not persist lead to Supabase PostgreSQL (${syncRes.error})`
-      });
-    }
-
-    // 2. Only after confirmed cloud persistence, save to local memory & disk JSON
+    // 1. Save to local memory & disk JSON immediately (local-first)
     dbCrmLeads[id] = newLead;
     saveLeads();
 
-    // 3. Record Audit Log
+    // 2. Record Audit Log
     dbCrmAudit.push({
       id: `AUDIT-${Date.now()}`,
       lead_id: id,
@@ -1225,11 +1215,16 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
     });
     saveAudit();
 
+    // 3. Fire-and-forget Supabase sync in background (does not block the response)
+    syncLeadToSupabase(newLead).catch((err) => {
+      console.warn('⚠️ [CRM Create] Background Supabase sync failed (lead already saved locally):', err?.message || err);
+    });
+
     res.status(201).json({
       success: true,
       leadId: newLead.id,
       lead: formatLeadWithAliases(newLead),
-      message: 'Lead successfully captured and persisted in Supabase database.'
+      message: 'Lead successfully created in CRM.'
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error creating lead' });
@@ -1302,21 +1297,11 @@ async function handleLeadUpdate(req: Request, res: Response) {
     lead.last_updated_by_name = user?.name;
     lead.updated_at = new Date().toISOString();
 
-    // 1. Await Supabase cloud update BEFORE updating local memory/cache
-    const syncRes = await syncLeadToSupabase(lead);
-    if (!syncRes.success) {
-      console.error('❌ [CRM Update] Aborting local update because Supabase write failed:', syncRes.error);
-      return res.status(500).json({
-        success: false,
-        error: `Database update failed: Could not persist changes to Supabase PostgreSQL (${syncRes.error})`
-      });
-    }
-
-    // 2. Only after confirmed cloud persistence, save to local memory & disk JSON
+    // 1. Save to local memory & disk JSON immediately (local-first)
     dbCrmLeads[lead.id] = lead;
     saveLeads();
 
-    // 3. Record Audit Log
+    // 2. Record Audit Log
     dbCrmAudit.push({
       id: `AUDIT-${Date.now()}`,
       lead_id: lead.id,
@@ -1328,20 +1313,25 @@ async function handleLeadUpdate(req: Request, res: Response) {
     });
     saveAudit();
 
-    res.json({ success: true, lead: formatLeadWithAliases(lead), message: 'Lead successfully updated in Supabase database and CRM.' });
+    // 3. Fire-and-forget Supabase sync in background (does not block the response)
+    syncLeadToSupabase(lead).catch((err) => {
+      console.warn('⚠️ [CRM Update] Background Supabase sync failed (lead already saved locally):', err?.message || err);
+    });
+
+    res.json({ success: true, lead: formatLeadWithAliases(lead), message: 'Lead successfully updated.' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error updating lead' });
   }
 }
 
-// DELETE /api/crm/leads/:id (Archive Lead - Strictly Admin-Only)
+// DELETE /api/crm/leads/:id (Archive Lead - All active CRM users)
 crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        error: 'Forbidden: Only administrators are authorized to archive CRM leads.'
+        error: 'Unauthorized: Please log in to perform this action.'
       });
     }
 
@@ -1351,28 +1341,15 @@ crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
     }
 
-    // 1. Await database archiving in Supabase first
-    const dbResult = await deleteLeadFromSupabase(leadId);
-    if (!dbResult.success || dbResult.deleted_count === 0) {
-      console.error(`❌ [CRM Archive] Supabase archiving failed for lead ${leadId}:`, dbResult.error);
-      return res.status(500).json({
-        success: false,
-        error: dbResult.error || 'Failed to archive lead in Supabase database (0 rows updated).'
-      });
-    }
-
-    // 2. Only after confirmed database archive, add to persistent tombstone set
+    // 1. Add to persistent tombstone set so it is never re-ingested
     dbCrmDeletedLeadIds.add(leadId);
     saveDeletedLeadIds();
 
-    // 3. Remove lead from active in-memory store and JSON file
+    // 2. Remove lead from active in-memory store and JSON file immediately
     delete dbCrmLeads[leadId];
     saveLeads();
 
-    // 4. Call History Retention Policy:
-    // Historical calls must be preserved even when a lead is archived.
-    // Archive an immutable copy in data/crm_calls_archived.json,
-    // and retain existing calls in dbCrmCalls so all reporting and telecaller histories remain accurate.
+    // 3. Call History Retention: archive associated calls so history is not lost
     const associatedCalls = dbCrmCalls.filter(c => c.lead_id === leadId);
     if (associatedCalls.length > 0) {
       const existingArchivedIds = new Set(dbCrmCallsArchived.map(c => c.id));
@@ -1390,7 +1367,7 @@ crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
       saveArchivedCalls();
     }
 
-    // 5. Audit log
+    // 4. Audit log
     dbCrmAudit.push({
       id: `AUDIT-${Date.now()}`,
       lead_id: leadId,
@@ -1399,12 +1376,16 @@ crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
       performed_by_name: user.name,
       details: {
         archived_name: lead.customer_name,
-        phone: lead.phone,
-        archive_method: dbResult.method
+        phone: lead.phone
       },
       created_at: new Date().toISOString()
     });
     saveAudit();
+
+    // 5. Fire-and-forget Supabase archive in background
+    deleteLeadFromSupabase(leadId).catch((err) => {
+      console.warn('⚠️ [CRM Archive] Background Supabase archive failed (lead already removed locally):', err?.message || err);
+    });
 
     res.json({
       success: true,
