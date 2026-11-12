@@ -178,6 +178,7 @@ export function getSupabaseServerClient(): SupabaseClient {
       }
     });
     lastUsedServerKey = key;
+    console.log(`✅ [Supabase Server Client] Shared service-role client initialized for ${url}`);
   }
   return supabaseServerAdminClient;
 }
@@ -202,94 +203,121 @@ export const getPublicSupabaseCredentials = (): { url: string; key: string } => 
 async function testSupabaseTable(tableName: string): Promise<boolean> {
   if (!hasSupabaseServiceRoleKey()) return false;
   try {
-    const { url, key } = getCrmServiceRoleCredentials();
-    const res = await fetch(`${url}/rest/v1/${tableName}?select=*&limit=1`, {
-      method: 'GET',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`
-      }
-    });
-    return res.ok;
+    const client = getSupabaseServerClient();
+    const { error } = await client.from(tableName).select('*', { count: 'exact', head: true });
+    return !error;
   } catch {
     return false;
   }
 }
 
-// Authoritative Supabase Cloud Persistence for CRM Leads (uses service_role when available, anon for INSERT-only website leads)
-async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boolean; table: string; error?: string; data?: any }> {
-  let url: string;
-  let key: string;
-
-  if (hasSupabaseServiceRoleKey()) {
-    const creds = getCrmServiceRoleCredentials();
-    url = creds.url;
-    key = creds.key;
-  } else {
-    // For pure INSERT into leads_and_inquiries, public anon is permitted by RLS ("Public can insert leads")
-    // but cannot SELECT returned representations. We use Prefer: return=minimal.
-    const creds = getPublicSupabaseCredentials();
-    url = creds.url;
-    key = creds.key;
+// Check if a lead exists in Supabase leads_and_inquiries
+export async function checkLeadExistsInSupabase(id: string): Promise<boolean> {
+  if (!hasSupabaseServiceRoleKey()) return false;
+  try {
+    const client = getSupabaseServerClient();
+    const { data } = await client.from('leads_and_inquiries').select('id').eq('id', id).single();
+    return Boolean(data && data.id);
+  } catch {
+    return false;
   }
+}
 
+/**
+ * Builds the canonical database payload for leads_and_inquiries table.
+ * Enforces PostgreSQL CHECK constraint (status IN ('new', 'contacted', 'site_visit_scheduled', 'boq_sent', 'converted', 'archived')).
+ * Packs full CRM metadata into raw_details JSONB for complete fidelity.
+ */
+export function buildSupabaseLeadPayload(lead: ServerCrmLead, isUpdate: boolean = false): Record<string, any> {
   const normPhone = normalizePhone(lead.phone);
 
+  let dbStatus = 'new';
+  const st = (lead.status || '').toLowerCase();
+  if (st.includes('converted') || st.includes('closed') || st.includes('won')) dbStatus = 'converted';
+  else if (st.includes('site visit')) dbStatus = 'site_visit_scheduled';
+  else if (st.includes('quotation') || st.includes('boq')) dbStatus = 'boq_sent';
+  else if (st.includes('contact') || st.includes('follow')) dbStatus = 'contacted';
+  else if (st.includes('archive') || st.includes('delete')) dbStatus = 'archived';
+
+  const crmDetails = {
+    customer_name: lead.customer_name,
+    normalized_phone: normPhone,
+    alternate_phone: lead.alternate_phone || null,
+    custom_source: lead.custom_source || null,
+    custom_service: lead.custom_service || null,
+    project_address: lead.project_address || null,
+    temperature: lead.temperature || 'Warm',
+    crm_status: lead.status || 'New Lead',
+    assigned_to: lead.assigned_to || null,
+    assigned_to_name: lead.assigned_to_name || null,
+    last_contact_at: lead.last_contact_at || null,
+    next_followup_at: lead.next_followup_at || null,
+    next_followup_date: lead.next_followup_date || null,
+    next_followup_time: lead.next_followup_time || null,
+    created_by: lead.created_by || null,
+    created_by_name: lead.created_by_name || null,
+    last_updated_by: lead.last_updated_by || null,
+    last_updated_by_name: lead.last_updated_by_name || null,
+    ...(lead.raw_payload || {})
+  };
+
+  const payload: Record<string, any> = {
+    full_name: lead.customer_name,
+    phone: lead.phone,
+    email: lead.email || null,
+    city: lead.city || 'Bengaluru',
+    service_type: lead.interested_service || 'Residential Interior',
+    estimated_budget: lead.budget || null,
+    project_scope: lead.notes || null,
+    source: lead.source || 'CRM Lead',
+    status: dbStatus,
+    preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
+    notes: lead.notes || null,
+    raw_details: crmDetails,
+    updated_at: new Date().toISOString()
+  };
+
+  if (!isUpdate) {
+    payload.id = lead.id;
+    payload.created_at = lead.created_at || new Date().toISOString();
+  }
+
+  return payload;
+}
+
+// Authoritative Supabase Cloud Persistence for CRM Leads (uses service_role when available, anon for INSERT-only website leads)
+async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boolean; table: string; error?: string; data?: any }> {
+  const payload = buildSupabaseLeadPayload(lead, false);
+
+  // 1. Privileged server client with service-role key
+  if (hasSupabaseServiceRoleKey()) {
+    try {
+      const client = getSupabaseServerClient();
+      const { data, error } = await client
+        .from('leads_and_inquiries')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('❌ [Supabase Client Insert] Insert rejected:', error.message, error.details);
+        return { success: false, table: 'leads_and_inquiries', error: error.message };
+      }
+      return { success: true, table: 'leads_and_inquiries', data: data || payload };
+    } catch (err: any) {
+      console.error('❌ [Supabase Client Insert] Exception:', err?.message || err);
+      return { success: false, table: 'leads_and_inquiries', error: err?.message || 'Error inserting into Supabase' };
+    }
+  }
+
+  // 2. Public anonymous insert fallback (e.g. public website forms before service role is set)
   try {
-    let dbStatus = 'new';
-    const st = (lead.status || '').toLowerCase();
-    if (st.includes('converted') || st.includes('closed')) dbStatus = 'converted';
-    else if (st.includes('site visit')) dbStatus = 'site_visit_scheduled';
-    else if (st.includes('quotation') || st.includes('boq')) dbStatus = 'boq_sent';
-    else if (st.includes('contact')) dbStatus = 'contacted';
-    else if (st.includes('archive') || st.includes('delete')) dbStatus = 'archived';
-
-    // Comprehensive CRM metadata embedded in JSONB raw_details for complete fidelity
-    const crmDetails = {
-      customer_name: lead.customer_name,
-      normalized_phone: normPhone,
-      alternate_phone: lead.alternate_phone || null,
-      custom_source: lead.custom_source || null,
-      custom_service: lead.custom_service || null,
-      project_address: lead.project_address || null,
-      temperature: lead.temperature || 'Warm',
-      crm_status: lead.status || 'New Lead',
-      assigned_to: lead.assigned_to || null,
-      assigned_to_name: lead.assigned_to_name || null,
-      last_contact_at: lead.last_contact_at || null,
-      next_followup_at: lead.next_followup_at || null,
-      next_followup_date: lead.next_followup_date || null,
-      next_followup_time: lead.next_followup_time || null,
-      created_by: lead.created_by || null,
-      created_by_name: lead.created_by_name || null,
-      last_updated_by: lead.last_updated_by || null,
-      last_updated_by_name: lead.last_updated_by_name || null,
-      ...(lead.raw_payload || {})
-    };
-
-    const payload = {
-      id: lead.id,
-      full_name: lead.customer_name,
-      phone: lead.phone,
-      email: lead.email || null,
-      city: lead.city || 'Bengaluru',
-      service_type: lead.interested_service || 'Residential Interior',
-      estimated_budget: lead.budget || null,
-      project_scope: lead.notes || null,
-      source: lead.source || 'CRM Lead',
-      status: dbStatus,
-      preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
-      notes: lead.notes || null,
-      raw_details: crmDetails,
-      created_at: lead.created_at,
-      updated_at: lead.updated_at || new Date().toISOString()
-    };
-
-    const res = await fetch(`${url}/rest/v1/leads_and_inquiries`, {
+    const creds = getPublicSupabaseCredentials();
+    const res = await fetch(`${creds.url}/rest/v1/leads_and_inquiries`, {
       method: 'POST',
       headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
+        apikey: creds.key,
+        Authorization: `Bearer ${creds.key}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
@@ -304,7 +332,6 @@ async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boole
       return { success: false, table: 'leads_and_inquiries', error: `HTTP ${res.status}: ${errText}` };
     }
   } catch (err: any) {
-    console.error('❌ [Supabase Sync] Network exception:', err?.message || err);
     return { success: false, table: 'leads_and_inquiries', error: err.message || 'Network error reaching Supabase' };
   }
 }
@@ -320,15 +347,6 @@ interface SupabaseDeleteResult {
 // Strictly requires SUPABASE_SERVICE_ROLE_KEY to prevent unauthorized modification attempts
 async function updateLeadInSupabase(lead: ServerCrmLead): Promise<{ success: boolean; error?: string }> {
   ensureServerEnvLoaded();
-  const diag = getSafeEnvDiagnostics();
-
-  console.log(
-    `[CRM Lead Update] Initiating database update for lead ID: ${lead.id} | ` +
-    `PID: ${diag.processId} | ` +
-    `Service Role Configured: ${diag.serviceRoleKeyExists ? 'YES' : 'NO'} | ` +
-    `Key Length: ${diag.serviceRoleKeyLength}`
-  );
-
   if (!hasSupabaseServiceRoleKey()) {
     return {
       success: false,
@@ -336,120 +354,75 @@ async function updateLeadInSupabase(lead: ServerCrmLead): Promise<{ success: boo
     };
   }
 
-  const { url, key } = getCrmServiceRoleCredentials();
-  const normPhone = normalizePhone(lead.phone);
+  const client = getSupabaseServerClient();
+  const updatePayload = buildSupabaseLeadPayload(lead, true);
 
   try {
-    let dbStatus = 'new';
-    const st = (lead.status || '').toLowerCase();
-    if (st.includes('converted') || st.includes('closed')) dbStatus = 'converted';
-    else if (st.includes('site visit')) dbStatus = 'site_visit_scheduled';
-    else if (st.includes('quotation') || st.includes('boq')) dbStatus = 'boq_sent';
-    else if (st.includes('contact')) dbStatus = 'contacted';
-    else if (st.includes('archive') || st.includes('delete')) dbStatus = 'archived';
-
-    const crmDetails = {
-      customer_name: lead.customer_name,
-      normalized_phone: normPhone,
-      alternate_phone: lead.alternate_phone || null,
-      custom_source: lead.custom_source || null,
-      custom_service: lead.custom_service || null,
-      project_address: lead.project_address || null,
-      temperature: lead.temperature || 'Warm',
-      crm_status: lead.status || 'New Lead',
-      assigned_to: lead.assigned_to || null,
-      assigned_to_name: lead.assigned_to_name || null,
-      last_contact_at: lead.last_contact_at || null,
-      next_followup_at: lead.next_followup_at || null,
-      next_followup_date: lead.next_followup_date || null,
-      next_followup_time: lead.next_followup_time || null,
-      created_by: lead.created_by || null,
-      created_by_name: lead.created_by_name || null,
-      last_updated_by: lead.last_updated_by || null,
-      last_updated_by_name: lead.last_updated_by_name || null,
-      ...(lead.raw_payload || {})
-    };
-
-    // 1. First attempt: Dedicated atomic update_crm_lead RPC (SECURITY DEFINER with FOR UPDATE row lock)
+    // 1. Try atomic RPC update_crm_lead
     try {
-      const rpcRes = await fetch(`${url}/rest/v1/rpc/update_crm_lead`, {
-        method: 'POST',
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          p_lead_id: lead.id,
-          p_full_name: lead.customer_name,
-          p_phone: lead.phone,
-          p_email: lead.email || null,
-          p_city: lead.city || 'Bengaluru',
-          p_service_type: lead.interested_service || 'Residential Interior',
-          p_estimated_budget: lead.budget || null,
-          p_project_scope: lead.notes || null,
-          p_source: lead.source || 'CRM Lead',
-          p_status: dbStatus,
-          p_preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
-          p_notes: lead.notes || null,
-          p_raw_details: crmDetails,
-          p_updated_by: lead.last_updated_by || 'admin',
-          p_updated_by_name: lead.last_updated_by_name || 'Royal Epic Admin'
-        })
+      const { data: rpcData, error: rpcErr } = await client.rpc('update_crm_lead', {
+        p_lead_id: lead.id,
+        p_full_name: lead.customer_name,
+        p_phone: lead.phone,
+        p_email: lead.email || null,
+        p_city: lead.city || 'Bengaluru',
+        p_service_type: lead.interested_service || 'Residential Interior',
+        p_estimated_budget: lead.budget || null,
+        p_project_scope: lead.notes || null,
+        p_source: lead.source || 'CRM Lead',
+        p_status: updatePayload.status,
+        p_preferred_date: updatePayload.preferred_date || null,
+        p_notes: lead.notes || null,
+        p_raw_details: updatePayload.raw_details,
+        p_updated_by: lead.last_updated_by || 'admin',
+        p_updated_by_name: lead.last_updated_by_name || 'Royal Epic User'
       });
 
-      if (rpcRes.ok) {
-        const rpcData = await rpcRes.json().catch(() => null);
-        if (rpcData && (rpcData.success || rpcData.id)) {
-          console.log(`✅ [Supabase Update] Successfully updated lead ${lead.id} via RPC update_crm_lead.`);
-          return { success: true };
-        }
+      if (!rpcErr && rpcData && (rpcData.success || rpcData.id)) {
+        console.log(`✅ [Supabase Update] Successfully updated lead ${lead.id} via RPC update_crm_lead.`);
+        return { success: true };
       }
     } catch (_) {
       // Fall through to PATCH
     }
 
-    // 2. Second attempt: Direct PATCH with id=eq.<lead.id> filter (never POST)
-    const updatePayload = {
-      full_name: lead.customer_name,
-      phone: lead.phone,
-      email: lead.email || null,
-      city: lead.city || 'Bengaluru',
-      service_type: lead.interested_service || 'Residential Interior',
-      estimated_budget: lead.budget || null,
-      project_scope: lead.notes || null,
-      source: lead.source || 'CRM Lead',
-      status: dbStatus,
-      preferred_date: lead.next_followup_date || (lead.next_followup_at ? lead.next_followup_at.split('T')[0] : null),
-      notes: lead.notes || null,
-      raw_details: crmDetails,
-      last_updated_by: lead.last_updated_by || null,
-      last_updated_by_name: lead.last_updated_by_name || null,
-      updated_at: new Date().toISOString()
-    };
+    // 2. Direct UPDATE with .eq('id', lead.id) — strictly PATCH/UPDATE
+    const { data: updateData, error: updateErr } = await client
+      .from('leads_and_inquiries')
+      .update(updatePayload)
+      .eq('id', lead.id)
+      .select();
 
-    const patchRes = await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(lead.id)}`, {
-      method: 'PATCH',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(updatePayload)
-    });
+    if (updateErr) {
+      console.warn(`❌ [Supabase Update] UPDATE rejected for lead ${lead.id}:`, updateErr.message);
+      return { success: false, error: updateErr.message };
+    }
 
-    if (patchRes.ok || patchRes.status === 204 || patchRes.status === 200) {
-      console.log(`✅ [Supabase Update] Successfully updated lead ${lead.id} via PATCH.`);
+    // If 0 rows updated, record may not exist in Supabase yet (legacy local lead)
+    if (!updateData || updateData.length === 0) {
+      console.log(`ℹ️ [Supabase Update] Lead ${lead.id} not found in Supabase. Inserting with existing ID...`);
+      const insertPayload = {
+        ...updatePayload,
+        id: lead.id,
+        created_at: lead.created_at || new Date().toISOString()
+      };
+      const { error: insertErr } = await client
+        .from('leads_and_inquiries')
+        .insert([insertPayload]);
+
+      if (insertErr) {
+        console.warn(`❌ [Supabase Update -> Initial Insert] Failed:`, insertErr.message);
+        return { success: false, error: insertErr.message };
+      }
+      console.log(`✅ [Supabase Update] Lead ${lead.id} inserted into Supabase with original ID.`);
       return { success: true };
     }
 
-    const errText = await patchRes.text().catch(() => 'Unknown Supabase error');
-    console.warn(`❌ [Supabase Update] PATCH rejected for lead ${lead.id}: HTTP ${patchRes.status}:`, errText);
-    return { success: false, error: `HTTP ${patchRes.status}: ${errText}` };
+    console.log(`✅ [Supabase Update] Successfully updated lead ${lead.id} via Supabase client.`);
+    return { success: true };
   } catch (err: any) {
-    console.error('❌ [Supabase Update] Network exception:', err?.message || err);
-    return { success: false, error: err.message || 'Network error reaching Supabase' };
+    console.error('❌ [Supabase Update] Exception:', err?.message || err);
+    return { success: false, error: err?.message || 'Network error reaching Supabase' };
   }
 }
 
@@ -457,15 +430,6 @@ async function updateLeadInSupabase(lead: ServerCrmLead): Promise<{ success: boo
 // Strictly requires SUPABASE_SERVICE_ROLE_KEY to prevent unauthorized archive attempts
 async function deleteLeadFromSupabase(id: string, actorId: string = 'admin', actorName?: string): Promise<SupabaseDeleteResult> {
   ensureServerEnvLoaded();
-  const diag = getSafeEnvDiagnostics();
-
-  console.log(
-    `[CRM Lead Archive] Initiating database archive for lead ID: ${id} by ${actorName || actorId} | ` +
-    `PID: ${diag.processId} | ` +
-    `Service Role Configured: ${diag.serviceRoleKeyExists ? 'YES' : 'NO'} | ` +
-    `Key Length: ${diag.serviceRoleKeyLength}`
-  );
-
   if (!hasSupabaseServiceRoleKey()) {
     return {
       success: false,
@@ -474,79 +438,61 @@ async function deleteLeadFromSupabase(id: string, actorId: string = 'admin', act
     };
   }
 
-  const { url, key } = getCrmServiceRoleCredentials();
-  let lastError = '';
+  const client = getSupabaseServerClient();
+  const effectiveActorName = actorName || actorId;
+  const now = new Date().toISOString();
 
-  // 1. First, attempt via archive_crm_lead RPC (restricted exclusively to service_role)
+  // 1. First attempt: RPC archive_crm_lead
   try {
-    const rpcRes = await fetch(`${url}/rest/v1/rpc/archive_crm_lead`, {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ p_lead_id: id, p_archived_by: actorId, p_archived_by_name: actorName || actorId })
+    const { data: rpcData, error: rpcErr } = await client.rpc('archive_crm_lead', {
+      p_lead_id: id,
+      p_archived_by: actorId,
+      p_archived_by_name: effectiveActorName
     });
-    if (rpcRes.ok) {
-      const rpcData = await rpcRes.json().catch(() => null);
-      if (rpcData && (rpcData.success || rpcData.archived || rpcData.deleted_count === 1)) {
-        console.log(`✅ [Supabase Archive] Archived lead ${id} via RPC archive_crm_lead by ${actorId}.`);
-        return { success: true, deleted_count: 1, method: 'rpc_archive' };
-      }
-    } else {
-      const rpcErr = await rpcRes.text().catch(() => '');
-      lastError = `RPC archive_crm_lead HTTP ${rpcRes.status}: ${rpcErr}`;
-      console.warn(`⚠️ [Supabase Archive] ${lastError}`);
+
+    if (!rpcErr && rpcData && (rpcData.success || rpcData.archived || rpcData.deleted_count === 1)) {
+      console.log(`✅ [Supabase Archive] Archived lead ${id} via RPC archive_crm_lead by ${actorId}.`);
+      return { success: true, deleted_count: 1, method: 'rpc_archive' };
     }
-  } catch (e: any) {
-    lastError = `RPC exception: ${e?.message || e}`;
+  } catch (_) {
+    // Fall through to direct table update
   }
 
-  // 2. Direct database-level soft-archive via PATCH on leads_and_inquiries (using service_role)
+  // 2. Direct table soft-archive via .update().eq('id', id)
   try {
-    const patchRes = await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        status: 'archived',
+    const archivePayload = {
+      status: 'archived',
+      updated_at: now,
+      raw_details: {
         is_deleted: true,
-        deleted_at: new Date().toISOString(),
-        last_updated_by: actorId,
-        last_updated_by_name: actorName || actorId,
-        notes: `[ARCHIVED]: Archived by ${actorName || actorId} (${actorId}) from Telecaller CRM at ${new Date().toISOString()}`,
-        raw_details: { 
-          is_deleted: true, 
-          deleted_at: new Date().toISOString(),
-          archived_by: actorId,
-          archived_by_name: actorName || actorId
-        },
-        updated_at: new Date().toISOString()
-      })
-    });
+        deleted_at: now,
+        archived_by: actorId,
+        archived_by_name: effectiveActorName
+      },
+      notes: `[ARCHIVED]: Archived by ${effectiveActorName} (${actorId}) from Telecaller CRM at ${now}`
+    };
 
-    if (patchRes.ok || patchRes.status === 204 || patchRes.status === 200) {
-      console.log(`✅ [Supabase Archive] Database-archived lead ${id} in leads_and_inquiries by ${actorId}.`);
-      return { success: true, deleted_count: 1, method: 'soft_delete_db' };
-    } else {
-      const patchErr = await patchRes.text().catch(() => '');
-      lastError = `PATCH leads_and_inquiries HTTP ${patchRes.status}: ${patchErr}`;
-      console.warn(`⚠️ [Supabase Archive] ${lastError}`);
+    const { data, error } = await client
+      .from('leads_and_inquiries')
+      .update(archivePayload)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.warn(`❌ [Supabase Archive] Soft-archive rejected for lead ${id}:`, error.message);
+      return { success: false, deleted_count: 0, error: error.message };
     }
-  } catch (err2: any) {
-    lastError = `PATCH exception: ${err2?.message || err2}`;
-  }
 
-  return {
-    success: false,
-    deleted_count: 0,
-    error: lastError || 'Failed to archive record in Supabase database: 0 rows affected or permission denied.'
-  };
+    if (!data || data.length === 0) {
+      console.log(`ℹ️ [Supabase Archive] Lead ${id} was not present in Supabase. Marking archived in CRM.`);
+      return { success: true, deleted_count: 1, method: 'soft_delete_db' };
+    }
+
+    console.log(`✅ [Supabase Archive] Soft-archived lead ${id} in leads_and_inquiries by ${actorId}.`);
+    return { success: true, deleted_count: 1, method: 'soft_delete_db' };
+  } catch (err: any) {
+    return { success: false, deleted_count: 0, error: err?.message || 'Error reaching Supabase' };
+  }
 }
 
 export interface SupabaseCallSyncResult {
@@ -561,77 +507,52 @@ export interface SupabaseCallSyncResult {
 // Strictly requires SUPABASE_SERVICE_ROLE_KEY because crm_call_logs is restricted exclusively to service_role
 async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<SupabaseCallSyncResult> {
   ensureServerEnvLoaded();
-  const diag = getSafeEnvDiagnostics();
-
-  console.log(
-    `[CRM Call Log Sync] Syncing call log ID: ${call.id} for lead: ${call.lead_id} | ` +
-    `PID: ${diag.processId} | ` +
-    `Service Role Configured: ${diag.serviceRoleKeyExists ? 'YES' : 'NO'}`
-  );
-
   if (!hasSupabaseServiceRoleKey()) {
     return {
       success: false,
       persisted_to_supabase: false,
       status: 'error',
-      error: 'SUPABASE_SERVICE_ROLE_KEY is required for CRM call log persistence. Please configure SUPABASE_SERVICE_ROLE_KEY in Hostinger environment variables.'
+      error: 'SUPABASE_SERVICE_ROLE_KEY is required for CRM call log persistence.'
     };
   }
 
-  const { url, key } = getCrmServiceRoleCredentials();
   try {
-    const res = await fetch(`${url}/rest/v1/crm_call_logs`, {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        id: call.id,
-        lead_id: call.lead_id,
-        call_date: call.call_date,
-        outcome: call.outcome,
-        notes: call.notes || null,
-        followup_date: call.followup_date || null,
-        logged_by: call.logged_by || null,
-        logged_by_name: call.logged_by_name || null,
-        duration_seconds: call.duration_seconds || 0,
-        created_at: call.created_at || call.call_date
-      })
-    });
-
-    if (res.ok || res.status === 201 || res.status === 204) {
-      console.log(`✅ [Supabase Calls] Successfully persisted call ${call.id} to public.crm_call_logs.`);
-      return { success: true, persisted_to_supabase: true, status: 'synced_to_supabase' };
-    }
-
-    const errText = await res.text().catch(() => '');
-    if (res.status === 404 || errText.includes('42P01') || errText.includes('PGRST205')) {
-      return {
-        success: false,
-        persisted_to_supabase: false,
-        migration_pending: true,
-        status: 'table_pending_migration',
-        error: "Table 'public.crm_call_logs' does not exist in Supabase yet. Call saved securely to server storage."
-      };
-    }
-
-    console.warn(`⚠️ [Supabase Calls] PostgREST insert note (${res.status}):`, errText);
-    return {
-      success: false,
-      persisted_to_supabase: false,
-      status: 'error',
-      error: errText
+    const client = getSupabaseServerClient();
+    const callRecord = {
+      id: call.id,
+      lead_id: call.lead_id,
+      call_date: call.call_date,
+      outcome: call.outcome,
+      notes: call.notes || null,
+      followup_date: call.followup_date || null,
+      logged_by: call.logged_by || null,
+      logged_by_name: call.logged_by_name || null,
+      duration_seconds: call.duration_seconds || 0,
+      created_at: call.created_at || call.call_date
     };
+
+    const { error } = await client
+      .from('crm_call_logs')
+      .insert([callRecord]);
+
+    if (error) {
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return {
+          success: false,
+          persisted_to_supabase: false,
+          migration_pending: true,
+          status: 'table_pending_migration',
+          error: "Table 'public.crm_call_logs' does not exist in Supabase yet. Call saved securely to server storage."
+        };
+      }
+      console.warn('⚠️ [Supabase Calls] Insert note:', error.message);
+      return { success: false, persisted_to_supabase: false, status: 'error', error: error.message };
+    }
+
+    console.log(`✅ [Supabase Calls] Successfully persisted call ${call.id} to public.crm_call_logs.`);
+    return { success: true, persisted_to_supabase: true, status: 'synced_to_supabase' };
   } catch (err: any) {
-    return {
-      success: false,
-      persisted_to_supabase: false,
-      status: 'network_error',
-      error: err?.message || String(err)
-    };
+    return { success: false, persisted_to_supabase: false, status: 'network_error', error: err?.message || String(err) };
   }
 }
 
@@ -649,22 +570,15 @@ async function syncCallsFromSupabase(): Promise<{ synced: number; tableAvailable
   lastSupabaseCallSyncTimestamp = Date.now();
 
   try {
-    const { url, key } = getCrmServiceRoleCredentials();
-    const res = await fetch(`${url}/rest/v1/crm_call_logs?select=*&order=call_date.desc&limit=500`, {
-      method: 'GET',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`
-      }
-    });
+    const client = getSupabaseServerClient();
+    const { data: rows, error } = await client
+      .from('crm_call_logs')
+      .select('*')
+      .order('call_date', { ascending: false })
+      .limit(500);
 
-    if (!res.ok) {
-      return { synced: 0, tableAvailable: false };
-    }
-
-    const rows = await res.json().catch(() => []);
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return { synced: 0, tableAvailable: true };
+    if (error || !Array.isArray(rows) || rows.length === 0) {
+      return { synced: 0, tableAvailable: !error };
     }
 
     let newCount = 0;
@@ -977,63 +891,88 @@ let isSupabaseSyncInProgress = false;
 // Pull existing website public enquiries from Supabase leads_and_inquiries into Telecaller CRM
 export async function syncLeadsFromSupabase(): Promise<number> {
   if (!hasSupabaseServiceRoleKey()) {
-    return 0; // Skip polling if service role is not set up, avoiding unauthorized SELECT attempts with anon
+    return 0; // Skip polling if service role is not set up
   }
   if (isSupabaseSyncInProgress) {
     return 0; // Concurrency guard: avoid interleaving sync operations
   }
   isSupabaseSyncInProgress = true;
-  const { url, key } = getCrmServiceRoleCredentials();
   let syncedCount = 0;
 
   try {
-    const res = await fetch(`${url}/rest/v1/leads_and_inquiries?select=*&order=created_at.desc&limit=200`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` }
-    });
-    if (res.ok) {
-      const rows = await res.json();
-      if (Array.isArray(rows) && rows.length > 0) {
-        rows.forEach((r: any) => {
-          // 1. Strict tombstone check: If deleted by admin, never re-ingest
-          if (dbCrmDeletedLeadIds.has(r.id)) {
-            return;
+    const client = getSupabaseServerClient();
+    const { data: rows, error } = await client
+      .from('leads_and_inquiries')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(300);
+
+    if (!error && Array.isArray(rows) && rows.length > 0) {
+      let purgeCount = 0;
+      rows.forEach((r: any) => {
+        // 1. Strict tombstone check: If deleted/archived, purge from memory
+        if (dbCrmDeletedLeadIds.has(r.id)) {
+          if (dbCrmLeads[r.id]) {
+            delete dbCrmLeads[r.id];
+            purgeCount++;
           }
-          // 2. Strict archive check
-          if (r.status === 'archived' || r.raw_details?.is_deleted === true) {
-            return;
-          }
-          const custName = r.full_name || r.customer_name || '';
-          // 3. Skip developer test / probe entries
-          if (isDeveloperTestRecord(custName, r.phone)) {
-            return;
-          }
-          // 4. Ingest new leads
-          if (!dbCrmLeads[r.id]) {
-            ingestPublicWebsiteLead(r);
-            syncedCount++;
-          } else {
-            // 5. Update local lead if Supabase has newer update timestamp
-            const local = dbCrmLeads[r.id];
-            const rUpdated = new Date(r.updated_at || r.created_at).getTime();
-            const lUpdated = new Date(local.updated_at || local.created_at).getTime();
-            if (rUpdated > lUpdated && r.raw_details) {
-              const rd = r.raw_details;
-              if (rd.temperature) local.temperature = rd.temperature;
-              if (rd.assigned_to) local.assigned_to = rd.assigned_to;
-              if (rd.assigned_to_name) local.assigned_to_name = rd.assigned_to_name;
-              if (rd.next_followup_at) local.next_followup_at = rd.next_followup_at;
-              if (rd.next_followup_date) local.next_followup_date = rd.next_followup_date;
-              if (rd.next_followup_time) local.next_followup_time = rd.next_followup_time;
-              if (rd.crm_status) local.status = rd.crm_status;
-              local.updated_at = r.updated_at;
-              syncedCount++;
-            }
-          }
-        });
-        if (syncedCount > 0) {
-          saveLeads();
-          console.log(`✅ [CRM Sync] Synchronized ${syncedCount} website enquiries with Telecaller CRM.`);
+          return;
         }
+        // 2. Strict archive check
+        if (r.status === 'archived' || r.is_deleted === true || r.raw_details?.is_deleted === true) {
+          dbCrmDeletedLeadIds.add(r.id);
+          if (dbCrmLeads[r.id]) {
+            delete dbCrmLeads[r.id];
+            purgeCount++;
+          }
+          return;
+        }
+        const custName = r.full_name || r.customer_name || '';
+        // 3. Skip developer test / probe entries
+        if (isDeveloperTestRecord(custName, r.phone)) {
+          return;
+        }
+        // 4. Ingest new leads
+        if (!dbCrmLeads[r.id]) {
+          ingestPublicWebsiteLead(r);
+          syncedCount++;
+        } else {
+          // 5. Update local lead if Supabase has newer update timestamp
+          const local = dbCrmLeads[r.id];
+          const rUpdated = new Date(r.updated_at || r.created_at).getTime();
+          const lUpdated = new Date(local.updated_at || local.created_at).getTime();
+          if (rUpdated >= lUpdated && r.raw_details) {
+            const rd = r.raw_details;
+            if (rd.temperature) local.temperature = rd.temperature;
+            if (rd.assigned_to) local.assigned_to = rd.assigned_to;
+            if (rd.assigned_to_name) local.assigned_to_name = rd.assigned_to_name;
+            if (rd.next_followup_at) local.next_followup_at = rd.next_followup_at;
+            if (rd.next_followup_date) local.next_followup_date = rd.next_followup_date;
+            if (rd.next_followup_time) local.next_followup_time = rd.next_followup_time;
+            if (rd.crm_status) local.status = rd.crm_status;
+            if (r.full_name) {
+              local.customer_name = r.full_name;
+              local.name = r.full_name;
+            }
+            if (r.phone) {
+              local.phone = r.phone;
+              local.normalized_phone = normalizePhone(r.phone);
+            }
+            if (r.city) local.city = r.city;
+            if (r.service_type) local.interested_service = r.service_type;
+            if (r.estimated_budget) local.budget = r.estimated_budget;
+            if (r.notes) local.notes = r.notes;
+            local.updated_at = r.updated_at || new Date().toISOString();
+            syncedCount++;
+          }
+        }
+      });
+      if (purgeCount > 0) {
+        saveDeletedLeadIds();
+      }
+      if (syncedCount > 0 || purgeCount > 0) {
+        saveLeads();
+        console.log(`✅ [CRM Sync] Synchronized ${syncedCount} website enquiries with Telecaller CRM (purged ${purgeCount} archived).`);
       }
     }
   } catch (err: any) {
@@ -1170,46 +1109,41 @@ crmRouter.post('/auth/logout', (req: Request, res: Response) => {
 // SAFE ENVIRONMENT DIAGNOSTIC ENDPOINT
 // Never exposes secret key contents or partial values
 // -----------------------------------------------------------------------------
-crmRouter.get('/debug/env-status', (req: Request, res: Response) => {
+crmRouter.get('/debug/env-status', async (req: Request, res: Response) => {
+  const user = extractUserFromReq(req);
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Admin authorization required to access diagnostic information.'
+    });
+  }
+
   const diag = getSafeEnvDiagnostics();
   let serverClientReady = false;
+  let databaseConnected = false;
+
   try {
     if (hasSupabaseServiceRoleKey()) {
-      getSupabaseServerClient();
+      const client = getSupabaseServerClient();
       serverClientReady = true;
+      const { error } = await client.from('leads_and_inquiries').select('*', { count: 'exact', head: true });
+      if (!error) {
+        databaseConnected = true;
+      }
     }
   } catch (_) {}
 
-  const hostHeader = req.get('host') || req.hostname || 'unknown';
-
+  // Sanitized response: strictly NO filesystem paths, NO environment variable key arrays
   res.json({
     success: true,
     diagnostics: {
       serviceRoleKeyExists: diag.serviceRoleKeyExists,
-      serviceRoleKeyNonEmpty: diag.serviceRoleKeyNonEmpty,
       serviceRoleKeyValidFormat: diag.serviceRoleKeyValidFormat,
-      serviceRoleKeyLength: diag.serviceRoleKeyLength,
-      serviceRoleKeySource: diag.serviceRoleKeySource,
       supabaseServerClientReady: serverClientReady,
-      processId: diag.processId,
-      processParentId: diag.processParentId,
-      processUptimeSeconds: diag.processUptimeSeconds,
-      processStartedAt: diag.processStartedAt,
-      entryPoint: diag.entryPoint,
-      execPath: diag.execPath,
-      nodeVersion: diag.nodeVersion,
-      cwd: diag.cwd,
+      databaseConnected,
       nodeEnv: diag.nodeEnv,
-      requestHost: hostHeader,
-      detectedHostingerApplicationDomain: diag.detectedHostingerDomain,
-      supabaseUrl: process.env.SUPABASE_URL || 'https://lwrfoztfsyffgtybesia.supabase.co',
-      envFilesLoaded: diag.envFilesLoaded,
-      htaccessFilesFound: diag.htaccessFilesFound,
-      candidatePathsSearchedCount: diag.candidatePathsSearchedCount,
-      allEnvKeysInProcess: diag.allEnvKeysInProcess,
-      hpanelConfigurationGuidance: diag.serviceRoleKeyExists
-        ? 'Environment variable SUPABASE_SERVICE_ROLE_KEY is correctly detected and active.'
-        : `The running Node.js process is hosted under '${diag.detectedHostingerDomain}'. In Hostinger hPanel, navigate to Websites > ${diag.detectedHostingerDomain} > Node.js > Environment Variables, verify SUPABASE_SERVICE_ROLE_KEY is present, and then click RESTART on the Node.js application (uptime: ${diag.processUptimeSeconds}s).`
+      processUptimeSeconds: diag.processUptimeSeconds,
+      timestamp: new Date().toISOString()
     }
   });
 });
@@ -1219,12 +1153,12 @@ crmRouter.get('/debug/env-status', (req: Request, res: Response) => {
 // -----------------------------------------------------------------------------
 
 // GET /api/crm/leads
-crmRouter.get('/leads', (req: Request, res: Response) => {
+crmRouter.get('/leads', async (req: Request, res: Response) => {
   try {
-    // Non-blocking background sync with Supabase website leads (throttled every 15s)
+    // Sync with Supabase website leads (throttled every 15s)
     if (Date.now() - lastSupabaseSyncTimestamp > 15000) {
       lastSupabaseSyncTimestamp = Date.now();
-      syncLeadsFromSupabase().catch(() => {});
+      await syncLeadsFromSupabase().catch(() => {});
     }
 
     const search = ((req.query.search as string) || '').toLowerCase().trim();
@@ -1422,6 +1356,14 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
     const user = extractUserFromReq(req);
     const body = req.body || {};
 
+    // IDEMPOTENCY / UPDATE ROUTING GUARD:
+    // If client supplied an existing lead ID to POST /leads, delegate to update handler so we NEVER attempt a duplicate INSERT!
+    if (body.id && (dbCrmLeads[body.id] || (hasSupabaseServiceRoleKey() && await checkLeadExistsInSupabase(body.id)))) {
+      console.log(`ℹ️ [CRM Leads POST] Received existing lead ID "${body.id}" on POST route; delegating to update handler to prevent duplicate key constraint violation.`);
+      req.params.id = body.id;
+      return handleLeadUpdate(req, res);
+    }
+
     const rawName = body.customer_name || body.name || '';
     const rawPhone = body.phone || '';
     const rawAltPhone = body.alternate_phone || '';
@@ -1487,7 +1429,7 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString();
-    const id = body.id || `CRM-${now.slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
+    const id = `CRM-${now.slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const newLead: ServerCrmLead = {
       id,
@@ -1574,7 +1516,18 @@ async function handleLeadUpdate(req: Request, res: Response) {
       });
     }
 
-    const lead = dbCrmLeads[req.params.id];
+    let lead = dbCrmLeads[req.params.id];
+    if (!lead && hasSupabaseServiceRoleKey()) {
+      try {
+        const client = getSupabaseServerClient();
+        const { data: dbRow } = await client.from('leads_and_inquiries').select('*').eq('id', req.params.id).single();
+        if (dbRow) {
+          ingestPublicWebsiteLead(dbRow);
+          lead = dbCrmLeads[req.params.id];
+        }
+      } catch (_) {}
+    }
+
     if (!lead) {
       return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
     }
@@ -1671,7 +1624,18 @@ crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
     }
 
     const leadId = req.params.id;
-    const lead = dbCrmLeads[leadId];
+    let lead = dbCrmLeads[leadId];
+    if (!lead && hasSupabaseServiceRoleKey()) {
+      try {
+        const client = getSupabaseServerClient();
+        const { data: dbRow } = await client.from('leads_and_inquiries').select('*').eq('id', leadId).single();
+        if (dbRow) {
+          ingestPublicWebsiteLead(dbRow);
+          lead = dbCrmLeads[leadId];
+        }
+      } catch (_) {}
+    }
+
     if (!lead) {
       return res.status(404).json({ success: false, error: 'Lead not found in CRM.' });
     }
@@ -1781,13 +1745,31 @@ crmRouter.get('/leads/:id/calls', async (req: Request, res: Response) => {
 crmRouter.post('/calls', async (req: Request, res: Response) => {
   try {
     const user = extractUserFromReq(req);
+    if (!user || (user.role !== 'admin' && user.role !== 'telecaller')) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden: Unauthorized to record call logs. Valid Admin or Telecaller session required.'
+      });
+    }
+
     const { lead_id, outcome, notes, followup_date, update_lead_status, update_lead_temperature } = req.body;
 
     if (!lead_id || !outcome) {
       return res.status(400).json({ success: false, error: 'lead_id and outcome are required.' });
     }
 
-    const lead = dbCrmLeads[lead_id];
+    let lead = dbCrmLeads[lead_id];
+    if (!lead && hasSupabaseServiceRoleKey()) {
+      try {
+        const client = getSupabaseServerClient();
+        const { data: dbRow } = await client.from('leads_and_inquiries').select('*').eq('id', lead_id).single();
+        if (dbRow) {
+          ingestPublicWebsiteLead(dbRow);
+          lead = dbCrmLeads[lead_id];
+        }
+      } catch (_) {}
+    }
+
     if (!lead) {
       return res.status(404).json({ success: false, error: 'Lead not found.' });
     }
@@ -1800,8 +1782,8 @@ crmRouter.post('/calls', async (req: Request, res: Response) => {
       outcome,
       notes: notes?.trim() || undefined,
       followup_date: followup_date || undefined,
-      logged_by: user?.id,
-      logged_by_name: user?.name,
+      logged_by: user.id,
+      logged_by_name: user.name,
       created_at: now
     };
 
@@ -1819,15 +1801,15 @@ crmRouter.post('/calls', async (req: Request, res: Response) => {
     if (update_lead_status) lead.status = update_lead_status;
     if (update_lead_temperature) lead.temperature = update_lead_temperature;
     if (followup_date) lead.next_followup_at = followup_date;
-    lead.last_updated_by = user?.id;
-    lead.last_updated_by_name = user?.name;
+    lead.last_updated_by = user.id;
+    lead.last_updated_by_name = user.name;
     lead.updated_at = now;
 
     dbCrmLeads[lead_id] = lead;
     saveLeads();
 
     // Sync updated lead to Supabase using PATCH (never POST)
-    updateLeadInSupabase(lead).catch(() => {});
+    await updateLeadInSupabase(lead).catch(() => {});
 
     res.status(201).json({
       success: true,

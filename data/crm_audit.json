@@ -307,5 +307,66 @@
       "archive_method": "soft_delete_db"
     },
     "created_at": "2026-11-12T06:37:36.168Z"
+  },
+  {
+    "id": "AUDIT-1794471582342",
+    "lead_id": "CRM-2611-57665",
+    "action": "CREATE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "customer_name": "CRUD Automated Verification Test",
+      "phone": "+919888898190",
+      "source": "Direct Phone Inquiry",
+      "status": "New Lead"
+    },
+    "created_at": "2026-11-12T08:19:42.071Z"
+  },
+  {
+    "id": "AUDIT-1794471582842",
+    "lead_id": "CRM-2611-57665",
+    "action": "UPDATE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "updated_fields": [
+        "customer_name",
+        "temperature",
+        "status",
+        "notes",
+        "next_followup_date",
+        "next_followup_time"
+      ]
+    },
+    "created_at": "2026-11-12T08:19:42.476Z"
+  },
+  {
+    "id": "AUDIT-1794471583075",
+    "lead_id": "CRM-2611-57665",
+    "action": "UPDATE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "updated_fields": [
+        "id",
+        "customer_name",
+        "phone",
+        "notes"
+      ]
+    },
+    "created_at": "2026-11-12T08:19:42.852Z"
+  },
+  {
+    "id": "AUDIT-1794471583870",
+    "lead_id": "CRM-2611-57665",
+    "action": "ARCHIVE",
+    "performed_by": "crm_telecaller_1",
+    "performed_by_name": "Telecaller 1",
+    "details": {
+      "archived_name": "CRUD Automated Verification Test (UPDATED)",
+      "phone": "+919888898190",
+      "archive_method": "soft_delete_db"
+    },
+    "created_at": "2026-11-12T08:19:43.870Z"
   }
 ]
