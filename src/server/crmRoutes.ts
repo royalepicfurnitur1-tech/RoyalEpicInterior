@@ -631,6 +631,11 @@ export function isDeveloperTestRecord(name?: string, phone?: string): boolean {
   return false;
 }
 
+// A lead is a 'website enquiry' if it was created by the public website ingestion pipeline
+export function isWebsiteEnquiryLead(l: { created_by?: string; source?: string }): boolean {
+  return l.created_by === 'system_website_enquiry' || l.source === 'Website Enquiry';
+}
+
 // Ingest a public website enquiry immediately into the Telecaller CRM
 export function ingestPublicWebsiteLead(leadRecord: {
   id: string;
@@ -682,7 +687,9 @@ export function ingestPublicWebsiteLead(leadRecord: {
     normalized_phone: rd.normalized_phone || normPhone,
     alternate_phone: rd.alternate_phone || undefined,
     email: leadRecord.email || undefined,
-    source: leadRecord.source || 'Website Enquiry',
+    // All public-website submissions are grouped under one CRM source so they appear in the
+    // 'Website Enquiries' view; the specific form name is kept in the notes below.
+    source: 'Website Enquiry',
     custom_source: rd.custom_source || undefined,
     interested_service: leadRecord.service_type || 'Residential Interior',
     projectType: leadRecord.service_type || 'Residential Interior',
@@ -694,6 +701,7 @@ export function ingestPublicWebsiteLead(leadRecord: {
     temperature: rd.temperature || 'Hot',
     status: rd.crm_status || 'New Lead',
     notes: [
+      leadRecord.source && leadRecord.source !== 'Website Enquiry' ? `Form: ${leadRecord.source}` : '',
       leadRecord.project_scope || '',
       leadRecord.drawing_name ? `Uploaded Drawing: ${leadRecord.drawing_name}` : '',
       leadRecord.preferred_date ? `Preferred Consultation Date: ${leadRecord.preferred_date}` : '',
@@ -913,6 +921,7 @@ crmRouter.get('/leads', (req: Request, res: Response) => {
     const status = (req.query.status as string) || '';
     const temperature = (req.query.temperature as string) || '';
     const source = (req.query.source as string) || '';
+    const originFilter = ((req.query.origin as string) || '').toLowerCase();
     const service = (req.query.service as string) || '';
     const budget = (req.query.budget as string) || '';
     const location = ((req.query.location as string) || '').toLowerCase().trim();
@@ -964,6 +973,11 @@ crmRouter.get('/leads', (req: Request, res: Response) => {
       } else {
         list = list.filter(l => l.status === status);
       }
+    }
+
+    // 2b. Origin filter: only leads that came in through the public website forms
+    if (originFilter === 'website') {
+      list = list.filter(isWebsiteEnquiryLead);
     }
 
     // 3. Source filter
@@ -1193,8 +1207,8 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
       next_followup_at: finalFollowupAt || undefined,
       next_followup_date: body.next_followup_date || undefined,
       next_followup_time: body.next_followup_time || undefined,
-      created_by: user?.id,
-      created_by_name: user?.name,
+      created_by: user?.id || 'system_website_enquiry',
+      created_by_name: user?.name || 'Website Public Enquiry',
       created_at: now,
       updated_at: now
     };

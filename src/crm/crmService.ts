@@ -98,6 +98,7 @@ export async function fetchCrmLeads(filters?: Partial<CrmFilterState>): Promise<
     if (filters?.followup_date) params.set('followup_date', filters.followup_date);
     if (filters?.created_date && filters.created_date !== 'All') params.set('created_date', filters.created_date);
     if (filters?.sortBy) params.set('sortBy', filters.sortBy);
+    if (filters?.origin) params.set('origin', filters.origin);
     if (filters?.page) params.set('page', String(filters.page));
     if (filters?.pageSize) params.set('pageSize', String(filters.pageSize));
 

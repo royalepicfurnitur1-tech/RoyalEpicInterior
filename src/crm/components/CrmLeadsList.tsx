@@ -48,13 +48,16 @@ interface CrmLeadsListProps {
   onOpenCreateLead: () => void;
   onQuickCall: (lead: CrmLead) => void;
   initialFilters?: Partial<CrmFilterState>;
+  /** 'website' = show only enquiries submitted through the public website forms */
+  origin?: 'website';
 }
 
 export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
   onSelectLead,
   onOpenCreateLead,
   onQuickCall,
-  initialFilters
+  initialFilters,
+  origin
 }) => {
   const { isAdmin } = useCrmAuth();
 
@@ -109,7 +112,7 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchCrmLeads(filters);
+      const res = await fetchCrmLeads(origin ? { ...filters, origin } : filters);
       if (res.error) {
         setError(res.error);
       } else {
@@ -138,7 +141,8 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
     filters.created_date,
     filters.sortBy,
     filters.page,
-    filters.pageSize
+    filters.pageSize,
+    origin
   ]);
 
   const handleCopyPhone = (phoneNum: string, id: string, e: React.MouseEvent) => {
@@ -233,14 +237,16 @@ export const CrmLeadsList: React.FC<CrmLeadsListProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <h1 className="text-xl font-bold text-[#172033] tracking-tight">
-              All Leads
+              {origin === 'website' ? 'Website Enquiries' : 'All Leads'}
             </h1>
             <span className="text-xs text-slate-500 font-mono">
               ({totalLeads} total)
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            Search, filter, assign and review customer inquiries across all sales channels.
+            {origin === 'website'
+              ? 'Enquiries submitted through the website forms appear here instantly, newest first.'
+              : 'Search, filter, assign and review customer inquiries across all sales channels.'}
           </p>
         </div>
 

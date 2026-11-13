@@ -34,14 +34,17 @@ import {
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
-  CheckCircle2
+  CheckCircle2,
+  Globe
 } from 'lucide-react';
 
 interface TelecallerCrmAppProps {
   onBackToWebsite?: () => void;
 }
 
-type TabType = 'dashboard' | 'leads' | 'followups' | 'history' | 'reports' | 'users' | 'settings';
+type TabType = 'dashboard' | 'leads' | 'website' | 'followups' | 'history' | 'reports' | 'users' | 'settings';
+
+const WEBSITE_INITIAL_FILTERS = { sortBy: 'created_desc' as const };
 
 const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
   const { user, isAuthenticated, loading, isAdmin, logout } = useCrmAuth();
@@ -61,6 +64,9 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
     overdue: 0,
     upcoming: 0
   });
+
+  // Number of new (not yet worked) website enquiries, for the sidebar badge
+  const [websiteNewCount, setWebsiteNewCount] = useState(0);
 
   // Modal states
   const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
@@ -82,6 +88,18 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
         });
       }).catch(() => {});
     }
+  }, [isAuthenticated, refreshKey]);
+
+  // Poll the website-enquiry count so new submissions show up on the sidebar badge
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const loadWebsiteCount = () =>
+      fetchCrmLeads({ origin: 'website', status: 'New Lead', page: 1, pageSize: 1 })
+        .then(res => setWebsiteNewCount(res.total || 0))
+        .catch(() => {});
+    loadWebsiteCount();
+    const timer = setInterval(loadWebsiteCount, 30000);
+    return () => clearInterval(timer);
   }, [isAuthenticated, refreshKey]);
 
   if (loading) {
@@ -142,6 +160,7 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
     switch (activeTab) {
       case 'dashboard': return 'Dashboard Overview';
       case 'leads': return 'All Leads Directory';
+      case 'website': return 'Website Enquiries';
       case 'followups': 
         return followupSubTab === 'today' ? "Today's Follow-ups" :
                followupSubTab === 'overdue' ? 'Overdue Follow-ups' :
@@ -237,6 +256,27 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
             >
               <Users className="w-4 h-4 shrink-0" />
               {!isSidebarCollapsed && <span>All Leads</span>}
+            </button>
+
+            {/* Website Enquiries */}
+            <button
+              onClick={() => setActiveTab('website')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                activeTab === 'website'
+                  ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
+              }`}
+              title="Website Enquiries"
+            >
+              <div className="flex items-center gap-3">
+                <Globe className="w-4 h-4 shrink-0 text-emerald-600" />
+                {!isSidebarCollapsed && <span>Website Enquiries</span>}
+              </div>
+              {!isSidebarCollapsed && websiteNewCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {websiteNewCount}
+                </span>
+              )}
             </button>
 
             {/* Divider */}
@@ -569,6 +609,17 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               />
             )}
 
+            {activeTab === 'website' && (
+              <CrmLeadsList
+                key={`website-${refreshKey}`}
+                origin="website"
+                initialFilters={WEBSITE_INITIAL_FILTERS}
+                onSelectLead={handleOpenLead}
+                onOpenCreateLead={() => setIsCreateModalOpen(true)}
+                onQuickCall={handleQuickCall}
+              />
+            )}
+
             {activeTab === 'followups' && (
               <CrmFollowupsView
                 key={`follow-${refreshKey}-${followupSubTab}`}
@@ -657,6 +708,23 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               >
                 <Users className="w-4 h-4" />
                 <span>All Leads</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveTab('website'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-medium text-left ${
+                  activeTab === 'website' ? 'bg-[#EBF1FE] text-[#356AE6] font-semibold' : 'text-slate-600'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Globe className="w-4 h-4 text-emerald-600" />
+                  <span>Website Enquiries</span>
+                </div>
+                {websiteNewCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700">
+                    {websiteNewCount}
+                  </span>
+                )}
               </button>
 
               <div className="my-2 border-t border-[#E2E8F0]" />

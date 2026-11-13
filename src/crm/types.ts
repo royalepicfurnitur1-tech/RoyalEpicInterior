@@ -14,6 +14,7 @@ export interface CrmUser {
 // 1. Lead Source Options
 export const LEAD_SOURCES = [
   'Justdial',
+  'IndiaMART',
   'Google Search',
   'Google Ads',
   'Website Enquiry',
@@ -179,6 +180,7 @@ export interface CrmFilterState {
   followup_date?: string; // YYYY-MM-DD
   created_date: string; // 'All' | 'today' | '7days' | '30days'
   sortBy: 'created_desc' | 'created_asc' | 'followup_asc' | 'followup_desc' | 'name_asc';
+  origin?: string; // 'website' = only leads submitted via the public website forms
   page: number;
   pageSize: number;
 }
