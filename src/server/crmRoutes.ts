@@ -630,9 +630,8 @@ export function ingestPublicWebsiteLead(leadRecord: {
   const leadId = leadRecord.id;
   const custName = leadRecord.full_name || leadRecord.customer_name || 'Website Visitor';
   
-  if (isDeveloperTestRecord(custName, rawPhone)) {
-    return null;
-  }
+  // NOTE: no "developer test" filtering here. Every public website enquiry must reach the CRM;
+  // the previous substring/phone blocklist silently dropped real and test submissions.
 
   const rd = leadRecord.raw_details || {};
 
@@ -720,11 +719,8 @@ export async function syncLeadsFromSupabase(): Promise<number> {
           if (dbCrmDeletedLeadIds.has(r.id)) {
             return;
           }
-          const custName = r.full_name || r.customer_name || '';
-          // 3. Skip developer test / probe entries
-          if (isDeveloperTestRecord(custName, r.phone)) {
-            return;
-          }
+          // 3. (Developer-test name/phone filter intentionally removed: it silently dropped real
+          //    enquiries. Unwanted leads are removed by deleting them in the CRM instead.)
           // 4. Ingest new leads
           if (!dbCrmLeads[r.id]) {
             ingestPublicWebsiteLead(r);
