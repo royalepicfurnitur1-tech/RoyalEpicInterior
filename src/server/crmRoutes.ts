@@ -216,11 +216,11 @@ async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boole
       return { success: true, table: 'leads_and_inquiries', data: inserted };
     } else {
       const errText = await res.text().catch(() => 'Unknown Supabase error');
-      console.warn('❌ [Supabase Sync] leads_and_inquiries write rejected:', res.status, errText);
+      console.warn('âŒ [Supabase Sync] leads_and_inquiries write rejected:', res.status, errText);
       return { success: false, table: 'leads_and_inquiries', error: `HTTP ${res.status}: ${errText}` };
     }
   } catch (err: any) {
-    console.error('❌ [Supabase Sync] Network exception:', err?.message || err);
+    console.error('âŒ [Supabase Sync] Network exception:', err?.message || err);
     return { success: false, table: 'leads_and_inquiries', error: err.message || 'Network error reaching Supabase' };
   }
 }
@@ -232,56 +232,13 @@ interface SupabaseDeleteResult {
   error?: string;
 }
 
-// Secure server-side deletion from Supabase database
+// Persistent server-side deletion: the lead row is KEPT in Supabase as a backup but flagged as
+// archived/is_deleted. Every sync (including the one on server start after a deployment) skips
+// flagged rows and re-adds their ids to the local tombstone list, so a deleted lead never returns.
 async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult> {
   const { url, key } = getSupabaseCredentials();
+  const nowIso = new Date().toISOString();
 
-  // 1. First, attempt via delete_crm_lead RPC if installed in database
-  try {
-    const rpcRes = await fetch(`${url}/rest/v1/rpc/delete_crm_lead`, {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ p_lead_id: id })
-    });
-    if (rpcRes.ok) {
-      const rpcData = await rpcRes.json().catch(() => null);
-      if (rpcData && (rpcData.success || rpcData.deleted_count === 1)) {
-        console.log(`✅ [Supabase Delete] Deleted lead ${id} via RPC delete_crm_lead.`);
-        return { success: true, deleted_count: 1, method: 'rpc' };
-      }
-    }
-  } catch (_) {
-    // Continue to direct REST deletion attempt
-  }
-
-  // 2. Direct hard delete on leads_and_inquiries with Prefer: return=representation
-  try {
-    const delRes = await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Prefer': 'return=representation'
-      }
-    });
-
-    if (delRes.ok) {
-      const deletedRows = await delRes.json().catch(() => []);
-      if (Array.isArray(deletedRows) && deletedRows.length === 1) {
-        console.log(`✅ [Supabase Delete] Hard-deleted lead ${id} from leads_and_inquiries (1 row affected).`);
-        return { success: true, deleted_count: 1, method: 'hard_delete' };
-      }
-    }
-  } catch (err: any) {
-    console.warn('Direct hard delete failed:', err?.message || err);
-  }
-
-  // 3. Fallback: If RLS blocked hard delete, perform database-level archive/delete via PATCH
-  // on leads_and_inquiries (marking status = 'archived' and embedding is_deleted flag in raw_details)
   try {
     const patchRes = await fetch(`${url}/rest/v1/leads_and_inquiries?id=eq.${encodeURIComponent(id)}`, {
       method: 'PATCH',
@@ -293,28 +250,28 @@ async function deleteLeadFromSupabase(id: string): Promise<SupabaseDeleteResult>
       },
       body: JSON.stringify({
         status: 'archived',
-        notes: `[ARCHIVED BY ADMIN]: Archived from Telecaller CRM at ${new Date().toISOString()}`,
-        raw_details: { is_deleted: true, deleted_at: new Date().toISOString() },
-        updated_at: new Date().toISOString()
+        raw_details: { is_deleted: true, deleted_at: nowIso },
+        updated_at: nowIso
       })
     });
 
     if (patchRes.ok) {
       const patchedRows = await patchRes.json().catch(() => []);
-      if (Array.isArray(patchedRows) && patchedRows.length === 1) {
-        console.log(`✅ [Supabase Archive] Database-archived lead ${id} in leads_and_inquiries (1 row updated).`);
+      if (Array.isArray(patchedRows) && patchedRows.length >= 1) {
+        console.log(`âœ… [Supabase Archive] Lead ${id} flagged archived/is_deleted in leads_and_inquiries (kept as backup).`);
         return { success: true, deleted_count: 1, method: 'soft_delete_db' };
       }
+      // 200 with no rows: the lead does not exist in Supabase (e.g. CRM-only lead) - nothing can reappear from there
+      console.log(`â„¹ï¸ [Supabase Archive] Lead ${id} has no row in leads_and_inquiries; nothing to archive.`);
+      return { success: true, deleted_count: 0, method: 'soft_delete_db' };
     }
-  } catch (err2: any) {
-    console.warn('Database archive fallback failed:', err2?.message || err2);
+    const errText = await patchRes.text().catch(() => '');
+    console.error(`âŒ [Supabase Archive] Could not archive lead ${id}: HTTP ${patchRes.status} ${errText}. Run supabase/migrations/fix_leads_table_grants.sql in Supabase.`);
+    return { success: false, deleted_count: 0, error: `HTTP ${patchRes.status}: ${errText}` };
+  } catch (err: any) {
+    console.error('âŒ [Supabase Archive] Network error while archiving lead:', err?.message || err);
+    return { success: false, deleted_count: 0, error: err?.message || 'Network error' };
   }
-
-  return {
-    success: false,
-    deleted_count: 0,
-    error: 'Failed to archive record in Supabase database: 0 rows affected or permission denied.'
-  };
 }
 
 export interface SupabaseCallSyncResult {
@@ -351,7 +308,7 @@ async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<SupabaseCa
     });
 
     if (res.ok || res.status === 201) {
-      console.log(`✅ [Supabase Calls] Successfully persisted call ${call.id} to public.crm_call_logs.`);
+      console.log(`âœ… [Supabase Calls] Successfully persisted call ${call.id} to public.crm_call_logs.`);
       return { success: true, persisted_to_supabase: true, status: 'synced_to_supabase' };
     }
 
@@ -366,7 +323,7 @@ async function syncCallLogToSupabase(call: ServerCrmCallLog): Promise<SupabaseCa
       };
     }
 
-    console.warn(`⚠️ [Supabase Calls] PostgREST insert note (${res.status}):`, errText);
+    console.warn(`âš ï¸ [Supabase Calls] PostgREST insert note (${res.status}):`, errText);
     return {
       success: false,
       persisted_to_supabase: false,
@@ -434,7 +391,7 @@ async function syncCallsFromSupabase(): Promise<{ synced: number; tableAvailable
 
     if (newCount > 0) {
       saveCalls();
-      console.log(`✅ [CRM Call Sync] Synced ${newCount} call logs from Supabase.`);
+      console.log(`âœ… [CRM Call Sync] Synced ${newCount} call logs from Supabase.`);
     }
 
     return { synced: newCount, tableAvailable: true };
@@ -720,7 +677,7 @@ export function ingestPublicWebsiteLead(leadRecord: {
 
   dbCrmLeads[crmLead.id] = crmLead;
   saveLeads();
-  console.log(`✅ [CRM Ingestion] Ingested website enquiry ${crmLead.id} for "${crmLead.customer_name}" (${crmLead.phone}) into Telecaller CRM.`);
+  console.log(`âœ… [CRM Ingestion] Ingested website enquiry ${crmLead.id} for "${crmLead.customer_name}" (${crmLead.phone}) into Telecaller CRM.`);
   return crmLead;
 }
 
@@ -736,21 +693,31 @@ export async function syncLeadsFromSupabase(): Promise<number> {
   isSupabaseSyncInProgress = true;
   const { url, key } = getSupabaseCredentials();
   let syncedCount = 0;
+  let tombstonesChanged = false;
 
   try {
-    const res = await fetch(`${url}/rest/v1/leads_and_inquiries?select=*&order=created_at.desc&limit=200`, {
+    const res = await fetch(`${url}/rest/v1/leads_and_inquiries?select=*&order=created_at.desc&limit=1000`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` }
     });
     if (res.ok) {
       const rows = await res.json();
       if (Array.isArray(rows) && rows.length > 0) {
         rows.forEach((r: any) => {
-          // 1. Strict tombstone check: If deleted by admin, never re-ingest
-          if (dbCrmDeletedLeadIds.has(r.id)) {
+          // 1. Archived/deleted in Supabase => permanently hide locally, even if a stale local
+          //    copy came back from a deployment (restored data/crm_leads.json).
+          if (r.status === 'archived' || r.raw_details?.is_deleted === true) {
+            if (!dbCrmDeletedLeadIds.has(r.id)) {
+              dbCrmDeletedLeadIds.add(r.id);
+              tombstonesChanged = true;
+            }
+            if (dbCrmLeads[r.id]) {
+              delete dbCrmLeads[r.id];
+              tombstonesChanged = true;
+            }
             return;
           }
-          // 2. Strict archive check
-          if (r.status === 'archived' || r.raw_details?.is_deleted === true) {
+          // 2. Strict tombstone check: If deleted by admin, never re-ingest
+          if (dbCrmDeletedLeadIds.has(r.id)) {
             return;
           }
           const custName = r.full_name || r.customer_name || '';
@@ -781,9 +748,13 @@ export async function syncLeadsFromSupabase(): Promise<number> {
             }
           }
         });
+        if (tombstonesChanged) {
+          saveDeletedLeadIds();
+          saveLeads();
+        }
         if (syncedCount > 0) {
           saveLeads();
-          console.log(`✅ [CRM Sync] Synchronized ${syncedCount} website enquiries with Telecaller CRM.`);
+          console.log(`âœ… [CRM Sync] Synchronized ${syncedCount} website enquiries with Telecaller CRM.`);
         }
       }
     }
@@ -1231,7 +1202,7 @@ crmRouter.post('/leads', async (req: Request, res: Response) => {
 
     // 3. Fire-and-forget Supabase sync in background (does not block the response)
     syncLeadToSupabase(newLead).catch((err) => {
-      console.warn('⚠️ [CRM Create] Background Supabase sync failed (lead already saved locally):', err?.message || err);
+      console.warn('âš ï¸ [CRM Create] Background Supabase sync failed (lead already saved locally):', err?.message || err);
     });
 
     res.status(201).json({
@@ -1329,7 +1300,7 @@ async function handleLeadUpdate(req: Request, res: Response) {
 
     // 3. Fire-and-forget Supabase sync in background (does not block the response)
     syncLeadToSupabase(lead).catch((err) => {
-      console.warn('⚠️ [CRM Update] Background Supabase sync failed (lead already saved locally):', err?.message || err);
+      console.warn('âš ï¸ [CRM Update] Background Supabase sync failed (lead already saved locally):', err?.message || err);
     });
 
     res.json({ success: true, lead: formatLeadWithAliases(lead), message: 'Lead successfully updated.' });
@@ -1396,16 +1367,19 @@ crmRouter.delete('/leads/:id', async (req: Request, res: Response) => {
     });
     saveAudit();
 
-    // 5. Fire-and-forget Supabase archive in background
-    deleteLeadFromSupabase(leadId).catch((err) => {
-      console.warn('⚠️ [CRM Archive] Background Supabase archive failed (lead already removed locally):', err?.message || err);
-    });
+    // 5. Persist the deletion in Supabase (row kept as backup, flagged archived) so it survives deployments
+    const sbResult = await deleteLeadFromSupabase(leadId).catch((err) => ({
+      success: false, deleted_count: 0, error: err?.message || String(err)
+    } as SupabaseDeleteResult));
 
     res.json({
       success: true,
       archived: true,
       deleted_count: 1,
-      message: 'Lead archived successfully.'
+      persisted_in_database: sbResult.success,
+      message: sbResult.success
+        ? 'Lead archived successfully.'
+        : 'Lead removed from CRM, but could not be flagged in the database yet (see server logs).'
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Error archiving lead' });
