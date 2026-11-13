@@ -254,7 +254,7 @@ export async function fetchLeadsFromSupabase(): Promise<any[]> {
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {
-        return data;
+        return data.filter((r: any) => r.status !== 'archived' && r.is_deleted !== true && r.raw_details?.is_deleted !== true);
       }
     } catch (err) {
       console.warn('Failed to query Supabase leads:', err);
