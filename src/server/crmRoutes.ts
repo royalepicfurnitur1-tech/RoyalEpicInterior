@@ -206,7 +206,7 @@ async function syncLeadToSupabase(lead: ServerCrmLead): Promise<{ success: boole
         apikey: key,
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=representation'
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
       body: JSON.stringify(payload)
     });

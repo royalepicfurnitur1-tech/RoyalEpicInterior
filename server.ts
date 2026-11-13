@@ -1284,49 +1284,48 @@ async function startServer() {
           apikey: supabaseKey,
           Authorization: `Bearer ${supabaseKey}`,
           "Content-Type": "application/json",
-          "Prefer": "return=representation"
+          // return=minimal: the anon role only needs INSERT privilege (no SELECT needed for RETURNING)
+          "Prefer": "return=minimal"
         },
         body: JSON.stringify(leadRecord)
       });
 
+      let savedToSupabase = response.ok;
+      let supabaseError: string | undefined;
       if (response.ok) {
-        const insertedData = await response.json();
         console.log("✅ Successfully inserted lead into Supabase:", leadRecord.id);
-
-        // Instantly ingest into Telecaller CRM
-        ingestPublicWebsiteLead(leadRecord);
-
-        // Dispatch Hostinger SMTP email notification (non-blocking, fail-safe, deduplicated)
-        sendLeadNotificationEmail(leadRecord).catch((mailErr) => {
-          console.error("⚠️ [Hostinger SMTP] Notification send note:", mailErr?.message || mailErr);
-        });
-
-        return res.json({
-          success: true,
-          id: leadRecord.id,
-          data: insertedData,
-          message: "Lead inserted successfully into Supabase PostgreSQL"
-        });
       } else {
-        const errorText = await response.text();
-        console.error("❌ Supabase POST /leads_and_inquiries returned error:", response.status, errorText);
-        return res.status(response.status).json({
-          success: false,
-          statusCode: response.status,
-          error: errorText,
-          leadRecord,
-          hint: errorText.includes("42P01") || response.status === 404
-            ? "Table 'leads_and_inquiries' does not exist in Supabase yet. Please run the table creation SQL in Supabase SQL editor."
-            : errorText.includes("row-level security")
-            ? "Row Level Security (RLS) policy is preventing insertion. Run: CREATE POLICY \"Public can insert leads\" ON public.leads_and_inquiries FOR INSERT TO anon WITH CHECK (true);"
-            : "Supabase rejected the insert."
-        });
+        supabaseError = await response.text();
+        console.error("❌ Supabase POST /leads_and_inquiries returned error:", response.status, supabaseError);
       }
+
+      // Telecaller CRM + email must NEVER depend on the Supabase write succeeding.
+      ingestPublicWebsiteLead(leadRecord);
+      sendLeadNotificationEmail(leadRecord).catch((mailErr) => {
+        console.error("⚠️ [Hostinger SMTP] Notification send note:", mailErr?.message || mailErr);
+      });
+
+      return res.json({
+        success: true,
+        id: leadRecord.id,
+        savedToSupabase,
+        ...(supabaseError ? { supabaseError } : {}),
+        message: savedToSupabase
+          ? "Lead inserted successfully into Supabase PostgreSQL"
+          : "Lead captured in Telecaller CRM and email dispatched; Supabase write failed (see server logs)"
+      });
     } catch (err: any) {
       console.error("Supabase submit fetch error:", err);
-      return res.status(500).json({
-        success: false,
-        error: err.message || "Failed to reach Supabase"
+      // Network failure reaching Supabase: still ingest into CRM and send email
+      ingestPublicWebsiteLead(leadRecord);
+      sendLeadNotificationEmail(leadRecord).catch((mailErr) => {
+        console.error("⚠️ [Hostinger SMTP] Notification send note:", mailErr?.message || mailErr);
+      });
+      return res.json({
+        success: true,
+        id: leadRecord.id,
+        savedToSupabase: false,
+        supabaseError: err.message || "Failed to reach Supabase"
       });
     }
   });

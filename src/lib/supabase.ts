@@ -192,16 +192,14 @@ export async function submitLeadToSupabase(payload: LeadInquiryPayload): Promise
     try {
       const { data, error } = await supabase
         .from('leads_and_inquiries')
-        .insert([record])
-        .select()
-        .single();
+        .insert([record]);
 
       if (error) {
         console.warn('⚠️ Direct Supabase client fallback insert returned:', error.message, error.details);
       } else {
-        console.log('✅ Direct Supabase client insert succeeded (fallback):', data?.id || generatedId);
+        console.log('✅ Direct Supabase client insert succeeded (fallback):', generatedId);
         saveLeadLocally(record);
-        return { success: true, id: data?.id || generatedId };
+        return { success: true, id: generatedId };
       }
     } catch (clientErr: any) {
       console.warn('Client Supabase insertion error:', clientErr);
