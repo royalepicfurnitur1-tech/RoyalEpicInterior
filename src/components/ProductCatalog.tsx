@@ -15,6 +15,7 @@ import { formatProductPrice } from '../utils/priceFormatter';
 import {
   matchProductToSelectedCategory,
   resolveCategoryDefinition,
+  isSameCategory,
   RESIDENTIAL_SUBCATEGORIES,
   slugify
 } from '../utils/categoryResolver';
@@ -90,7 +91,7 @@ const VISUAL_CATEGORIES = [
   },
   {
     name: 'Commercial Equipment',
-    categoryKey: 'Kitchen Equipment',
+    categoryKey: 'commercial-kitchen-equipment',
     image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
     tag: '304 Stainless Steel',
     subtitle: 'Industrial Cooking Ranges & Exhausts',
@@ -158,6 +159,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     if (initialCategory !== undefined && initialCategory !== selectedCategory) {
       setSelectedCategory(initialCategory);
     }
+    const cleanInit = slugify(initialCategory || '');
+    if (cleanInit === 'commercial-kitchen-equipment' || cleanInit === 'commercial-equipment') {
+      setViewMode('equipment-table');
+    } else if (initialCategory !== undefined) {
+      setViewMode('grid');
+    }
   }, [initialCategory]);
 
   useEffect(() => {
@@ -192,39 +199,31 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   const categories = useMemo(() => {
     const list = ['All'];
-    const seen = new Set<string>(['All']);
+    const seenSlugs = new Set<string>(['all']);
+
+    const addCategoryLabel = (rawName?: string) => {
+      if (!rawName) return;
+      const cleaned = rawName.replace(/\s+/g, ' ').trim();
+      if (!cleaned || cleaned === '__SYSTEM__') return;
+      const def = resolveCategoryDefinition(cleaned);
+      const canonicalName = def ? def.name : cleaned;
+      const canonicalSlug = def ? def.slug : slugify(cleaned);
+      if (!canonicalSlug || seenSlugs.has(canonicalSlug)) return;
+      seenSlugs.add(canonicalSlug);
+      list.push(canonicalName);
+    };
 
     // Always include the exact 6 Residential Categories as top pills
-    RESIDENTIAL_SUBCATEGORIES.forEach((cat) => {
-      if (!seen.has(cat.name)) {
-        seen.add(cat.name);
-        list.push(cat.name);
-      }
-    });
+    RESIDENTIAL_SUBCATEGORIES.forEach((cat) => addCategoryLabel(cat.name));
 
-    supabaseCategories.forEach((name) => {
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        list.push(name);
-      }
-    });
+    supabaseCategories.forEach((name) => addCategoryLabel(name));
 
     if (products && products.length > 0) {
-      products.forEach((p) => {
-        if (p.category && !seen.has(p.category)) {
-          seen.add(p.category);
-          list.push(p.category);
-        }
-      });
+      products.forEach((p) => addCategoryLabel(p.category));
     }
 
     if (list.length === 1) {
-      DEFAULT_CATEGORIES.forEach((c) => {
-        if (!seen.has(c.name)) {
-          seen.add(c.name);
-          list.push(c.name);
-        }
-      });
+      DEFAULT_CATEGORIES.forEach((c) => addCategoryLabel(c.name));
     }
 
     return list;
@@ -295,7 +294,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const slug = def ? def.slug : (cat === 'All' ? '' : slugify(cat));
     const targetUrl = slug ? `/products?category=${slug}` : '/products';
     window.history.pushState({}, '', targetUrl);
-    if (cat === 'Kitchen Equipment') {
+    if (slug === 'commercial-kitchen-equipment' || slug === 'commercial-equipment') {
       setViewMode('equipment-table');
     } else {
       setViewMode('grid');
@@ -344,7 +343,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           {/* Visual Category Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {VISUAL_CATEGORIES.map((cat, idx) => {
-              const isSelected = selectedCategory === cat.categoryKey;
+              const isSelected = isSameCategory(selectedCategory, cat.categoryKey);
               return (
                 <div
                   key={idx}
@@ -658,19 +657,25 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           {/* Horizontal Category Filter Pills */}
           {viewMode === 'grid' && (
             <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => handleCategorySelect(cat)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    selectedCategory === cat
-                      ? 'bg-stone-900 text-white shadow-sm font-bold'
-                      : 'bg-white border border-stone-200/90 text-stone-700 hover:text-stone-900 hover:border-stone-400'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const isActive =
+                  cat === 'All'
+                    ? !selectedCategory || selectedCategory.toLowerCase() === 'all'
+                    : isSameCategory(selectedCategory, cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => handleCategorySelect(cat)}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-stone-900 text-white shadow-sm font-bold'
+                        : 'bg-white border border-stone-200/90 text-stone-700 hover:text-stone-900 hover:border-stone-400'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
             </div>
           )}
 

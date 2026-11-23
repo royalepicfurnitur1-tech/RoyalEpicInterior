@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowRight, Layers, Sparkles } from 'lucide-react';
+import { ArrowRight, Layers } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface ArchitecturalCollectionsShowcaseProps {
   onNavigateToProducts: (categorySlug?: string) => void;
@@ -38,15 +39,30 @@ const FEATURED_COLLECTIONS = [
 ];
 
 export const ArchitecturalCollectionsShowcase: React.FC<ArchitecturalCollectionsShowcaseProps> = ({
-  onNavigateToProducts,
-  onRequestQuote
+  onNavigateToProducts
 }) => {
   return (
-    <section className="py-16 sm:py-20 bg-[#A8A492] text-stone-900 relative" id="shop">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-16 sm:py-20 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="shop">
+      {/* Subtle Floating Architectural Geometric Accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-16 right-8 w-64 h-64 rounded-full border border-white/25 animate-arch-float"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-10 -left-14 w-44 h-44 border border-stone-900/10 rotate-12 animate-arch-float-reverse"
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-stone-300/80">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-stone-300/80"
+        >
           <div className="max-w-2xl">
             <span className="text-xs font-bold uppercase tracking-widest text-amber-800 font-mono block mb-2">
               Explore by Space & Category
@@ -68,15 +84,19 @@ export const ArchitecturalCollectionsShowcase: React.FC<ArchitecturalCollections
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Concise Featured Collection Cards (Navigates directly to Products page filtered) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {FEATURED_COLLECTIONS.map((item, idx) => (
-            <div
+            <motion.div
               key={idx}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.5, delay: idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
               onClick={() => onNavigateToProducts(item.slug)}
-              className="group relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 border border-stone-200/90 hover:border-amber-500 hover:shadow-xl bg-white flex flex-col justify-between h-[280px]"
+              className="group relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 border border-stone-200/90 hover:border-amber-500 hover:shadow-xl hover:-translate-y-1.5 bg-white flex flex-col justify-between h-[280px]"
             >
               <div className="relative h-[190px] w-full overflow-hidden bg-stone-100">
                 <img
@@ -104,12 +124,18 @@ export const ArchitecturalCollectionsShowcase: React.FC<ArchitecturalCollections
                   <ArrowRight className="w-4 h-4" />
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
         {/* Turnkey Factory Direct Reassurance Strip */}
-        <div className="mt-12 bg-white/90 backdrop-blur-sm border border-stone-200/90 rounded-2xl p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-12 bg-white/90 backdrop-blur-sm border border-stone-200/90 rounded-2xl p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm"
+        >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
               <Layers className="w-5 h-5 text-amber-800" />
@@ -129,7 +155,7 @@ export const ArchitecturalCollectionsShowcase: React.FC<ArchitecturalCollections
           >
             Explore Complete Inventory <ArrowRight className="w-3.5 h-3.5" />
           </button>
-        </div>
+        </motion.div>
 
       </div>
     </section>

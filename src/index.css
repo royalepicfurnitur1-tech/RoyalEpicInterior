@@ -36,3 +36,54 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(212, 175, 55, 0.8);
 }
+
+/* Subtle luxury architectural floating accents (compositor-only) */
+@keyframes architectural-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(1.5deg);
+  }
+}
+
+@keyframes architectural-float-reverse {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, 10px, 0) rotate(-1.5deg);
+  }
+}
+
+@keyframes hero-subtle-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.animate-arch-float {
+  animation: architectural-float 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-arch-float-reverse {
+  animation: architectural-float-reverse 11s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-hero-breathe {
+  animation: hero-subtle-breathe 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-arch-float,
+  .animate-arch-float-reverse,
+  .animate-hero-breathe {
+    animation: none !important;
+  }
+}

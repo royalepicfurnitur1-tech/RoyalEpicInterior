@@ -1,5 +1,6 @@
 import React from 'react';
 import { Quote } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface ArchitectVisionSectionProps {
   onRequestQuote?: (title: string) => void;
@@ -11,11 +12,27 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
       id="vision" 
       className="py-16 sm:py-20 lg:py-24 bg-[#FAF7F2] text-stone-900 border-b border-[#E7E2DA] relative overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Subtle Floating Architectural Brass Ornaments */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-10 -left-16 w-48 h-48 rounded-full border border-[#C49746]/15 animate-arch-float"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-12 right-12 w-60 h-60 rounded-full bg-[#C49746]/8 blur-3xl animate-arch-float-reverse"
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
           {/* LEFT COLUMN: Architect's Message */}
-          <div className="lg:col-span-7 flex flex-col justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-7 flex flex-col justify-center"
+          >
             
             {/* Eyebrow Label */}
             <span className="text-[11px] sm:text-xs uppercase tracking-[0.24em] text-[#8C6D3B] font-mono font-semibold block mb-3">
@@ -41,7 +58,7 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
             </p>
 
             {/* Small Subheading & Philosophy Sentence */}
-            <div className="bg-white/70 rounded-2xl p-5 border border-[#E7E2DA] mb-8">
+            <div className="bg-white/70 rounded-2xl p-5 border border-[#E7E2DA] mb-8 transition-shadow duration-300 hover:shadow-sm">
               <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#8C6D3B] font-bold block mb-1.5">
                 Our Philosophy
               </span>
@@ -60,12 +77,28 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
               </p>
             </div>
 
-          </div>
+          </motion.div>
 
           {/* RIGHT COLUMN: Architect's Photograph */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
+          <motion.div
+            initial={{ opacity: 0, y: 22 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.65, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-5 flex justify-center lg:justify-end"
+          >
             <div className="relative w-full max-w-md lg:max-w-none">
               
+              {/* Subtle Floating Architectural Brass Corner Frame */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none hidden sm:block absolute -top-4 -right-4 w-24 h-24 rounded-2xl border border-[#C49746]/35 -z-10 animate-arch-float"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none hidden sm:block absolute -bottom-3 -left-4 w-20 h-20 rounded-2xl border border-[#C49746]/25 -z-10 animate-arch-float-reverse"
+              />
+
               {/* Subtle warm architectural backing glow/border */}
               <div 
                 className="absolute -inset-2.5 rounded-3xl bg-gradient-to-tr from-[#C49746]/15 via-transparent to-stone-300/30 -z-10 blur-xs" 
@@ -77,7 +110,7 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
                 <img
                   src="/assets/aistudio/proffesional-image_cb026225.png"
                   alt="Managing Director & Architect - Royal Epic Interiors"
-                  className="w-full h-auto max-h-[600px] object-cover object-top hover:scale-[1.01] transition-transform duration-700 ease-out"
+                  className="w-full h-auto max-h-[600px] object-cover object-top hover:scale-[1.015] transition-transform duration-700 ease-out"
                   loading="eager"
                 />
               </div>
@@ -89,7 +122,7 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
               </div>
 
             </div>
-          </div>
+          </motion.div>
 
         </div>
       </div>

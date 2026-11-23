@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { 
   Phone, Mail, MapPin, Send, MessageSquare, Clock, CheckCircle2, ExternalLink
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { submitLeadToSupabase } from '../lib/supabase';
 
 export const ContactSection: React.FC = () => {
@@ -45,10 +46,26 @@ export const ContactSection: React.FC = () => {
 
   return (
     <section className="py-20 sm:py-28 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="contact">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Subtle Floating Architectural Accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-14 right-12 w-56 h-56 rounded-full border border-white/25 animate-arch-float"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-12 -left-16 w-48 h-48 border border-stone-900/10 rotate-12 animate-arch-float-reverse"
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
+        >
           <div className="max-w-2xl">
             <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-2">
               Corporate Office & Experience Center
@@ -60,12 +77,18 @@ export const ContactSection: React.FC = () => {
           <p className="text-sm text-stone-600 max-w-md leading-relaxed">
             Visit our experience center or schedule an on-site consultation. Our design engineers respond within 2 hours.
           </p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left: Contact Info Card & Google Maps Simulation */}
-          <div className="lg:col-span-5 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-5 space-y-6"
+          >
             
             {/* Contact Details Card */}
             <div className="bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
@@ -144,10 +167,16 @@ export const ContactSection: React.FC = () => {
 
 
 
-          </div>
+          </motion.div>
 
           {/* Right: Contact Form */}
-          <div className="lg:col-span-7 bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-10 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.6, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-7 bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-10 shadow-sm"
+          >
             <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-1">
               Start Your Project
             </span>
@@ -294,7 +323,7 @@ export const ContactSection: React.FC = () => {
               </div>
             )}
 
-          </div>
+          </motion.div>
 
         </div>
 

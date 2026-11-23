@@ -54,17 +54,33 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
   return (
     <section 
       id="blog" 
-      className="py-16 sm:py-20 lg:py-24 bg-[#FAF7F2] text-stone-900 border-t border-b border-[#E7E2DA] relative selection:bg-[#C49746]/20"
+      className="py-10 sm:py-12 lg:py-14 bg-[#FAF7F2] text-stone-900 border-t border-b border-[#E7E2DA] relative overflow-hidden selection:bg-[#C49746]/20"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Subtle Floating Architectural Brass Line Accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rounded-full border border-[#C49746]/15 animate-arch-float"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-6 -left-10 w-36 h-36 border border-[#C49746]/15 rotate-12 animate-arch-float-reverse"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.15 }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10"
+      >
         
         {/* Editorial Section Masthead */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-8 mb-10 border-b border-[#E5DFD5]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-4 mb-6 border-b border-[#E5DFD5]">
           <div>
-            <span className="text-[11px] uppercase tracking-[0.24em] font-medium text-[#8C6D3B] block mb-2 font-sans">
+            <span className="text-[10px] uppercase tracking-[0.24em] font-medium text-[#8C6D3B] block mb-1 font-sans">
               Architectural Monographs & Journal
             </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-[2.6rem] font-serif font-normal text-stone-900 tracking-tight leading-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-[2.1rem] font-serif font-normal text-stone-900 tracking-tight leading-tight">
               Royal Epic Design Journal
             </h2>
           </div>
@@ -73,7 +89,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
             <span className="hidden sm:inline">Curated spatial insights & joinery craft</span>
             <button
               onClick={handleViewAllArticles}
-              className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] font-semibold text-stone-800 hover:text-[#8C6D3B] transition-colors cursor-pointer group"
+              className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] font-semibold text-stone-800 hover:text-[#8C6D3B] transition-colors cursor-pointer group"
             >
               <span>View All Articles</span>
               <ArrowRight className="w-3.5 h-3.5 text-[#8C6D3B] group-hover:translate-x-0.5 transition-transform" />
@@ -82,28 +98,28 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
         </div>
 
         {/* Magazine-Style Three-Column Layout */}
-        <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-10 xl:gap-12">
+        <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-7 xl:gap-9">
           
           {/* ==================================================== */}
           {/* 1. LEFT COLUMN: Article Number & Minimal Actions     */}
           {/* ==================================================== */}
-          <div className="hidden lg:flex flex-col items-start gap-6 w-12 xl:w-14 shrink-0 pt-1 text-stone-400">
+          <div className="hidden lg:flex flex-col items-start gap-4 w-11 xl:w-12 shrink-0 pt-0.5 text-stone-400">
             <div className="flex flex-col items-start">
               <span className="text-[10px] uppercase tracking-widest font-mono text-stone-400">NO.</span>
-              <span className="text-2xl xl:text-3xl font-serif text-stone-900 font-normal leading-none mt-0.5">
+              <span className="text-xl xl:text-2xl font-serif text-stone-900 font-normal leading-none mt-0.5 tabular-nums">
                 {String(featuredIndex + 1).padStart(2, '0')}
               </span>
             </div>
 
-            <div className="w-6 h-px bg-[#E5DFD5]" />
+            <div className="w-5 h-px bg-[#E5DFD5]" />
 
-            <div className="flex flex-col items-start gap-3">
+            <div className="flex flex-col items-start gap-2.5">
               <button
                 onClick={(e) => handleCopyShare(e, featuredPost)}
                 title="Copy article link"
-                className="p-2 -ml-2 rounded text-stone-400 hover:text-stone-900 hover:bg-stone-200/50 transition-colors relative cursor-pointer"
+                className="p-1.5 -ml-1.5 rounded text-stone-400 hover:text-stone-900 hover:bg-stone-200/50 transition-colors relative cursor-pointer"
               >
-                {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
                 {copiedLink && (
                   <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-stone-900 text-white text-[10px] font-mono tracking-normal rounded whitespace-nowrap shadow-sm">
                     Copied
@@ -111,7 +127,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
                 )}
               </button>
               
-              <span className="text-[10px] font-mono tracking-wider text-stone-400 uppercase [writing-mode:vertical-lr] rotate-180 pt-2">
+              <span className="text-[9px] font-mono tracking-wider text-stone-400 uppercase [writing-mode:vertical-lr] rotate-180 pt-1">
                 Royal Epic
               </span>
             </div>
@@ -121,100 +137,109 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
           {/* 2. CENTRE COLUMN: Featured Article Showcase          */}
           {/* ==================================================== */}
           <div className="flex-1 w-full flex flex-col justify-between">
-            <article className="group">
-              
-              {/* Category & Mobile Index */}
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <span className="text-[11px] uppercase tracking-[0.22em] font-medium text-[#8C6D3B]">
-                  {featuredPost.category}
-                </span>
-                <span className="lg:hidden text-xs font-mono text-stone-400">
-                  {String(featuredIndex + 1).padStart(2, '0')} / {String(allPosts.length).padStart(2, '0')}
-                </span>
-              </div>
-
-              {/* Headline */}
-              <h3 
-                onClick={() => handleOpenArticle(featuredPost)}
-                className="text-2xl sm:text-3xl lg:text-[2.2rem] xl:text-[2.35rem] font-serif font-normal text-stone-900 leading-[1.22] tracking-tight mb-4 group-hover:text-stone-700 transition-colors cursor-pointer"
+            <AnimatePresence mode="wait">
+              <motion.article
+                key={featuredPost.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="group"
               >
-                {featuredPost.title}
-              </h3>
-
-              {/* Byline Metadata */}
-              <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 font-sans mb-5 pb-4 border-b border-[#E5DFD5]">
-                <span>By {featuredPost.author}</span>
-                <span aria-hidden="true" className="text-stone-300">·</span>
-                <span>{featuredPost.date}</span>
-                <span aria-hidden="true" className="text-stone-300">·</span>
-                <span className="flex items-center gap-1 text-stone-500 font-mono text-[11px]">
-                  <Clock className="w-3 h-3 text-[#8C6D3B]" /> {featuredPost.readTime}
-                </span>
-              </div>
-
-              {/* Featured Architectural Photograph */}
-              <div 
-                onClick={() => handleOpenArticle(featuredPost)}
-                className="relative aspect-[16/9] w-full overflow-hidden bg-stone-100 cursor-pointer mb-5 border border-stone-200/70"
-              >
-                <img
-                  src={featuredPost.image}
-                  alt={featuredPost.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-                />
-              </div>
-
-              {/* Excerpt Introduction */}
-              <p className="text-stone-600 font-serif italic text-sm sm:text-base leading-relaxed mb-6 line-clamp-3">
-                "{featuredPost.excerpt}"
-              </p>
-
-              {/* Action: Read Full Article */}
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={() => handleOpenArticle(featuredPost)}
-                  className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-semibold text-stone-900 border-b border-stone-900 pb-1 hover:text-[#8C6D3B] hover:border-[#8C6D3B] transition-colors cursor-pointer group/btn"
-                >
-                  <span>Read Full Article</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-stone-700 group-hover/btn:text-[#8C6D3B] group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                </button>
-
-                <div className="lg:hidden flex items-center gap-2">
-                  <button
-                    onClick={(e) => handleCopyShare(e, featuredPost)}
-                    className="p-2 text-stone-500 hover:text-stone-900 cursor-pointer"
-                    title="Share article"
-                  >
-                    {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
-                  </button>
+                
+                {/* Category & Mobile Index */}
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-[10px] uppercase tracking-[0.22em] font-medium text-[#8C6D3B]">
+                    {featuredPost.category}
+                  </span>
+                  <span className="lg:hidden text-xs font-mono text-stone-400 tabular-nums">
+                    {String(featuredIndex + 1).padStart(2, '0')} / {String(allPosts.length).padStart(2, '0')}
+                  </span>
                 </div>
-              </div>
 
-            </article>
+                {/* Headline */}
+                <h3 
+                  onClick={() => handleOpenArticle(featuredPost)}
+                  className="text-xl sm:text-2xl lg:text-[1.65rem] xl:text-[1.8rem] font-serif font-normal text-stone-900 leading-[1.24] tracking-tight mb-2.5 group-hover:text-stone-700 transition-colors cursor-pointer"
+                >
+                  {featuredPost.title}
+                </h3>
+
+                {/* Byline Metadata */}
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-stone-500 font-sans mb-3.5 pb-2.5 border-b border-[#E5DFD5]">
+                  <span>By {featuredPost.author}</span>
+                  <span aria-hidden="true" className="text-stone-300">·</span>
+                  <span>{featuredPost.date}</span>
+                  <span aria-hidden="true" className="text-stone-300">·</span>
+                  <span className="flex items-center gap-1 text-stone-500 font-mono text-[11px]">
+                    <Clock className="w-3 h-3 text-[#8C6D3B]" /> {featuredPost.readTime}
+                  </span>
+                </div>
+
+                {/* Featured Architectural Photograph */}
+                <div 
+                  onClick={() => handleOpenArticle(featuredPost)}
+                  className="relative aspect-[16/8.2] max-h-[290px] w-full overflow-hidden bg-stone-100 cursor-pointer mb-3.5 border border-stone-200/70"
+                >
+                  <img
+                    src={featuredPost.image}
+                    alt={featuredPost.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
+                  />
+                </div>
+
+                {/* Excerpt Introduction */}
+                <p className="text-stone-600 font-serif italic text-xs sm:text-sm leading-relaxed mb-4 line-clamp-2">
+                  "{featuredPost.excerpt}"
+                </p>
+
+                {/* Action: Read Full Article */}
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => handleOpenArticle(featuredPost)}
+                    className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] font-semibold text-stone-900 border-b border-stone-900 pb-0.5 hover:text-[#8C6D3B] hover:border-[#8C6D3B] transition-colors cursor-pointer group/btn"
+                  >
+                    <span>Read Full Article</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-stone-700 group-hover/btn:text-[#8C6D3B] group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                  </button>
+
+                  <div className="lg:hidden flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleCopyShare(e, featuredPost)}
+                      className="p-1.5 text-stone-500 hover:text-stone-900 cursor-pointer"
+                      title="Share article"
+                    >
+                      {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+              </motion.article>
+            </AnimatePresence>
           </div>
 
           {/* ==================================================== */}
           {/* 3. RIGHT COLUMN: Next Articles                       */}
           {/* ==================================================== */}
-          <div className="w-full lg:w-80 xl:w-96 shrink-0 pt-6 lg:pt-0 lg:border-l lg:border-[#E5DFD5] lg:pl-8 xl:pl-10">
-            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-3 mb-6">
-              <h4 className="text-xs uppercase tracking-[0.22em] font-bold text-stone-900 font-sans">
+          <div className="w-full lg:w-76 xl:w-88 shrink-0 pt-4 lg:pt-0 lg:border-l lg:border-[#E5DFD5] lg:pl-6 xl:pl-8">
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-2.5 mb-4">
+              <h4 className="text-[11px] uppercase tracking-[0.22em] font-bold text-stone-900 font-sans">
                 Next Articles
               </h4>
-              <span className="text-[11px] font-mono text-stone-400">
+              <span className="text-[10px] font-mono text-stone-400">
                 {nextArticles.length} Stories
               </span>
             </div>
 
             {/* List of 3 to 4 compact horizontal links */}
-            <div className="space-y-6">
+            <div className="space-y-3.5">
               {nextArticles.map((post) => {
                 const originalIndex = allPosts.findIndex((p) => p.id === post.id);
                 return (
                   <div
                     key={post.id}
-                    className="group flex items-start gap-4 pb-5 border-b border-[#EAE5DC] last:border-b-0 cursor-pointer"
+                    className="group flex items-start gap-3 pb-3.5 border-b border-[#EAE5DC] last:border-b-0 cursor-pointer transition-transform duration-200 hover:translate-x-0.5"
                     onClick={() => {
                       if (originalIndex !== -1) {
                         setFeaturedIndex(originalIndex);
@@ -222,7 +247,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
                     }}
                   >
                     {/* Small Thumbnail */}
-                    <div className="w-20 h-16 sm:w-22 sm:h-18 rounded-xs overflow-hidden shrink-0 bg-stone-200 border border-stone-200/80">
+                    <div className="w-16 h-13 sm:w-18 sm:h-14 rounded-xs overflow-hidden shrink-0 bg-stone-200 border border-stone-200/80">
                       <img
                         src={post.image}
                         alt={post.title}
@@ -233,15 +258,15 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <span className="text-[10px] uppercase tracking-widest text-[#8C6D3B] font-medium block truncate mb-1">
+                      <span className="text-[9.5px] uppercase tracking-widest text-[#8C6D3B] font-medium block truncate mb-0.5">
                         {post.category}
                       </span>
                       
-                      <h5 className="text-xs sm:text-[13px] font-serif font-medium text-stone-900 line-clamp-2 leading-snug group-hover:text-[#8C6D3B] transition-colors">
+                      <h5 className="text-xs font-serif font-medium text-stone-900 line-clamp-2 leading-snug group-hover:text-[#8C6D3B] transition-colors">
                         {post.title}
                       </h5>
 
-                      <div className="flex items-center justify-between gap-2 mt-2 text-[10px] text-stone-400 font-mono">
+                      <div className="flex items-center justify-between gap-2 mt-1.5 text-[10px] text-stone-400 font-mono">
                         <span>{post.date}</span>
                         <button
                           onClick={(e) => {
@@ -260,10 +285,10 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
             </div>
 
             {/* Subtle View All Action */}
-            <div className="pt-6 mt-2 border-t border-[#E5DFD5]">
+            <div className="pt-4 mt-1 border-t border-[#E5DFD5]">
               <button
                 onClick={handleViewAllArticles}
-                className="w-full py-2.5 text-center text-xs uppercase tracking-[0.2em] font-medium text-stone-700 hover:text-stone-950 border border-stone-300 hover:border-stone-800 transition-all cursor-pointer bg-transparent"
+                className="w-full py-2 text-center text-[11px] uppercase tracking-[0.2em] font-medium text-stone-700 hover:text-stone-950 border border-stone-300 hover:border-stone-800 transition-all cursor-pointer bg-transparent"
               >
                 Explore All Monographs
               </button>
@@ -272,7 +297,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
 
         </div>
 
-      </div>
+      </motion.div>
 
       {/* ==================================================== */}
       {/* 4. FULL ARTICLE READER MODAL (Architectural Monograph) */}

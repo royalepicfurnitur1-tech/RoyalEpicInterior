@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { PORTFOLIO_PROJECTS as DEFAULT_PROJECTS } from '../data/mockData';
-import { PortfolioProject, CustomerReview } from '../types';
-import { getPortfolioProjects } from '../services/portfolioService';
+import { CustomerReview } from '../types';
 import { getManualCustomerReviews } from '../services/reviewService';
 import { 
-  Sparkles, MapPin, Calendar, Maximize2, Star, Quote, 
-  Check, Eye, ExternalLink, ChevronLeft, ChevronRight
+  Sparkles, Star, Quote, 
+  ExternalLink, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -77,10 +75,7 @@ interface PortfolioSectionProps {
   onRequestQuote: (projectTitle: string) => void;
 }
 
-export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuote }) => {
-  const [projectsList, setProjectsList] = useState<PortfolioProject[]>(DEFAULT_PROJECTS);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [activeProject, setActiveProject] = useState<PortfolioProject>(DEFAULT_PROJECTS[0]);
+export const PortfolioSection: React.FC<PortfolioSectionProps> = () => {
   const [approvedServiceReviews, setApprovedServiceReviews] = useState<CustomerReview[]>([]);
 
   // Carousel state: exactly 4 cards on desktop, 2 on tablet, 1 on mobile
@@ -158,13 +153,6 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
   };
 
   useEffect(() => {
-    getPortfolioProjects().then(res => {
-      if (res.projects && res.projects.length > 0) {
-        setProjectsList(res.projects);
-        setActiveProject(res.projects[0]);
-      }
-    });
-
     const loadServiceReviews = async () => {
       try {
         const reviews = await getManualCustomerReviews({ activeOnly: true });
@@ -179,86 +167,25 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
     return () => window.removeEventListener('royalepic-reviews-updated', handleUpdate);
   }, []);
 
-  const categories = ['All', 'Residential', 'Commercial', 'Modular Kitchen', 'Hospitality', 'Architectural'];
-
-  const filteredProjects = (selectedCategory === 'All'
-    ? projectsList
-    : projectsList.filter(p => p.category === selectedCategory)).slice(0, 4);
-
   return (
-    <section className="py-20 sm:py-24 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="portfolio">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div className="max-w-2xl">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#735422] font-mono block mb-2">
-              Transformations & Case Studies
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-stone-900 tracking-tight">
-              Interior Portfolio & Walkthroughs
-            </h2>
-          </div>
-          <p className="text-sm text-stone-700 max-w-md leading-relaxed">
-            Explore turnkey transformations and completed architectural projects delivered by Royal Epic across Bengaluru.
-          </p>
-        </div>
+    <section className="py-16 sm:py-20 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="portfolio">
+      {/* Subtle Floating Architectural Accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-12 left-10 w-44 h-44 rounded-full border border-white/25 animate-arch-float"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-14 right-10 w-52 h-52 border border-stone-900/10 rotate-12 animate-arch-float-reverse"
+      />
 
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-10 no-scrollbar">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => {
-                setSelectedCategory(cat);
-                const firstMatch = projectsList.find(p => cat === 'All' || p.category === cat);
-                if (firstMatch) setActiveProject(firstMatch);
-              }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                selectedCategory === cat
-                  ? 'bg-stone-900 text-white shadow-md font-bold'
-                  : 'bg-white/80 border border-stone-300/80 text-stone-800 hover:text-stone-950 hover:bg-white hover:border-stone-400 font-medium'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Exactly 4 Portfolio Project Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {filteredProjects.map((project) => (
-            <div
-              key={project.id}
-              onClick={() => setActiveProject(project)}
-              className={`rounded-3xl overflow-hidden border transition-all cursor-pointer group bg-white shadow-sm hover:shadow-xl ${
-                activeProject.id === project.id
-                  ? 'border-amber-600 ring-2 ring-amber-500/30'
-                  : 'border-stone-200/90 hover:border-amber-500/60'
-              }`}
-            >
-              <div className="h-52 overflow-hidden relative bg-stone-100">
-                <img
-                  src={project.afterImage}
-                  alt={project.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                />
-                <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-stone-900/85 backdrop-blur-md text-amber-300 text-[10px] font-bold uppercase font-mono shadow-xs">
-                  {project.category}
-                </span>
-              </div>
-              <div className="p-4">
-                <h4 className="text-sm font-serif font-bold text-stone-900 group-hover:text-amber-800 transition-colors line-clamp-1">
-                  {project.title}
-                </h4>
-                <p className="text-xs text-stone-600 mt-1 font-mono">
-                  {project.location} • {project.areaSqFt} sq.ft.
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.15 }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10"
+      >
 
         {/* ========================================================================= */}
         {/* CUSTOMER REVIEW SECTION: Harmonized Warm Taupe Container with White Cards */}
@@ -437,7 +364,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({ onRequestQuo
 
         </div>
 
-      </div>
+      </motion.div>
     </section>
   );
 };

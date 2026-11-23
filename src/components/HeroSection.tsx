@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Phone, MapPin, ChevronDown, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { submitLeadToSupabase } from '../lib/supabase';
 
 // =========================================================================
@@ -130,7 +131,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     >
       {/* Background Image Container */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-700 animate-hero-breathe"
         style={{ backgroundImage: `url('${bgSrc}')` }}
       >
         <img 
@@ -153,6 +154,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* 3. Subtle bottom vignette connecting smoothly to the next section */}
       <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/70 via-transparent to-neutral-950/40 pointer-events-none" />
 
+      {/* Subtle Floating Architectural Brass Glow & Hairline Frame */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-14 right-[12%] w-72 h-72 rounded-full bg-[#C49746]/12 blur-3xl animate-arch-float"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none hidden lg:block absolute bottom-12 left-[6%] w-40 h-40 border border-amber-300/15 rotate-6 animate-arch-float-reverse"
+      />
+
       {/* Main Content Grid */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
@@ -160,7 +171,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* ========================================================= */}
           {/* LEFT COLUMN: BRAND MESSAGE                                */}
           {/* ========================================================= */}
-          <div className="lg:col-span-7 xl:col-span-7 flex flex-col items-start text-left">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-7 xl:col-span-7 flex flex-col items-start text-left"
+          >
             
             {/* Eyebrow with Champagne Gold Accent Line */}
             <div className="inline-flex items-center gap-3 mb-4 sm:mb-6">
@@ -195,12 +211,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <span>Pan-India Delivery</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* ========================================================= */}
           {/* RIGHT COLUMN: MINIMAL CONSULTATION CARD                   */}
           {/* ========================================================= */}
-          <div className="lg:col-span-5 xl:col-span-5 flex justify-center lg:justify-end">
+          <motion.div
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-5 xl:col-span-5 flex justify-center lg:justify-end"
+          >
             <div className="w-full max-w-[420px] bg-[#FAF9F5] text-neutral-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-neutral-200/80 backdrop-blur-md transition-all">
               
               {!isSuccess ? (
@@ -334,7 +355,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               )}
 
             </div>
-          </div>
+          </motion.div>
 
         </div>
       </div>

@@ -19,6 +19,12 @@ import {
 } from "./src/server/productHtmlRenderer";
 import { SEO_PAGES } from "./src/data/seoPages";
 import { PRODUCTS_DATA } from "./src/data/mockData";
+import {
+  matchProductToSelectedCategory,
+  resolveCategoryDefinition,
+  ALL_CATEGORY_DEFINITIONS,
+  slugify as slugifyCategory
+} from "./src/utils/categoryResolver";
 import { 
   sendLeadNotificationEmail, 
   getSmtpConfigStatus, 
@@ -581,11 +587,23 @@ async function startServer() {
   app.get("/products", async (req, res, next) => {
     try {
       let html = await getIndexHtmlTemplate(req.path || "/products");
-      const catalogCanonical = `${SITE_URL}/products`;
-      const catalogTitle = 'Product Catalog | Luxury Handcrafted Furniture & Architectural Doors | Royal Epic Interior Bengaluru';
-      const catalogDesc = 'Explore Royal Epic Interior\'s handcrafted furniture catalog in Bengaluru. Factory-direct dining tables, modular kitchens, sliding wardrobes, sofas, and WPC waterproof doors.';
+      const rawCategory = typeof req.query.category === "string" ? req.query.category.trim() : "";
+      const resolvedCat = rawCategory ? resolveCategoryDefinition(rawCategory) : null;
+      const catalogCanonical = resolvedCat
+        ? `${SITE_URL}/products?category=${resolvedCat.slug}`
+        : `${SITE_URL}/products`;
+      const catalogTitle = resolvedCat
+        ? `${resolvedCat.name} | Royal Epic Interior & Furniture Bengaluru`
+        : 'Product Catalog | Luxury Handcrafted Furniture & Architectural Doors | Royal Epic Interior Bengaluru';
+      const catalogDesc = resolvedCat
+        ? `Explore factory-direct ${resolvedCat.name} by Royal Epic Interior Bengaluru. Custom crafted luxury furniture, doors, and turnkey interiors.`
+        : 'Explore Royal Epic Interior\'s handcrafted furniture catalog in Bengaluru. Factory-direct dining tables, modular kitchens, sliding wardrobes, sofas, and WPC waterproof doors.';
 
       html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${catalogTitle}</title>`);
+      html = html.replace(
+        /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i,
+        `<meta name="description" content="${catalogDesc.replace(/"/g, '&quot;')}" />`
+      );
       const canonicalTag = `<link rel="canonical" href="${catalogCanonical}" />`;
       if (html.includes('<link rel="canonical"')) {
         html = html.replace(/<link rel="canonical"[\s\S]*?\/>/i, canonicalTag);
@@ -2172,16 +2190,132 @@ async function startServer() {
   app.use("/api/crm", crmRouter);
 
 
+  // Normalize raw Supabase / static catalog rows into frontend Product shape for API filtering
+  const normalizeServerProduct = (row: any) => {
+    const specs = typeof row?.specifications === "object" && row.specifications !== null ? row.specifications : {};
+    const price = Number(row?.price || 0);
+    return {
+      id: String(row?.id || ""),
+      name: row?.name || "Untitled Product",
+      sku: specs.sku || row?.sku || `RE-SKU-${row?.id}`,
+      category: row?.category || "Living Room Luxury",
+      categorySlug: row?.category_slug || row?.categorySlug || slugifyCategory(row?.category || "furniture"),
+      subCategory: specs.subCategory || row?.sub_category || row?.subCategory || "",
+      price,
+      originalPrice: row?.original_price || row?.originalPrice ? Number(row.original_price || row.originalPrice) : Math.round(price * 1.2),
+      discount: Number(row?.discount || 0),
+      rating: Number(row?.rating || 4.9),
+      reviewsCount: Number(row?.reviews_count ?? row?.reviewsCount ?? 12),
+      image: row?.image || "",
+      galleryImages: Array.isArray(row?.gallery_images) ? row.gallery_images : (Array.isArray(row?.galleryImages) ? row.galleryImages : (row?.image ? [row.image] : [])),
+      description: row?.description || "",
+      specifications: specs,
+      features: Array.isArray(row?.features) ? row.features : [],
+      isHot: Boolean(row?.is_hot ?? row?.isHot),
+      isNew: Boolean(row?.is_new ?? row?.isNew),
+      has3dViewer: Boolean(row?.has_3d_viewer ?? row?.has3dViewer),
+      inStock: (row?.in_stock ?? row?.inStock) !== false,
+      priceType: row?.price_type || specs.priceType || specs.price_type || row?.priceType || "fixed",
+    };
+  };
+
+  // Public Catalog Products API with accurate category & search resolution
+  app.get("/api/products", async (req, res) => {
+    try {
+      const rawProducts = await getLiveCatalogProducts();
+      const normalized = rawProducts
+        .filter((row: any) => row && row.category !== "__SYSTEM__")
+        .map(normalizeServerProduct);
+
+      const categoryParam = typeof req.query.category === "string" ? req.query.category.trim() : "";
+      const searchParam = typeof req.query.search === "string" ? req.query.search.trim().toLowerCase() : "";
+      const resolvedDef = categoryParam ? resolveCategoryDefinition(categoryParam) : null;
+
+      let filtered = normalized;
+      if (categoryParam && categoryParam.toLowerCase() !== "all") {
+        filtered = filtered.filter((p: any) => matchProductToSelectedCategory(p, categoryParam));
+      }
+      if (searchParam) {
+        filtered = filtered.filter((p: any) =>
+          p.name.toLowerCase().includes(searchParam) ||
+          p.category.toLowerCase().includes(searchParam) ||
+          p.description.toLowerCase().includes(searchParam)
+        );
+      }
+
+      return res.json({
+        success: true,
+        category: resolvedDef ? { name: resolvedDef.name, slug: resolvedDef.slug } : (categoryParam || "All"),
+        count: filtered.length,
+        products: filtered
+      });
+    } catch (err: any) {
+      console.error("[API /api/products] Error:", err?.message || err);
+      return res.status(500).json({ success: false, error: "Failed to load products catalog" });
+    }
+  });
+
+  // Public Product Categories Directory API with live product counts
+  app.get("/api/products/categories", async (_req, res) => {
+    try {
+      const rawProducts = await getLiveCatalogProducts();
+      const normalized = rawProducts
+        .filter((row: any) => row && row.category !== "__SYSTEM__")
+        .map(normalizeServerProduct);
+
+      const seenSlugs = new Set<string>();
+      const categories: Array<{ name: string; slug: string; count: number }> = [];
+
+      for (const def of ALL_CATEGORY_DEFINITIONS) {
+        if (seenSlugs.has(def.slug)) continue;
+        seenSlugs.add(def.slug);
+        const count = normalized.filter((p: any) => def.matchProduct(p)).length;
+        categories.push({ name: def.name, slug: def.slug, count });
+      }
+
+      return res.json({
+        success: true,
+        totalProducts: normalized.length,
+        categories
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Failed to load product categories" });
+    }
+  });
+
   // CMS STORE FOR PRODUCTS MANAGEMENT
   let cmsProducts = [...PRODUCTS_DATA];
 
-  // GET All CMS Products
-  app.get("/api/cms/products", (req, res) => {
-    res.json({
-      success: true,
-      count: cmsProducts.length,
-      products: cmsProducts
-    });
+  // GET All CMS Products (supports optional ?category= filtering against live catalog)
+  app.get("/api/cms/products", async (req, res) => {
+    const categoryParam = typeof req.query.category === "string" ? req.query.category.trim() : "";
+    try {
+      const liveRows = await getLiveCatalogProducts();
+      const normalized = Array.isArray(liveRows) && liveRows.length > 0
+        ? liveRows.filter((row: any) => row && row.category !== "__SYSTEM__").map(normalizeServerProduct)
+        : cmsProducts;
+
+      const filtered = categoryParam && categoryParam.toLowerCase() !== "all"
+        ? normalized.filter((p: any) => matchProductToSelectedCategory(p as any, categoryParam))
+        : normalized;
+
+      return res.json({
+        success: true,
+        category: categoryParam || "All",
+        count: filtered.length,
+        products: filtered
+      });
+    } catch (_) {
+      const filtered = categoryParam && categoryParam.toLowerCase() !== "all"
+        ? cmsProducts.filter((p: any) => matchProductToSelectedCategory(p as any, categoryParam))
+        : cmsProducts;
+      return res.json({
+        success: true,
+        category: categoryParam || "All",
+        count: filtered.length,
+        products: filtered
+      });
+    }
   });
 
   // POST Add New Product Listing

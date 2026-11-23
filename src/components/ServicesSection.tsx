@@ -11,6 +11,7 @@ import {
   Check, ArrowRight, Sparkles, Layers,
   Compass, Award, Clock, ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface ServicesSectionProps {
   onRequestQuote: (serviceTitle: string) => void;
@@ -132,11 +133,27 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
 
   return (
     <section className="py-20 sm:py-24 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="services">
+      {/* Subtle Floating Architectural Accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-12 -right-20 w-72 h-72 rounded-full border border-white/25 animate-arch-float"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-16 -left-16 w-48 h-48 border border-stone-900/10 rotate-12 animate-arch-float-reverse"
+      />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* Architectural Trust Pillars Bar */}
-        <div className="mb-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 transition-colors">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+        >
+          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
             <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200/60">
               <Building2 className="w-5 h-5 text-amber-700" />
             </div>
@@ -148,7 +165,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 transition-colors">
+          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
             <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200/60">
               <Compass className="w-5 h-5 text-amber-700" />
             </div>
@@ -160,7 +177,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 transition-colors">
+          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
             <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200/60">
               <Award className="w-5 h-5 text-amber-700" />
             </div>
@@ -172,7 +189,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 transition-colors">
+          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
             <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200/60">
               <Clock className="w-5 h-5 text-amber-700" />
             </div>
@@ -183,10 +200,16 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10"
+        >
           <div className="max-w-2xl">
             <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-2">
               Comprehensive Manufacturing & Design
@@ -219,7 +242,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Major Service Category Cards with Clean Text-Based Dropdowns */}
         <div 
@@ -233,7 +256,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
             return (
               <div
                 key={service.id}
-                className="min-w-[300px] sm:min-w-[360px] md:min-w-[380px] max-w-[380px] shrink-0 snap-start bg-white rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 group border border-stone-200/90 hover:border-amber-400/70 hover:shadow-lg"
+                className="min-w-[300px] sm:min-w-[360px] md:min-w-[380px] max-w-[380px] shrink-0 snap-start bg-white rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 group border border-stone-200/90 hover:border-amber-400/70 hover:shadow-xl hover:-translate-y-1"
               >
                 <div>
                   {/* Image Banner Header */}
