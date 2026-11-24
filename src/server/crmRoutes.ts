@@ -1,8 +1,10 @@
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { propertyCrmRouter } from './propertyCrmRoutes';
 
 export const crmRouter = express.Router();
+crmRouter.use('/properties', propertyCrmRouter);
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const CRM_LEADS_FILE = path.join(DB_DIR, 'crm_leads.json');

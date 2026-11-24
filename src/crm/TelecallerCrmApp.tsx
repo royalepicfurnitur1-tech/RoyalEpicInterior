@@ -35,20 +35,38 @@ import {
   ChevronRight,
   FileSpreadsheet,
   CheckCircle2,
-  Globe
+  Globe,
+  Building2,
+  ChevronDown
 } from 'lucide-react';
+import { RoyalEpicPropertiesModule } from './properties/RoyalEpicPropertiesModule';
+import { PropertyModuleSection } from './properties/propertyTypes';
 
 interface TelecallerCrmAppProps {
   onBackToWebsite?: () => void;
 }
 
-type TabType = 'dashboard' | 'leads' | 'website' | 'followups' | 'history' | 'reports' | 'users' | 'settings';
+type TabType = 'dashboard' | 'leads' | 'website' | 'followups' | 'history' | 'reports' | 'users' | 'settings' | 'properties';
 
 const WEBSITE_INITIAL_FILTERS = { sortBy: 'created_desc' as const };
+
+const PROPERTY_NAV_SECTIONS: { id: PropertyModuleSection; label: string }[] = [
+  { id: 'dashboard', label: 'Property Dashboard' },
+  { id: 'leads', label: 'Property Leads' },
+  { id: 'add-lead', label: 'Add Property Lead' },
+  { id: 'followups', label: 'Owner Follow-ups' },
+  { id: 'listings', label: 'Property Listings' },
+  { id: 'enquiries', label: 'Tenant Enquiries' },
+  { id: 'site-visits', label: 'Site Visits' },
+  { id: 'deals', label: 'Deals & Payments' },
+  { id: 'reports', label: 'Property Reports' }
+];
 
 const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
   const { user, isAuthenticated, loading, isAdmin, logout } = useCrmAuth();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [propertySection, setPropertySection] = useState<PropertyModuleSection>('dashboard');
+  const [propertiesExpanded, setPropertiesExpanded] = useState(true);
   const [followupSubTab, setFollowupSubTab] = useState<'today' | 'overdue' | 'upcoming' | 'completed'>('today');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -169,6 +187,10 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
       case 'reports': return 'Operational Performance Reports';
       case 'users': return 'User Access & Permissions';
       case 'settings': return 'System Settings & Integrations';
+      case 'properties': {
+        const found = PROPERTY_NAV_SECTIONS.find(s => s.id === propertySection);
+        return `Royal Epic Properties — ${found ? found.label : 'Properties CRM'}`;
+      }
       default: return 'CRM Workspace';
     }
   };
@@ -390,6 +412,61 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               <BarChart3 className="w-4 h-4 shrink-0" />
               {!isSidebarCollapsed && <span>Reports</span>}
             </button>
+
+            {/* Royal Epic Properties Module */}
+            <div className="my-2 border-t border-[#E2E8F0]" />
+
+            {!isSidebarCollapsed && (
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#8C6B38]">
+                Royal Epic Properties
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setActiveTab('properties');
+                setPropertiesExpanded(prev => activeTab === 'properties' ? !prev : true);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'properties'
+                  ? 'bg-[#3D2E18] text-white'
+                  : 'text-[#5C4728] bg-[#FAF8F5] hover:bg-[#F3EFE6]'
+              }`}
+              title="Properties"
+            >
+              <div className="flex items-center gap-3">
+                <Building2 className="w-4 h-4 shrink-0 text-[#B48E55]" />
+                {!isSidebarCollapsed && <span>Properties</span>}
+              </div>
+              {!isSidebarCollapsed && (
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    propertiesExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+              )}
+            </button>
+
+            {!isSidebarCollapsed && propertiesExpanded && (
+              <div className="pl-3 space-y-0.5 border-l-2 border-[#E5DEC9] ml-3 mt-1">
+                {PROPERTY_NAV_SECTIONS.map(sec => (
+                  <button
+                    key={sec.id}
+                    onClick={() => {
+                      setActiveTab('properties');
+                      setPropertySection(sec.id);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-md text-[11px] font-medium transition cursor-pointer ${
+                      activeTab === 'properties' && propertySection === sec.id
+                        ? 'bg-[#F3EFE6] text-[#3D2E18] font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-[#3D2E18]'
+                    }`}
+                  >
+                    {sec.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Admin-only Navigation */}
             {isAdmin && (
@@ -650,6 +727,14 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
             {activeTab === 'settings' && isAdmin && (
               <CrmIntegrationsView />
             )}
+
+            {activeTab === 'properties' && (
+              <RoyalEpicPropertiesModule
+                activeSection={propertySection}
+                onChangeSection={(sec) => setPropertySection(sec)}
+                currentUserName={user?.name || 'Telecaller'}
+              />
+            )}
           </main>
 
           {/* Compact Clean Footer */}
@@ -799,6 +884,29 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 <BarChart3 className="w-4 h-4" />
                 <span>Reports</span>
               </button>
+
+              <div className="my-2 border-t border-[#E2E8F0]" />
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8C6B38]">
+                Properties
+              </div>
+              {PROPERTY_NAV_SECTIONS.map(sec => (
+                <button
+                  key={sec.id}
+                  onClick={() => {
+                    setActiveTab('properties');
+                    setPropertySection(sec.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-left ${
+                    activeTab === 'properties' && propertySection === sec.id
+                      ? 'bg-[#3D2E18] text-white font-semibold'
+                      : 'text-[#5C4728]'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[#B48E55]" />
+                  <span>{sec.label}</span>
+                </button>
+              ))}
 
               {isAdmin && (
                 <>
