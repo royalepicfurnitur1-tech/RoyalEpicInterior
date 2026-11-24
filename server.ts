@@ -15,6 +15,8 @@ import {
   injectHomepageIntoHtml,
   injectCatalogIntoHtml,
   injectSeoPageIntoHtml,
+  injectPropertiesListIntoHtml,
+  injectPropertyDetailIntoHtml,
   SITE_URL
 } from "./src/server/productHtmlRenderer";
 import { SEO_PAGES } from "./src/data/seoPages";
@@ -34,6 +36,11 @@ import {
 } from "./src/server/emailNotificationService";
 import { crmRouter, ingestPublicWebsiteLead } from "./src/server/crmRoutes";
 import { justdialRouter } from "./src/server/justdialRoutes";
+import {
+  publicPropertiesRouter,
+  getApprovedPublishedPropertiesForWebsite,
+  findPublicPropertyBySlugOrId,
+} from "./src/server/propertyCrmRoutes";
 
 dotenv.config();
 
@@ -507,17 +514,24 @@ async function startServer() {
 
   app.get("/sitemap.xml", async (req, res) => {
     try {
-      const host = (req.get("host") || "").toLowerCase();
-      const hostOrigin = host.includes("royalepicinterior.in") || (host.endsWith(".in") && host.includes("royalepic"))
+      const host = (
+        (req.get("x-forwarded-host") || req.get("host") || "") +
+        " " +
+        String(req.query.hostname || req.query.host || "")
+      ).toLowerCase();
+      const hostOrigin = host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
         ? "https://royalepicinterior.in"
-        : host.includes("royalepicinterior.com") || (host.endsWith(".com") && host.includes("royalepic"))
+        : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
           ? "https://royalepicinterior.com"
           : SITE_URL;
 
-      const liveProducts = await getLiveCatalogProducts();
-      const sitemapXml = generateSitemapXml(liveProducts, hostOrigin);
+      const [liveProducts, publishedProperties] = await Promise.all([
+        getLiveCatalogProducts(),
+        getApprovedPublishedPropertiesForWebsite().catch(() => []),
+      ]);
+      const sitemapXml = generateSitemapXml(liveProducts, hostOrigin, publishedProperties);
       res.setHeader("Content-Type", "application/xml; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
       res.setHeader("X-Content-Type-Options", "nosniff");
       return res.status(200).send(sitemapXml);
     } catch (err) {
@@ -664,6 +678,82 @@ async function startServer() {
     }
 
     // If not a matched product (e.g. category subpage), proceed to normal SPA router
+    next();
+  });
+
+  // Royal Epic Properties Listing Route (/properties) - Host-Aware Self-Canonical & Structured Data
+  app.get("/properties", async (req, res, next) => {
+    try {
+      const host = (
+        (req.get("x-forwarded-host") || req.get("host") || "") +
+        " " +
+        String(req.query.hostname || req.query.host || "")
+      ).toLowerCase();
+      const hostOrigin = host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
+        ? "https://royalepicinterior.in"
+        : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
+          ? "https://royalepicinterior.com"
+          : SITE_URL;
+
+      const template = await getIndexHtmlTemplate(req.originalUrl || "/properties");
+      const publishedProperties = await getApprovedPublishedPropertiesForWebsite().catch(() => []);
+      const enrichedHtml = injectPropertiesListIntoHtml(template, publishedProperties, hostOrigin);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      return res.status(200).send(enrichedHtml);
+    } catch (err: any) {
+      console.warn("[PropertiesSSR] Error rendering /properties HTML:", err?.message || err);
+      next();
+    }
+  });
+
+  // Royal Epic Properties Single Detail Route (/properties/:slug) - Host-Aware Self-Canonical & RealEstateListing JSON-LD
+  app.get("/properties/:slug", async (req, res, next) => {
+    if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.params.slug)) {
+      return next();
+    }
+
+    try {
+      const host = (
+        (req.get("x-forwarded-host") || req.get("host") || "") +
+        " " +
+        String(req.query.hostname || req.query.host || "")
+      ).toLowerCase();
+      const hostOrigin = host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
+        ? "https://royalepicinterior.in"
+        : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
+          ? "https://royalepicinterior.com"
+          : SITE_URL;
+
+      const slug = req.params.slug;
+      const property = await findPublicPropertyBySlugOrId(slug);
+      const template = await getIndexHtmlTemplate(req.originalUrl || `/properties/${slug}`);
+
+      if (property) {
+        const enrichedHtml = injectPropertyDetailIntoHtml(template, property, hostOrigin);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(200).send(enrichedHtml);
+      } else {
+        // Still inject host-aware self-canonical for the SPA route
+        const fallbackHtml = injectPropertiesListIntoHtml(template, [], hostOrigin).replace(
+          new RegExp(`${hostOrigin}/properties`, 'g'),
+          `${hostOrigin}/properties/${slug.replace(/[^a-zA-Z0-9_-]/g, '')}`
+        );
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+        return res.status(200).send(fallbackHtml);
+      }
+    } catch (err: any) {
+      console.warn("[PropertyDetailSSR] Error rendering property detail HTML:", err?.message || err);
+    }
+
     next();
   });
 
@@ -2189,6 +2279,10 @@ async function startServer() {
   // Mount Telecaller CRM API Routes Authoritatively
   app.use("/api/crm", crmRouter);
 
+  // Mount Royal Epic Properties Public Website API Routes
+  app.use("/api/properties", publicPropertiesRouter);
+  app.use("/api/public/properties", publicPropertiesRouter);
+
 
   // Normalize raw Supabase / static catalog rows into frontend Product shape for API filtering
   const normalizeServerProduct = (row: any) => {
@@ -3045,7 +3139,7 @@ Provide a JSON response with the following keys:
   } else {
 
     // Guard against relative asset requests originating from nested subpaths (e.g. /products/assets/* -> /assets/*)
-    app.use(/^\/(?:products|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res, next) => {
+    app.use(/^\/(?:products|properties|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res, next) => {
       const assetFileName = req.params[0];
       const targetFilePath = path.join(distPath, "assets", assetFileName);
       if (fs.existsSync(targetFilePath)) {

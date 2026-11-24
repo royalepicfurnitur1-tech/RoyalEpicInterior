@@ -1567,11 +1567,76 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="px-2.5 py-0.5 rounded bg-[#3D2E18] text-white text-[11px] font-semibold">
+                            <span
+                              className={`px-2.5 py-0.5 rounded text-[11px] font-semibold ${
+                                prop.listing_status === 'Published'
+                                  ? 'bg-emerald-700 text-white'
+                                  : prop.listing_status === 'Unpublished' ||
+                                    prop.listing_status === 'Rented' ||
+                                    prop.listing_status === 'Occupied' ||
+                                    prop.listing_status === 'Unavailable' ||
+                                    prop.listing_status === 'Archived'
+                                  ? 'bg-slate-600 text-white'
+                                  : prop.listing_status === 'Rejected'
+                                  ? 'bg-rose-700 text-white'
+                                  : 'bg-[#3D2E18] text-white'
+                              }`}
+                            >
                               {prop.listing_status}
                             </span>
+                            {prop.listing_status === 'Published' && verified && (
+                              <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                                ● Live on /properties
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-right whitespace-nowrap space-x-1.5">
+                            {verified && prop.listing_status !== 'Published' && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await reviewPropertyListing(
+                                      prop.id,
+                                      'Published',
+                                      'Published to public website /properties'
+                                    );
+                                    showSuccess(
+                                      `Property ${prop.property_code} is now Published on /properties.`
+                                    );
+                                    await loadSectionData();
+                                  } catch (err: any) {
+                                    setErrorBanner(err.message || 'Failed to publish property.');
+                                  }
+                                }}
+                                className="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold cursor-pointer"
+                                title="Publish to Public Website (/properties)"
+                              >
+                                Publish
+                              </button>
+                            )}
+                            {prop.listing_status === 'Published' && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await reviewPropertyListing(
+                                      prop.id,
+                                      'Unpublished',
+                                      'Unpublished from public website'
+                                    );
+                                    showSuccess(
+                                      `Property ${prop.property_code} has been Unpublished from the website.`
+                                    );
+                                    await loadSectionData();
+                                  } catch (err: any) {
+                                    setErrorBanner(err.message || 'Failed to unpublish property.');
+                                  }
+                                }}
+                                className="px-2.5 py-1 rounded bg-amber-700 hover:bg-amber-800 text-white text-[11px] font-semibold cursor-pointer"
+                                title="Remove from Public Website"
+                              >
+                                Unpublish
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setWorkspaceLeadId(prop.lead_id);
@@ -1589,7 +1654,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                               }}
                               className="px-2.5 py-1 rounded bg-[#8C6B38] hover:bg-[#5C4728] text-white text-[11px] font-semibold cursor-pointer"
                             >
-                              Review / Approve
+                              Review / Status
                             </button>
                           </td>
                         </tr>
@@ -1662,11 +1727,11 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
               <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
                 <tr>
                   <th className="py-3 px-4">Enquiry ID</th>
-                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Date & Source</th>
                   <th className="py-3 px-4">Tenant Name & Mobile</th>
                   <th className="py-3 px-4">Linked Property</th>
                   <th className="py-3 px-4">Preferred Location & Type</th>
-                  <th className="py-3 px-4">Budget</th>
+                  <th className="py-3 px-4">Budget / Visit Pref</th>
                   <th className="py-3 px-4">Telecaller</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -1685,18 +1750,49 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                       <td className="py-3 px-4 font-mono font-bold text-[#5C4728]">
                         {enq.enquiry_code}
                       </td>
-                      <td className="py-3 px-4 font-mono">{enq.enquiry_date}</td>
+                      <td className="py-3 px-4">
+                        <div className="font-mono">{enq.enquiry_date}</div>
+                        <span
+                          className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            enq.enquiry_source === 'Website'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-[#F3EFE6] text-[#5C4728]'
+                          }`}
+                        >
+                          {enq.enquiry_source || 'Direct Call'}
+                        </span>
+                      </td>
                       <td className="py-3 px-4">
                         <div className="font-semibold text-[#3D2E18]">{enq.tenant_name}</div>
                         <div className="font-mono text-[11px] text-slate-500">{enq.tenant_mobile}</div>
+                        {enq.tenant_email && (
+                          <div className="text-[11px] text-slate-500">{enq.tenant_email}</div>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-[#5C4728]">
-                        {enq.property_title || 'General Requirement'}
+                        <div className="font-semibold text-[#3D2E18]">
+                          {enq.property_title || 'General Requirement'}
+                        </div>
+                        {enq.property_id && (
+                          <div className="font-mono text-[10px] text-[#8C6B38]">{enq.property_id}</div>
+                        )}
                       </td>
                       <td className="py-3 px-4">
-                        {enq.preferred_location} • {enq.property_type_needed}
+                        <div>{enq.preferred_location} • {enq.property_type_needed}</div>
+                        {enq.family_or_company_profile && (
+                          <div className="text-[11px] text-[#6E5A3E]">
+                            Profile: {enq.family_or_company_profile}
+                          </div>
+                        )}
                       </td>
-                      <td className="py-3 px-4 font-mono">{enq.budget_range || '—'}</td>
+                      <td className="py-3 px-4">
+                        <div className="font-mono">{enq.budget_range || '—'}</div>
+                        {enq.move_in_date && (
+                          <div className="text-[10px] text-[#8C6B38] font-medium">
+                            Visit/Move-in: {enq.move_in_date}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-4">{enq.assigned_telecaller}</td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-semibold text-[11px]">

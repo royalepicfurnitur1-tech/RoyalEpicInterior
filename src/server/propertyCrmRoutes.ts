@@ -350,7 +350,12 @@ function sanitizeRecordForDedicatedTable(table: PropertyTableName, raw: Record<s
       lead_id: rec.lead_id,
       move_in_date: rec.move_in_date,
       family_or_company_profile: rec.family_or_company_profile,
-      budget_range: rec.budget_range
+      budget_range: rec.budget_range,
+      preferred_contact_time: rec.preferred_contact_time,
+      preferred_visit_date: rec.preferred_visit_date,
+      preferred_visit_time: rec.preferred_visit_time,
+      number_of_occupants: rec.number_of_occupants,
+      consent_to_contact: rec.consent_to_contact
     });
   } else if (table === 'property_site_visits') {
     if (rec.tenant_feedback !== undefined && !rec.visit_feedback) {
@@ -421,6 +426,45 @@ async function sbUpsert<T extends { id: string }>(
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => 'Unknown Supabase error');
+    // Graceful compatibility if live DB constraint on public.properties hasn't had optional ALTER TABLE applied for new Phase 2 status labels
+    if (table === 'properties' && errText.includes('properties_listing_status_check')) {
+      const requestedStatus = payload.listing_status;
+      const compatStatusMap: Record<string, string> = {
+        'Ready to Publish': 'Approved',
+        'Unpublished': 'Approved',
+        'Archived': 'Unavailable',
+        'Occupied': 'Rented'
+      };
+      const fallbackDbStatus = compatStatusMap[requestedStatus] || 'Approved';
+      const history = Array.isArray(payload.approval_history) ? [...payload.approval_history] : [];
+      if (history.length > 0 && history[0]?.status === requestedStatus) {
+        history[0] = { ...history[0], db_compat: true, status: requestedStatus };
+      } else {
+        history.unshift({
+          action: `STATUS_${String(requestedStatus).toUpperCase().replace(/\s+/g, '_')}`,
+          status: requestedStatus,
+          db_compat: true,
+          notes: `Status set to ${requestedStatus}`,
+          timestamp: new Date().toISOString()
+        });
+      }
+      const retryPayload = {
+        ...payload,
+        listing_status: fallbackDbStatus,
+        is_archived: requestedStatus === 'Archived' ? true : Boolean(payload.is_archived),
+        approval_history: history
+      };
+      const retryRes = await fetch(`${url}/rest/v1/${table}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(retryPayload)
+      });
+      if (retryRes.ok) {
+        const retryRows = await retryRes.json();
+        const row = Array.isArray(retryRows) && retryRows.length > 0 ? retryRows[0] : retryPayload;
+        return { ...row, listing_status: requestedStatus } as T;
+      }
+    }
     throw new Error(`Supabase WRITE error on dedicated table ${table} (HTTP ${res.status}): ${errText}`);
   }
   const rows = await res.json();
@@ -446,10 +490,134 @@ async function sbDeleteById(table: PropertyTableName, id: string): Promise<void>
 }
 
 // -----------------------------------------------------------------------------
-// FUTURE WEBSITE INTEGRATION READINESS (Phase 2+)
+// PHASE 2: PUBLIC WEBSITE INTEGRATION HELPERS & STRICT PRIVACY FILTERING
 // Returns ONLY verified, approved, and published properties with public media.
-// Private owner documents and internal verification notes are strictly excluded.
+// Owner phone numbers, owner emails, full residential street addresses, private
+// documents, and internal verification notes are NEVER exposed publicly.
 // -----------------------------------------------------------------------------
+function slugifySegment(text: string): string {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function generatePublicPropertySlug(prop: any): string {
+  const titleSlug = slugifySegment(prop.property_title || prop.property_type || 'rental-property');
+  const localitySlug = slugifySegment(prop.locality || 'bengaluru');
+  const idSlug = slugifySegment(prop.id || '');
+  const baseSlug = titleSlug.includes(localitySlug) ? titleSlug : `${titleSlug}-${localitySlug}`;
+  return idSlug ? `${baseSlug}-${idSlug}` : baseSlug;
+}
+
+export function isPropertyPubliclyVisible(rawProp: any): boolean {
+  if (!rawProp) return false;
+  const p = formatPropertyAliases(rawProp);
+  if (p.is_archived || p.listing_status === 'Archived') return false;
+
+  const isVerified =
+    p.owner_identity_verified === 'Yes' &&
+    p.ownership_auth_confirmed === 'Yes' &&
+    p.availability_confirmed === 'Yes' &&
+    p.permission_to_advertise === 'Yes';
+
+  // Only properties explicitly marked 'Published' are displayed on the public website
+  const isPublished = p.listing_status === 'Published';
+  return isVerified && isPublished;
+}
+
+const DEFAULT_PROPERTY_FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+
+export function toPublicPropertyListing(rawProp: any, allImages: any[]) {
+  const p = formatPropertyAliases(rawProp);
+  const publicPhotos = allImages
+    .filter(
+      (img: any) =>
+        (img.property_id === p.id || (p.lead_id && img.lead_id === p.lead_id)) &&
+        !img.is_private_document &&
+        img.category !== 'Additional Documents' &&
+        typeof img.file_url === 'string' &&
+        !img.file_url.startsWith('/api/crm/')
+    )
+    .map((img: any) => ({
+      id: img.id,
+      category: img.category || 'Exterior Photos',
+      file_name: img.file_name || 'Property Photo',
+      url: img.public_url || img.file_url
+    }))
+    .filter((img: any) => Boolean(img.url));
+
+  const featuredImage =
+    publicPhotos.length > 0 ? publicPhotos[0].url : DEFAULT_PROPERTY_FALLBACK_IMAGE;
+
+  const locality = (p.locality || 'Bengaluru').trim();
+  const city = (p.city || 'Bengaluru').trim();
+  const pinCode = (p.pin_code || '').trim();
+  const approximateLocation = `${locality}${locality.toLowerCase() !== city.toLowerCase() ? `, ${city}` : ''}${pinCode ? ` - ${pinCode}` : ''}`;
+
+  // Explicit allowlist of public-safe fields ONLY (never includes owner contact, full_address, or internal notes)
+  const bhkVal = p.bhk_configuration || (p.property_type?.includes('BHK') ? p.property_type : 'N/A');
+  const rentVal = Number(p.expected_monthly_rent) || 0;
+  const descVal =
+    p.property_description ||
+    `Verified ${p.furnishing_status || ''} ${p.property_type || 'Property'} available for rent in ${locality}, ${city}. Managed by Royal Epic Properties.`;
+
+  return {
+    id: p.id,
+    property_id: p.id,
+    property_code: p.property_code || p.id,
+    slug: generatePublicPropertySlug(p),
+    property_title: p.property_title || `${p.property_type || 'Rental Property'} in ${locality}`,
+    property_category: (p.property_category || 'Residential') as 'Residential' | 'Commercial',
+    property_type: p.property_type || '2 BHK',
+    bhk_configuration: bhkVal,
+    bhk_type: bhkVal,
+    locality,
+    city,
+    pin_code: pinCode,
+    pincode: pinCode,
+    approximate_location: approximateLocation,
+    expected_monthly_rent: rentVal,
+    monthly_rent: rentVal,
+    security_deposit: Number(p.security_deposit) || 0,
+    maintenance_charges: Number(p.maintenance_charges) || 0,
+    other_charges: p.other_charges || '',
+    rent_negotiable: p.rent_negotiable !== 'No',
+    deposit_negotiable: (p.deposit_negotiable === 'No' ? 'No' : 'Yes') as 'Yes' | 'No',
+    built_up_area: Number(p.built_up_area) || 0,
+    carpet_area: Number(p.carpet_area) || 0,
+    area_unit: 'sq.ft',
+    furnishing_status: (p.furnishing_status || 'Semi-Furnished') as any,
+    bedrooms: Number(p.bedrooms) || 0,
+    bathrooms: Number(p.bathrooms) || 0,
+    balconies: Number(p.balconies) || 0,
+    floor_number: p.floor_number || '',
+    total_floors: p.total_floors || '',
+    lift_available: (p.lift_available === 'Yes' ? 'Yes' : 'No') as 'Yes' | 'No',
+    parking_availability: p.parking_availability || 'Available',
+    available_from_date: p.available_from_date || 'Immediate',
+    available_from: p.available_from_date || 'Immediate',
+    preferred_tenant_type: 'Family / Working Professionals',
+    power_backup: 'Available',
+    water_supply: '24x7 Supply',
+    facing: 'East',
+    property_age: 'Well Maintained',
+    availability_status: 'Published',
+    property_description: descVal,
+    description: descVal,
+    amenities: Array.isArray(p.amenities) ? p.amenities : [],
+    listing_status: 'Published' as const,
+    featured_image: featuredImage,
+    main_image: featuredImage,
+    photos: publicPhotos,
+    images: publicPhotos,
+    created_at: p.approved_at || p.created_at,
+    published_at: p.approved_at || p.updated_at || p.created_at,
+    updated_at: p.updated_at || p.created_at
+  };
+}
+
 export async function getApprovedPublishedPropertiesForWebsite() {
   const [allProps, allImages] = await Promise.all([
     sbSelectAll('properties'),
@@ -457,59 +625,33 @@ export async function getApprovedPublishedPropertiesForWebsite() {
   ]);
 
   return allProps
-    .filter((p: any) => {
-      if (p.is_archived) return false;
-      const isVerified =
-        p.owner_identity_verified === 'Yes' &&
-        (p.ownership_auth_confirmed === 'Yes' || p.ownership_confirmed === 'Yes') &&
-        (p.availability_confirmed === 'Yes' || p.property_availability_confirmed === 'Yes') &&
-        p.permission_to_advertise === 'Yes';
-      const isPublishedOrApproved = ['Approved', 'Ready to Publish', 'Published'].includes(p.listing_status);
-      return isVerified && isPublishedOrApproved;
-    })
-    .map((p: any) => {
-      const publicPhotos = allImages
-        .filter((img: any) => (img.property_id === p.id || img.lead_id === p.lead_id) && !img.is_private_document)
-        .map((img: any) => ({
-          id: img.id,
-          category: img.category,
-          file_name: img.file_name,
-          url: img.file_url
-        }));
-      return {
-        id: p.id,
-        property_code: p.id,
-        property_title: p.property_title,
-        property_category: p.property_category,
-        property_type: p.property_type,
-        bhk_configuration: p.bhk_configuration,
-        locality: p.locality,
-        city: p.city,
-        pin_code: p.pin_code,
-        expected_monthly_rent: p.expected_monthly_rent,
-        security_deposit: p.security_deposit,
-        maintenance_charges: p.maintenance_charges,
-        rent_negotiable: p.rent_negotiable,
-        deposit_negotiable: p.deposit_negotiable,
-        built_up_area: p.built_up_area,
-        carpet_area: p.carpet_area,
-        furnishing_status: p.furnishing_status,
-        bedrooms: p.bedrooms,
-        bathrooms: p.bathrooms,
-        balconies: p.balconies,
-        floor_number: p.floor_number,
-        total_floors: p.total_floors,
-        lift_available: p.lift_available,
-        parking_availability: p.parking_availability,
-        available_from_date: p.available_from_date,
-        property_description: p.property_description,
-        amenities: p.amenities || [],
-        listing_status: p.listing_status,
-        photos: publicPhotos,
-        approved_at: p.approved_at,
-        updated_at: p.updated_at
-      };
-    });
+    .filter((p: any) => isPropertyPubliclyVisible(p))
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.approved_at || b.updated_at || b.created_at || 0).getTime() -
+        new Date(a.approved_at || a.updated_at || a.created_at || 0).getTime()
+    )
+    .map((p: any) => toPublicPropertyListing(p, allImages));
+}
+
+export async function findPublicPropertyBySlugOrId(slugOrId: string) {
+  if (!slugOrId) return null;
+  const cleanTarget = decodeURIComponent(slugOrId)
+    .toLowerCase()
+    .trim()
+    .replace(/^\/properties\//, '')
+    .replace(/\/$/, '');
+
+  const publishedList = await getApprovedPublishedPropertiesForWebsite();
+  for (const item of publishedList) {
+    if (item.slug.toLowerCase() === cleanTarget) return item;
+    if (String(item.id).toLowerCase() === cleanTarget) return item;
+    if (String(item.property_code).toLowerCase() === cleanTarget) return item;
+    const idSlug = slugifySegment(item.id);
+    if (idSlug && cleanTarget.endsWith(`-${idSlug}`)) return item;
+    if (slugifySegment(item.property_title) === cleanTarget) return item;
+  }
+  return null;
 }
 
 // -----------------------------------------------------------------------------
@@ -583,8 +725,24 @@ function formatPropertyAliases(prop: any) {
   if (!prop) return prop;
   const ownership = prop.ownership_confirmed || prop.ownership_auth_confirmed || 'Pending';
   const avail = prop.property_availability_confirmed || prop.availability_confirmed || 'Pending';
+  const latestHistory =
+    Array.isArray(prop.approval_history) && prop.approval_history.length > 0
+      ? prop.approval_history[0]
+      : null;
+  const resolvedListingStatus =
+    prop.is_archived
+      ? 'Archived'
+      : latestHistory &&
+        latestHistory.status &&
+        (latestHistory.db_compat ||
+          ['Ready to Publish', 'Unpublished', 'Occupied', 'Archived'].includes(latestHistory.status))
+      ? latestHistory.status
+      : prop.listing_status;
+
   return {
     ...prop,
+    listing_status: resolvedListingStatus,
+    slug: generatePublicPropertySlug(prop),
     property_code: prop.property_code || prop.id,
     full_property_address: prop.full_property_address || prop.full_address || '',
     full_address: prop.full_address || prop.full_property_address || '',
@@ -634,8 +792,14 @@ function formatEnquiryAliases(enq: any) {
     enquiry_status: resolvedStatus,
     notes: cleanNotes,
     lead_id: enq.lead_id || meta.lead_id || null,
-    move_in_date: enq.move_in_date || meta.move_in_date || '',
-    family_or_company_profile: enq.family_or_company_profile || meta.family_or_company_profile || '',
+    move_in_date: enq.move_in_date || meta.move_in_date || meta.preferred_visit_date || '',
+    family_or_company_profile:
+      enq.family_or_company_profile || meta.family_or_company_profile || meta.number_of_occupants || '',
+    preferred_contact_time: enq.preferred_contact_time || meta.preferred_contact_time || '',
+    preferred_visit_date: enq.preferred_visit_date || meta.preferred_visit_date || '',
+    preferred_visit_time: enq.preferred_visit_time || meta.preferred_visit_time || '',
+    number_of_occupants: enq.number_of_occupants || meta.number_of_occupants || '',
+    consent_to_contact: enq.consent_to_contact ?? meta.consent_to_contact ?? true,
     tenant_mobile: mob,
     mobile_number: mob,
     tenant_email: enq.tenant_email || enq.email || '',
@@ -1610,12 +1774,13 @@ propertyCrmRouter.get('/listings', async (req: Request, res: Response) => {
     const category = (req.query.property_category as string) || '';
     const locality = ((req.query.locality as string) || '').toLowerCase().trim();
 
-    const [allProps, allImages] = await Promise.all([
+    const [allPropsRaw, allImages] = await Promise.all([
       sbSelectAll('properties'),
       sbSelectAll('property_images')
     ]);
 
-    let list = allProps.filter((p: any) => !p.is_archived || status === 'Archived');
+    const allProps = allPropsRaw.map(formatPropertyAliases);
+    let list = allProps.filter((p: any) => (!p.is_archived && p.listing_status !== 'Archived') || status === 'Archived');
 
     if (search) {
       list = list.filter(
@@ -1649,7 +1814,7 @@ propertyCrmRouter.get('/listings', async (req: Request, res: Response) => {
           .filter((img: any) => img.property_id === p.id || img.lead_id === p.lead_id)
           .map(formatImageAliases);
         return {
-          ...formatPropertyAliases(p),
+          ...p,
           images: propImages
         };
       });
@@ -1674,10 +1839,11 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
     }
 
     const body = req.body || {};
-    const allProps = await sbSelectAll('properties');
-    const existingProp = allProps.find(
-      (p: any) => !p.is_archived && (p.lead_id === leadId || (lead.property_id && p.id === lead.property_id))
+    const allPropsRaw = await sbSelectAll('properties');
+    const existingPropRaw = allPropsRaw.find(
+      (p: any) => p.lead_id === leadId || (lead.property_id && p.id === lead.property_id)
     );
+    const existingProp = existingPropRaw ? formatPropertyAliases(existingPropRaw) : null;
     const isNew = !existingProp;
 
     const now = new Date().toISOString();
@@ -1712,6 +1878,11 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
       existingProp?.availability_confirmed ||
       'Pending';
 
+    const rawExpectedRent =
+      body.expected_monthly_rent !== undefined && body.expected_monthly_rent !== null
+        ? body.expected_monthly_rent
+        : body.monthly_rent;
+
     const candidateProp = {
       id: propId,
       property_code: propId,
@@ -1722,15 +1893,15 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
         `${body.property_type || lead.property_type || 'Property'} in ${body.locality || lead.location_locality || 'Bengaluru'}`,
       property_category: body.property_category || existingProp?.property_category || lead.property_category || 'Residential',
       property_type: body.property_type || existingProp?.property_type || lead.property_type || '2 BHK',
-      bhk_configuration: body.bhk_configuration ?? existingProp?.bhk_configuration ?? '',
+      bhk_configuration: body.bhk_configuration ?? body.bhk_type ?? existingProp?.bhk_configuration ?? '',
       full_address: fullAddr,
       full_property_address: fullAddr,
       locality: body.locality ?? existingProp?.locality ?? lead.location_locality ?? '',
       city: body.city || existingProp?.city || 'Bengaluru',
-      pin_code: body.pin_code ?? existingProp?.pin_code ?? '',
+      pin_code: body.pin_code ?? body.pincode ?? existingProp?.pin_code ?? '',
       expected_monthly_rent:
-        body.expected_monthly_rent !== undefined && body.expected_monthly_rent !== null
-          ? Number(body.expected_monthly_rent) || 0
+        rawExpectedRent !== undefined && rawExpectedRent !== null
+          ? Number(rawExpectedRent) || 0
           : existingProp?.expected_monthly_rent ?? (Number(lead.expected_rent) || 0),
       security_deposit:
         body.security_deposit !== undefined && body.security_deposit !== null
@@ -1741,7 +1912,12 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
           ? Number(body.maintenance_charges) || 0
           : existingProp?.maintenance_charges ?? 0,
       other_charges: body.other_charges ?? existingProp?.other_charges ?? '',
-      rent_negotiable: body.rent_negotiable || existingProp?.rent_negotiable || 'Yes',
+      rent_negotiable:
+        body.rent_negotiable === false || body.rent_negotiable === 'No'
+          ? 'No'
+          : body.rent_negotiable === true || body.rent_negotiable === 'Yes'
+          ? 'Yes'
+          : existingProp?.rent_negotiable || 'Yes',
       deposit_negotiable: body.deposit_negotiable || existingProp?.deposit_negotiable || 'Yes',
       built_up_area:
         body.built_up_area !== undefined && body.built_up_area !== ''
@@ -1751,7 +1927,13 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
         body.carpet_area !== undefined && body.carpet_area !== ''
           ? body.carpet_area
           : existingProp?.carpet_area,
-      furnishing_status: body.furnishing_status || existingProp?.furnishing_status || 'Semi Furnished',
+      furnishing_status: (() => {
+        const rawF = String(body.furnishing_status || existingProp?.furnishing_status || 'Semi Furnished').trim();
+        if (/^semi[-\s]?furnished$/i.test(rawF)) return 'Semi Furnished';
+        if (/^fully[-\s]?furnished$/i.test(rawF)) return 'Fully Furnished';
+        if (/^unfurnished$/i.test(rawF)) return 'Unfurnished';
+        return 'Semi Furnished';
+      })(),
       bedrooms:
         body.bedrooms !== undefined && body.bedrooms !== '' && body.bedrooms !== null
           ? Number(body.bedrooms)
@@ -1768,8 +1950,8 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
       total_floors: body.total_floors ?? existingProp?.total_floors ?? '',
       lift_available: body.lift_available || existingProp?.lift_available || 'No',
       parking_availability: body.parking_availability ?? existingProp?.parking_availability ?? '',
-      available_from_date: body.available_from_date ?? existingProp?.available_from_date ?? '',
-      property_description: body.property_description ?? existingProp?.property_description ?? '',
+      available_from_date: body.available_from_date ?? body.available_from ?? existingProp?.available_from_date ?? '',
+      property_description: body.property_description ?? body.description ?? existingProp?.property_description ?? '',
       amenities: Array.isArray(body.amenities) ? body.amenities : existingProp?.amenities || [],
       owner_full_name: (body.owner_full_name || '').trim() || existingProp?.owner_full_name || lead.owner_name,
       owner_primary_mobile: primaryMob,
@@ -1803,7 +1985,7 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
       rejected_at: existingProp?.rejected_at,
       rejection_reason: existingProp?.rejection_reason,
       approval_history: Array.isArray(existingProp?.approval_history) ? [...existingProp.approval_history] : [],
-      is_archived: false,
+      is_archived: requestedListingStatus === 'Archived',
       created_by: existingProp?.created_by || user.id,
       created_by_name: existingProp?.created_by_name || user.name,
       updated_by: user.id,
@@ -1827,18 +2009,24 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
         candidateProp.approved_by = user.id;
         candidateProp.approved_by_name = user.name;
         candidateProp.approved_at = now;
-        candidateProp.approval_history.unshift({
-          action: 'APPROVED',
-          status: requestedListingStatus as any,
-          notes: candidateProp.verification_notes || 'Verified and approved.',
-          staff_id: user.id,
-          staff_name: user.name,
-          timestamp: now
-        });
       }
     }
 
-    const savedProperty = await sbUpsert('properties', candidateProp, leadId);
+    if (!existingProp || existingProp.listing_status !== requestedListingStatus) {
+      candidateProp.approval_history.unshift({
+        action: ['Approved', 'Approved for Website', 'Ready to Publish', 'Published'].includes(requestedListingStatus)
+          ? 'APPROVED'
+          : 'STATUS_UPDATED',
+        status: requestedListingStatus as any,
+        notes: candidateProp.verification_notes || `Status set to ${requestedListingStatus}.`,
+        staff_id: user.id,
+        staff_name: user.name,
+        timestamp: now
+      });
+    }
+
+    const savedPropertyRaw = await sbUpsert('properties', candidateProp, leadId);
+    const savedProperty = formatPropertyAliases(savedPropertyRaw);
 
     const verCheck = checkPropertyVerificationComplete(savedProperty);
     let nextLeadStatus = lead.lead_status;
@@ -1846,6 +2034,8 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
       nextLeadStatus = 'Approved';
     } else if (savedProperty.listing_status === 'Rejected') {
       nextLeadStatus = 'Rejected';
+    } else if (['Rented', 'Occupied', 'Unavailable', 'Archived'].includes(savedProperty.listing_status)) {
+      nextLeadStatus = 'Not Available';
     } else if (verCheck.valid || savedProperty.listing_status === 'Verification Pending') {
       nextLeadStatus = 'Verification Pending';
     } else if (['New Lead', 'First Call Pending', 'Owner Contacted', 'Interested'].includes(lead.lead_status)) {
@@ -1892,7 +2082,7 @@ propertyCrmRouter.post('/leads/:leadId/property', async (req: Request, res: Resp
     res.json({
       success: true,
       isNew,
-      property: formatPropertyAliases(savedProperty),
+      property: savedProperty,
       lead: formatLeadAliases(savedLead)
     });
   } catch (err: any) {
@@ -1905,10 +2095,11 @@ propertyCrmRouter.post('/listings/:id/review', async (req: Request, res: Respons
   try {
     const user: ServerCrmUser = (req as any).crmUser;
     const propId = req.params.id;
-    const prop = await sbSelectById('properties', propId);
-    if (!prop || prop.is_archived) {
+    const propRaw = await sbSelectById('properties', propId);
+    if (!propRaw) {
       return res.status(404).json({ success: false, error: 'Property listing not found.' });
     }
+    const prop = formatPropertyAliases(propRaw);
 
     const body = req.body || {};
     const targetStatus = body.listing_status;
@@ -1938,7 +2129,11 @@ propertyCrmRouter.post('/listings/:id/review', async (req: Request, res: Respons
       action:
         targetStatus === 'Rejected'
           ? 'REJECTED'
-          : ['Approved', 'Approved for Website', 'Ready to Publish', 'Published'].includes(targetStatus)
+          : targetStatus === 'Unpublished'
+          ? 'UNPUBLISHED'
+          : targetStatus === 'Published'
+          ? 'PUBLISHED'
+          : ['Approved', 'Approved for Website', 'Ready to Publish'].includes(targetStatus)
           ? 'APPROVED'
           : 'STATUS_UPDATED',
       status: targetStatus,
@@ -1949,8 +2144,9 @@ propertyCrmRouter.post('/listings/:id/review', async (req: Request, res: Respons
     });
 
     const updatedProp = {
-      ...prop,
+      ...propRaw,
       listing_status: targetStatus,
+      is_archived: targetStatus === 'Archived',
       approved_by: ['Approved', 'Approved for Website', 'Ready to Publish', 'Published'].includes(targetStatus) ? user.id : prop.approved_by,
       approved_by_name: ['Approved', 'Approved for Website', 'Ready to Publish', 'Published'].includes(targetStatus)
         ? user.name
@@ -1978,7 +2174,7 @@ propertyCrmRouter.post('/listings/:id/review', async (req: Request, res: Respons
           nextLeadStatus = 'Approved';
         } else if (targetStatus === 'Rejected') {
           nextLeadStatus = 'Rejected';
-        } else if (targetStatus === 'Rented' || targetStatus === 'Unavailable') {
+        } else if (['Rented', 'Occupied', 'Unavailable', 'Archived'].includes(targetStatus)) {
           nextLeadStatus = 'Not Available';
         }
         await sbUpsert('property_leads', {
@@ -2943,3 +3139,478 @@ propertyCrmRouter.post('/deals/:id/payments', async (req: Request, res: Response
     res.status(500).json({ success: false, error: err?.message || 'Database error recording placement fee payment' });
   }
 });
+
+// =============================================================================
+// PHASE 2: PUBLIC WEBSITE PROPERTY API ROUTER (UNAUTHENTICATED PUBLIC READ + ENQUIRY)
+// Mounted at /api/properties and /api/public/properties
+// Strictly exposes ONLY verified, approved, and published properties.
+// NEVER exposes owner phone numbers, owner email addresses, full residential street
+// addresses, private owner documents, internal verification notes, or staff names/IDs.
+// =============================================================================
+export const publicPropertiesRouter = express.Router();
+
+// Lightweight in-memory rate limiter for public enquiry submissions
+const enquiryRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const ENQUIRY_RATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const ENQUIRY_MAX_PER_WINDOW = 20;
+
+function stripHtmlAndScripts(input: any): string {
+  if (input === undefined || input === null) return '';
+  return String(input)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// 1. GET /api/properties - Public property listing with filters, search & sorting
+publicPropertiesRouter.get('/', async (req: Request, res: Response) => {
+  try {
+    const allPublished = await getApprovedPublishedPropertiesForWebsite();
+
+    // Build filter facets from all currently published properties
+    const localitySet = new Set<string>();
+    const propertyTypeSet = new Set<string>();
+    const bhkSet = new Set<string>();
+    allPublished.forEach(p => {
+      if (p.locality) localitySet.add(p.locality);
+      if (p.property_type) propertyTypeSet.add(p.property_type);
+      if (p.bhk_configuration) bhkSet.add(p.bhk_configuration);
+    });
+
+    let filtered = [...allPublished];
+
+    const search = stripHtmlAndScripts(req.query.search).toLowerCase();
+    const locality = stripHtmlAndScripts(req.query.locality).toLowerCase();
+    const category = stripHtmlAndScripts(req.query.category);
+    const propType = stripHtmlAndScripts(req.query.type || req.query.property_type);
+    const bhk = stripHtmlAndScripts(req.query.bhk || req.query.bhk_configuration);
+    const furnishing = stripHtmlAndScripts(req.query.furnishing || req.query.furnishing_status);
+    const parking = stripHtmlAndScripts(req.query.parking || req.query.parking_availability).toLowerCase();
+    const availability = stripHtmlAndScripts(req.query.availability).toLowerCase();
+    const rawMinRent = req.query.minRent ?? req.query.min_rent;
+    const rawMaxRent = req.query.maxRent ?? req.query.max_rent;
+    const minRent = rawMinRent !== undefined && rawMinRent !== '' ? Number(rawMinRent) : null;
+    const maxRent = rawMaxRent !== undefined && rawMaxRent !== '' ? Number(rawMaxRent) : null;
+    const sort = stripHtmlAndScripts(req.query.sort) || 'recent';
+
+    if (search) {
+      filtered = filtered.filter(
+        p =>
+          p.property_title.toLowerCase().includes(search) ||
+          p.locality.toLowerCase().includes(search) ||
+          p.property_type.toLowerCase().includes(search) ||
+          p.property_category.toLowerCase().includes(search) ||
+          (p.bhk_configuration || '').toLowerCase().includes(search) ||
+          (p.property_description || '').toLowerCase().includes(search) ||
+          p.id.toLowerCase().includes(search) ||
+          p.amenities.some((a: string) => a.toLowerCase().includes(search))
+      );
+    }
+
+    if (locality && locality !== 'all') {
+      filtered = filtered.filter(
+        p =>
+          p.locality.toLowerCase().includes(locality) ||
+          p.approximate_location.toLowerCase().includes(locality)
+      );
+    }
+
+    if (category && category !== 'All') {
+      filtered = filtered.filter(p => p.property_category.toLowerCase() === category.toLowerCase());
+    }
+
+    if (propType && propType !== 'All') {
+      filtered = filtered.filter(p => p.property_type.toLowerCase() === propType.toLowerCase());
+    }
+
+    if (bhk && bhk !== 'All') {
+      filtered = filtered.filter(
+        p =>
+          (p.bhk_configuration || '').toLowerCase() === bhk.toLowerCase() ||
+          p.property_type.toLowerCase() === bhk.toLowerCase() ||
+          (bhk.toLowerCase().includes('bhk') &&
+            p.bedrooms !== null &&
+            `${p.bedrooms} bhk` === bhk.toLowerCase())
+      );
+    }
+
+    if (minRent !== null && Number.isFinite(minRent)) {
+      filtered = filtered.filter(p => p.expected_monthly_rent >= minRent);
+    }
+
+    if (maxRent !== null && Number.isFinite(maxRent)) {
+      filtered = filtered.filter(p => p.expected_monthly_rent <= maxRent);
+    }
+
+    if (furnishing && furnishing !== 'All') {
+      const normF = furnishing.toLowerCase().replace(/[-\s]+/g, ' ');
+      filtered = filtered.filter(
+        p => p.furnishing_status.toLowerCase().replace(/[-\s]+/g, ' ') === normF
+      );
+    }
+
+    if (parking && parking !== 'all') {
+      if (parking === 'yes' || parking === 'available') {
+        filtered = filtered.filter(
+          p =>
+            Boolean(p.parking_availability) &&
+            !['no', 'none', 'not available'].includes(p.parking_availability.toLowerCase())
+        );
+      } else {
+        filtered = filtered.filter(
+          p =>
+            (p.parking_availability || '').toLowerCase().includes(parking) ||
+            p.amenities.some((a: string) => a.toLowerCase().includes(parking))
+        );
+      }
+    }
+
+    if (availability && availability !== 'all') {
+      if (availability === 'immediate') {
+        const todayStr = getIstDateString();
+        filtered = filtered.filter(
+          p =>
+            !p.available_from_date ||
+            p.available_from_date.toLowerCase() === 'immediate' ||
+            p.available_from_date.slice(0, 10) <= todayStr
+        );
+      }
+    }
+
+    if (sort === 'rent_asc' || sort === 'low_to_high') {
+      filtered.sort((a, b) => a.expected_monthly_rent - b.expected_monthly_rent);
+    } else if (sort === 'rent_desc' || sort === 'high_to_low') {
+      filtered.sort((a, b) => b.expected_monthly_rent - a.expected_monthly_rent);
+    } else {
+      filtered.sort(
+        (a, b) =>
+          new Date(b.published_at || b.updated_at || 0).getTime() -
+          new Date(a.published_at || a.updated_at || 0).getTime()
+      );
+    }
+
+    res.json({
+      success: true,
+      total: filtered.length,
+      properties: filtered,
+      facets: {
+        localities: Array.from(localitySet).sort(),
+        categories: ['Residential', 'Commercial'],
+        propertyTypes: Array.from(propertyTypeSet).sort(),
+        bhkConfigurations: Array.from(bhkSet).sort(),
+        furnishingStatuses: ['Fully Furnished', 'Semi Furnished', 'Unfurnished']
+      }
+    });
+  } catch (err: any) {
+    console.error('[Public Properties API] Error loading public properties:', err?.message || err);
+    res.status(500).json({
+      success: false,
+      error: 'Unable to load properties at the moment. Please try again shortly.'
+    });
+  }
+});
+
+// 2. POST /api/properties/enquiries - Public tenant enquiry submission
+publicPropertiesRouter.post('/enquiries', async (req: Request, res: Response) => {
+  try {
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      'unknown';
+
+    const nowMs = Date.now();
+    const rateEntry = enquiryRateLimitMap.get(clientIp);
+    if (rateEntry && nowMs < rateEntry.resetAt) {
+      if (rateEntry.count >= ENQUIRY_MAX_PER_WINDOW) {
+        return res.status(429).json({
+          success: false,
+          error: 'Too many enquiry requests from this device. Please wait a few minutes or call Royal Epic directly.'
+        });
+      }
+      rateEntry.count += 1;
+    } else {
+      enquiryRateLimitMap.set(clientIp, { count: 1, resetAt: nowMs + ENQUIRY_RATE_WINDOW_MS });
+    }
+
+    const body = req.body || {};
+
+    // Honeypot anti-bot check
+    if (
+      (body.website_url_honeypot && String(body.website_url_honeypot).trim() !== '') ||
+      (body.website_url && String(body.website_url).trim() !== '')
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Spam submission rejected.'
+      });
+    }
+
+    const fullName = stripHtmlAndScripts(body.full_name || body.tenant_name);
+    const rawMobile = stripHtmlAndScripts(body.mobile_number || body.tenant_mobile);
+    const rawEmail = stripHtmlAndScripts(body.email_address || body.email || body.tenant_email);
+    const propertyIdOrSlug = stripHtmlAndScripts(body.property_id || body.interested_property_id);
+    const preferredContactTime = stripHtmlAndScripts(body.preferred_contact_time);
+    const preferredVisitDate = stripHtmlAndScripts(
+      body.preferred_site_visit_date || body.preferred_visit_date || body.move_in_date
+    );
+    const preferredVisitTime = stripHtmlAndScripts(
+      body.preferred_site_visit_time || body.preferred_visit_time
+    );
+    const numberOfOccupants = stripHtmlAndScripts(
+      body.number_of_occupants || body.family_or_company_profile
+    );
+    const additionalRequirements = stripHtmlAndScripts(
+      body.additional_requirements || body.requirements || body.message
+    );
+    const consentToContact =
+      body.consent_to_contact === true ||
+      body.consent_to_contact === 'true' ||
+      body.consent === true ||
+      body.consent === 'true';
+
+    if (!fullName || fullName.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter your Full Name.'
+      });
+    }
+
+    if (!rawMobile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter your Mobile Number.'
+      });
+    }
+
+    const digitsOnly = rawMobile.replace(/\D/g, '');
+    const tenDigitMobile =
+      digitsOnly.length === 12 && digitsOnly.startsWith('91')
+        ? digitsOnly.slice(2)
+        : digitsOnly.length === 11 && digitsOnly.startsWith('0')
+        ? digitsOnly.slice(1)
+        : digitsOnly;
+
+    if (!/^[6-9]\d{9}$/.test(tenDigitMobile)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter a valid 10-digit Indian mobile number.'
+      });
+    }
+
+    if (rawEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter a valid Email Address.'
+      });
+    }
+
+    if (!consentToContact) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please confirm your consent to be contacted by Royal Epic Properties.'
+      });
+    }
+
+    if (!propertyIdOrSlug) {
+      return res.status(400).json({
+        success: false,
+        error: 'Property selection is required for submitting an enquiry.'
+      });
+    }
+
+    // Verify property exists and is currently published
+    const matchedProperty = await findPublicPropertyBySlugOrId(propertyIdOrSlug);
+    if (!matchedProperty) {
+      return res.status(404).json({
+        success: false,
+        error: 'The selected property is no longer available for public enquiries.'
+      });
+    }
+
+    const normMobile = normalizePhone(tenDigitMobile);
+
+    // Check for duplicate submission within last 2 minutes
+    const existingEnquiries = await sbSelectAll('property_tenant_enquiries');
+    const duplicateEnquiry = existingEnquiries.find(
+      (e: any) =>
+        !e.is_archived &&
+        (e.normalized_mobile || normalizePhone(e.mobile_number || '')) === normMobile &&
+        (e.interested_property_id || '') === matchedProperty.id &&
+        Date.now() - new Date(e.created_at || 0).getTime() < 120000
+    );
+
+    if (duplicateEnquiry && !body.allowDuplicate) {
+      return res.status(409).json({
+        success: false,
+        isDuplicate: true,
+        enquiryId: duplicateEnquiry.id,
+        error: `We have already received your enquiry (Ref: ${duplicateEnquiry.id}) for "${matchedProperty.property_title}". Our property specialist will contact you shortly.`
+      });
+    }
+
+    const now = new Date().toISOString();
+    const enquiryId = generateUniqueId('REP-ENQ');
+
+    const summaryParts: string[] = [];
+    if (preferredContactTime) summaryParts.push(`Preferred Contact Time: ${preferredContactTime}`);
+    if (preferredVisitDate) {
+      summaryParts.push(
+        `Preferred Site Visit: ${preferredVisitDate}${preferredVisitTime ? ` at ${preferredVisitTime}` : ''}`
+      );
+    } else if (preferredVisitTime) {
+      summaryParts.push(`Preferred Site Visit Time: ${preferredVisitTime}`);
+    }
+    if (numberOfOccupants) summaryParts.push(`Occupants / Profile: ${numberOfOccupants}`);
+    if (additionalRequirements) summaryParts.push(`Requirements: ${additionalRequirements}`);
+
+    const combinedRequirements =
+      additionalRequirements ||
+      summaryParts.join(' | ') ||
+      `Interested in ${matchedProperty.property_title} (${matchedProperty.id})`;
+
+    const combinedNotes = [
+      `Website Enquiry for ${matchedProperty.property_title} (${matchedProperty.id}).`,
+      ...summaryParts,
+      'Consent to be contacted: Confirmed (Yes).'
+    ].join(' • ');
+
+    const enquiryRecord = {
+      id: enquiryId,
+      enquiry_code: enquiryId,
+      enquiry_date: getIstDateString(),
+      tenant_name: fullName,
+      mobile_number: normMobile,
+      tenant_mobile: normMobile,
+      normalized_mobile: normMobile,
+      email: rawEmail || undefined,
+      tenant_email: rawEmail || undefined,
+      interested_property_id: matchedProperty.id,
+      property_id: matchedProperty.id,
+      interested_property_title: matchedProperty.property_title,
+      property_title: matchedProperty.property_title,
+      preferred_location: matchedProperty.locality || 'Bengaluru',
+      property_type: matchedProperty.property_type || '2 BHK',
+      property_type_needed: matchedProperty.property_type || '2 BHK',
+      budget: Number(matchedProperty.expected_monthly_rent) || 0,
+      budget_range: matchedProperty.expected_monthly_rent
+        ? `₹${Number(matchedProperty.expected_monthly_rent).toLocaleString('en-IN')}`
+        : undefined,
+      move_in_date: preferredVisitDate || undefined,
+      family_or_company_profile: numberOfOccupants || undefined,
+      preferred_contact_time: preferredContactTime || undefined,
+      preferred_visit_date: preferredVisitDate || undefined,
+      preferred_visit_time: preferredVisitTime || undefined,
+      number_of_occupants: numberOfOccupants || undefined,
+      consent_to_contact: true,
+      requirements: combinedRequirements,
+      enquiry_source: 'Website',
+      assigned_staff_id: undefined,
+      assigned_staff_name: 'Website Queue',
+      assigned_telecaller: 'Website Queue',
+      enquiry_status: 'New Enquiry',
+      notes: combinedNotes,
+      is_archived: false,
+      created_by: 'public_website',
+      created_by_name: 'Royal Epic Website Visitor',
+      updated_by: 'public_website',
+      updated_by_name: 'Royal Epic Website Visitor',
+      created_at: now,
+      updated_at: now
+    };
+
+    const saved = await sbUpsert(
+      'property_tenant_enquiries',
+      enquiryRecord,
+      matchedProperty.id
+    );
+
+    // Log activity in public.property_activities for CRM audit trail
+    const activityRecord = {
+      id: generateUniqueId('REP-ACT'),
+      property_id: matchedProperty.id,
+      entity_type: 'enquiry',
+      entity_id: enquiryId,
+      action: 'WEBSITE_TENANT_ENQUIRY_SUBMITTED',
+      description: `Public website tenant enquiry ${enquiryId} submitted by ${fullName} (${normMobile}) for "${matchedProperty.property_title}".`,
+      new_status: 'New Enquiry',
+      metadata: {
+        enquiry_source: 'Website',
+        preferred_contact_time: preferredContactTime,
+        preferred_visit_date: preferredVisitDate,
+        preferred_visit_time: preferredVisitTime,
+        number_of_occupants: numberOfOccupants
+      },
+      performed_by: 'public_website',
+      performed_by_name: fullName,
+      created_at: now
+    };
+    await sbUpsert('property_activities', activityRecord, matchedProperty.id).catch(() => {});
+
+    res.status(201).json({
+      success: true,
+      enquiry_id: saved.id,
+      enquiryId: saved.id,
+      message:
+        'Thank you! Your property enquiry has been received by Royal Epic Properties. Our property consultant will contact you shortly.',
+      enquiry: {
+        id: saved.id,
+        enquiry_code: saved.id,
+        enquiry_date: saved.enquiry_date,
+        tenant_name: saved.tenant_name,
+        interested_property_id: matchedProperty.id,
+        interested_property_title: matchedProperty.property_title,
+        enquiry_status: 'New Enquiry',
+        enquiry_source: 'Website'
+      }
+    });
+  } catch (err: any) {
+    console.error('[Public Properties API] Error submitting tenant enquiry:', err?.message || err);
+    res.status(500).json({
+      success: false,
+      error: 'Unable to submit your enquiry right now. Please try again or call +91 99166 33338.'
+    });
+  }
+});
+
+// 3. GET /api/properties/:slugOrId - Public single property detail by slug or ID
+publicPropertiesRouter.get('/:slugOrId', async (req: Request, res: Response) => {
+  try {
+    const slugOrId = req.params.slugOrId;
+    const property = await findPublicPropertyBySlugOrId(slugOrId);
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        error: 'Property not found or is no longer available for rent.'
+      });
+    }
+
+    const allPublished = await getApprovedPublishedPropertiesForWebsite();
+    const similarProperties = allPublished
+      .filter(p => p.id !== property.id)
+      .sort((a, b) => {
+        const aScore =
+          (a.locality.toLowerCase() === property.locality.toLowerCase() ? 2 : 0) +
+          (a.property_category === property.property_category ? 1 : 0);
+        const bScore =
+          (b.locality.toLowerCase() === property.locality.toLowerCase() ? 2 : 0) +
+          (b.property_category === property.property_category ? 1 : 0);
+        return bScore - aScore;
+      })
+      .slice(0, 3);
+
+    res.json({
+      success: true,
+      property,
+      similar_properties: similarProperties,
+      similarProperties
+    });
+  } catch (err: any) {
+    console.error('[Public Properties API] Error loading property detail:', err?.message || err);
+    res.status(500).json({
+      success: false,
+      error: 'Unable to load property details right now.'
+    });
+  }
+});
+

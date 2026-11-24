@@ -31,6 +31,9 @@ import { FeedbackModal } from './components/FeedbackModal';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
+import { PublicPropertiesPage } from './pages/PublicPropertiesPage';
+import { PublicPropertyDetailPage } from './pages/PublicPropertyDetailPage';
+import { PropertiesShowcaseSection } from './components/PropertiesShowcaseSection';
 import { ActiveTab, CartItem, ProductVariation } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
 
@@ -95,6 +98,7 @@ function getInitialActiveTab(): ActiveTab {
   if (typeof window === 'undefined') return 'home';
   const path = window.location.pathname;
   if (path === '/products' || path.startsWith('/products')) return 'products';
+  if (path === '/properties' || path.startsWith('/properties/')) return 'properties';
   if (path === '/our-services' || path === '/services') return 'services';
   if (path === '/portfolio' || path === '/projects') return 'portfolio';
   if (path === '/gallery') return 'gallery';
@@ -195,6 +199,8 @@ export default function App() {
       if (url.pathname === '/products') {
         setActiveTab('products');
         setActiveProductCategory(catParam || 'All');
+      } else if (url.pathname === '/properties' || url.pathname.startsWith('/properties/')) {
+        setActiveTab('properties');
       } else if (url.pathname === '/') {
         setActiveTab('home');
       } else if (url.pathname === '/our-services' || url.pathname === '/services') {
@@ -223,6 +229,8 @@ export default function App() {
         setActiveTab('products');
         const params = new URLSearchParams(window.location.search);
         setActiveProductCategory(params.get('category') || 'All');
+      } else if (path === '/properties' || path.startsWith('/properties/')) {
+        setActiveTab('properties');
       } else if (path === '/') {
         setActiveTab('home');
       } else if (path === '/our-services' || path === '/services') {
@@ -656,6 +664,26 @@ export default function App() {
             onNavigate={navigateTo}
             onRequestQuote={(title) => handleOpenQuote(title)}
           />
+        ) : currentPath.startsWith('/properties/') ? (
+          (() => {
+            const propSlug = currentPath
+              .replace(/^\/properties\//, '')
+              .split('?')[0]
+              .replace(/\/$/, '');
+            return (
+              <PublicPropertyDetailPage
+                propertySlug={propSlug}
+                onBackToList={() => navigateTo('/properties')}
+                onSelectProperty={(slug) => navigateTo(`/properties/${slug}`)}
+                onNavigateHome={() => navigateTo('/')}
+              />
+            );
+          })()
+        ) : currentPath === '/properties' ? (
+          <PublicPropertiesPage
+            onSelectProperty={(slug) => navigateTo(`/properties/${slug}`)}
+            onNavigateHome={() => navigateTo('/')}
+          />
         ) : currentPath.startsWith('/products/') ? (
           (() => {
             const slug = currentPath.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
@@ -727,10 +755,21 @@ export default function App() {
                   }}
                   onRequestQuote={(title) => handleOpenQuote(title)}
                 />
+                <PropertiesShowcaseSection
+                  onExploreProperties={() => navigateTo('/properties')}
+                  onSelectProperty={(slug) => navigateTo(`/properties/${slug}`)}
+                />
                 <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
                 <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} onNavigate={navigateTo} />
                 <ContactSection />
               </>
+            )}
+
+            {activeTab === 'properties' && (
+              <PublicPropertiesPage
+                onSelectProperty={(slug) => navigateTo(`/properties/${slug}`)}
+                onNavigateHome={() => navigateTo('/')}
+              />
             )}
 
             {activeTab === 'services' && (

@@ -973,3 +973,257 @@ export function injectSeoPageIntoHtml(
 
   return html.replace('<div id="root"></div>', preRenderedPage);
 }
+
+/**
+ * Render public property listing index (/properties) HTML with host-aware self-canonical URL,
+ * Open Graph meta tags, and Schema.org structured data.
+ */
+export function injectPropertiesListIntoHtml(
+  templateHtml: string,
+  properties: any[],
+  hostOrigin: string = SITE_URL
+): string {
+  const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
+  const canonicalUrl = `${effectiveOrigin}/properties`;
+  const pageTitle = 'Rental Properties in Bengaluru | Royal Epic Properties';
+  const pageDesc =
+    'Explore verified residential and commercial rental properties in Bengaluru with Royal Epic Properties. Browse apartments, villas, offices and retail spaces.';
+  const ogImage =
+    (Array.isArray(properties) && properties[0]?.main_image) ||
+    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+
+  let html = templateHtml;
+
+  // 1. <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  // 2. <meta name="description">
+  const metaDescTag = `<meta name="description" content="${escapeHtml(pageDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. Host-aware self-canonical URL
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 4. Open Graph & Twitter tags
+  const ogTags = `
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
+    <meta property="og:description" content="${escapeHtml(pageDesc)}" />
+    <meta property="og:url" content="${canonicalUrl}" />
+    <meta property="og:image" content="${escapeHtml(ogImage)}" />
+    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
+    <meta name="twitter:description" content="${escapeHtml(pageDesc)}" />
+    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+  `;
+  html = html
+    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
+    .replace('</head>', `${ogTags}\n  </head>`);
+
+  // 5. Schema.org Structured Data (CollectionPage + ItemList + BreadcrumbList)
+  const listItems = (Array.isArray(properties) ? properties.slice(0, 30) : []).map((p, idx) => ({
+    '@type': 'ListItem',
+    position: idx + 1,
+    url: `${effectiveOrigin}/properties/${p.slug}`,
+    name: p.property_title,
+  }));
+
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: pageTitle,
+      description: pageDesc,
+      url: canonicalUrl,
+      provider: {
+        '@type': 'RealEstateAgent',
+        name: 'Royal Epic Properties (A Division of Royal Epic Interiors)',
+        url: canonicalUrl,
+        telephone: '+91-9916633338',
+        areaServed: {
+          '@type': 'City',
+          name: 'Bengaluru',
+        },
+      },
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: listItems.length,
+        itemListElement: listItems,
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${effectiveOrigin}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Properties',
+          item: canonicalUrl,
+        },
+      ],
+    },
+  ];
+
+  const jsonLdScript = `\n    <!-- Royal Epic Properties Structured Data -->\n    <script type="application/ld+json" id="properties-list-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
+  html = html.replace('</head>', `${jsonLdScript}</head>`);
+
+  // 6. Hydrate initial properties payload for instant render
+  const initialScript = `<script>window.__INITIAL_PROPERTIES__ = ${JSON.stringify(Array.isArray(properties) ? properties : [])};</script>`;
+  html = html.replace('</head>', `  ${initialScript}\n  </head>`);
+
+  return html;
+}
+
+/**
+ * Render public single property detail (/properties/:propertySlug) HTML with host-aware
+ * self-canonical URL, Open Graph meta tags, and Schema.org RealEstateListing structured data.
+ * Never includes private owner contact data or full street addresses.
+ */
+export function injectPropertyDetailIntoHtml(
+  templateHtml: string,
+  property: any,
+  hostOrigin: string = SITE_URL
+): string {
+  const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
+  const slug = property.slug || property.property_id;
+  const canonicalUrl = `${effectiveOrigin}/properties/${slug}`;
+  const bhkOrType = property.bhk_type && property.bhk_type !== 'N/A'
+    ? `${property.bhk_type} ${property.property_type}`
+    : property.property_type || 'Property';
+  const locality = property.locality || 'Bengaluru';
+  const pageTitle = `${property.property_title || `${bhkOrType} for Rent`} in ${locality}, Bengaluru | Royal Epic Properties`;
+
+  const rentFormatted = Number(property.monthly_rent || 0).toLocaleString('en-IN');
+  const rawDesc =
+    property.description ||
+    `Verified ${bhkOrType} available for rent in ${locality}, Bengaluru. Monthly Rent: ₹${rentFormatted}. Furnishing: ${property.furnishing_status || 'Semi-Furnished'}. Schedule a site visit with Royal Epic Properties.`;
+  const cleanDesc = rawDesc.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 240);
+  const ogImage =
+    property.main_image ||
+    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+
+  let html = templateHtml;
+
+  // 1. <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  // 2. <meta name="description">
+  const metaDescTag = `<meta name="description" content="${escapeHtml(cleanDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. Host-aware self-canonical URL
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 4. Open Graph & Twitter tags
+  const ogTags = `
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
+    <meta property="og:description" content="${escapeHtml(cleanDesc)}" />
+    <meta property="og:url" content="${canonicalUrl}" />
+    <meta property="og:image" content="${escapeHtml(ogImage)}" />
+    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
+    <meta name="twitter:description" content="${escapeHtml(cleanDesc)}" />
+    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+  `;
+  html = html
+    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
+    .replace('</head>', `${ogTags}\n  </head>`);
+
+  // 5. Schema.org RealEstateListing + BreadcrumbList (strictly approximate location only, no owner details)
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'RealEstateListing',
+      name: property.property_title,
+      description: cleanDesc,
+      url: canonicalUrl,
+      identifier: property.property_id,
+      image: Array.isArray(property.images) && property.images.length > 0
+        ? property.images.map((img: any) => img.url)
+        : [ogImage],
+      datePosted: property.created_at,
+      offers: {
+        '@type': 'Offer',
+        price: Number(property.monthly_rent || 0),
+        priceCurrency: 'INR',
+        availability: 'https://schema.org/InStock',
+        url: canonicalUrl,
+      },
+      contentLocation: {
+        '@type': 'Place',
+        name: `${locality}, Bengaluru`,
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: locality,
+          addressRegion: 'Bengaluru, Karnataka',
+          postalCode: property.pincode || undefined,
+          addressCountry: 'IN',
+        },
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${effectiveOrigin}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Properties',
+          item: `${effectiveOrigin}/properties`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: property.property_title,
+          item: canonicalUrl,
+        },
+      ],
+    },
+  ];
+
+  const jsonLdScript = `\n    <!-- Royal Epic Properties Detail Structured Data -->\n    <script type="application/ld+json" id="property-detail-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
+  html = html.replace('</head>', `${jsonLdScript}</head>`);
+
+  // 6. Hydrate initial property detail payload
+  const initialScript = `<script>window.__INITIAL_PROPERTY_DETAIL__ = ${JSON.stringify(property)};</script>`;
+  html = html.replace('</head>', `  ${initialScript}\n  </head>`);
+
+  return html;
+}
+

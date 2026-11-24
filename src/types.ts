@@ -329,6 +329,7 @@ export type ActiveTab =
   | 'home' 
   | 'services' 
   | 'products' 
+  | 'properties'
   | 'portfolio' 
   | 'custom-quote'
   | 'gallery'

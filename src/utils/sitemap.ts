@@ -15,6 +15,7 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   { path: '/our-services', changefreq: 'weekly', priority: 0.95 },
   { path: '/services/heritage-homes', changefreq: 'weekly', priority: 0.95 },
   { path: '/products', changefreq: 'daily', priority: 0.95 },
+  { path: '/properties', changefreq: 'daily', priority: 0.95 },
   { path: '/portfolio', changefreq: 'weekly', priority: 0.9 },
   { path: '/completed-projects', changefreq: 'weekly', priority: 0.9 },
   { path: '/restaurant-interior-gallery', changefreq: 'weekly', priority: 0.9 },
@@ -91,7 +92,7 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   { path: '/refund-policy', changefreq: 'monthly', priority: 0.7 }
 ];
 
-export function generateSitemapXml(products?: any[], siteBaseUrl?: string): string {
+export function generateSitemapXml(products?: any[], siteBaseUrl?: string, publishedProperties?: any[]): string {
   const effectiveBaseUrl = (siteBaseUrl || SITE_URL).replace(/\/+$/, '');
   const today = new Date().toISOString().split('T')[0];
   const seenUrls = new Set<string>();
@@ -128,6 +129,16 @@ export function generateSitemapXml(products?: any[], siteBaseUrl?: string): stri
     addUrlNode(fullLoc, 'weekly', '0.85');
   }
 
+  // 3. Individual active published property URLs (Royal Epic Properties)
+  if (Array.isArray(publishedProperties)) {
+    for (const prop of publishedProperties) {
+      if (!prop || !prop.slug) continue;
+      if (prop.availability_status && prop.availability_status !== 'Published') continue;
+      const fullLoc = `${effectiveBaseUrl}/properties/${prop.slug}`;
+      addUrlNode(fullLoc, 'daily', '0.90');
+    }
+  }
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urlNodes.join('\n')}
@@ -140,6 +151,8 @@ User-agent: *
 Allow: /
 Allow: /products
 Allow: /products/*
+Allow: /properties
+Allow: /properties/*
 Allow: /our-services
 Allow: /portfolio
 Allow: /completed-projects

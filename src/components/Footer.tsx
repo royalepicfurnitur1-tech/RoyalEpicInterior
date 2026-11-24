@@ -36,6 +36,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
   };
 
   const serviceLinks = [
+    { label: 'Royal Epic Properties (Bengaluru Rentals)', path: '/properties' },
     { label: 'Heritage Homes & Traditional Design', path: '/services/heritage-homes' },
     { label: 'Turnkey Interior Contractors', path: '/turnkey-interior-contractors-bangalore' },
     { label: 'Home Interior Design', path: '/home-interior-design-bangalore' },
@@ -61,16 +62,19 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
   ];
 
   const galleryLinks = [
+    { label: 'Royal Epic Properties – Rental Listings', path: '/properties' },
     { label: 'Restaurant Interior Gallery', path: '/restaurant-interior-gallery' },
     { label: 'Chettinad & Kerala Traditional Homes', path: '/chettinad-kerala-traditional-homes' },
     { label: 'Completed Project Showcase', path: '/completed-projects' }
   ];
 
   const handleNavClick = (tab: ActiveTab, path: string) => {
+    const resolvedTab: ActiveTab = path === '/properties' || path.startsWith('/properties/') ? 'properties' : tab;
     if (typeof setActiveTab === 'function') {
-      setActiveTab(tab);
+      setActiveTab(resolvedTab);
     }
     window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

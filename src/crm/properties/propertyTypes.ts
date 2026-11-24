@@ -117,13 +117,92 @@ export const PROPERTY_LISTING_STATUSES = [
   'Approved',
   'Ready to Publish',
   'Published',
+  'Unpublished',
   'Rented',
+  'Occupied',
   'Unavailable',
   'Rejected',
   'Archived'
 ] as const;
 
 export type PropertyListingStatus = (typeof PROPERTY_LISTING_STATUSES)[number];
+
+export interface PublicPropertyPhoto {
+  id: string;
+  category: string;
+  file_name?: string;
+  url: string;
+  is_cover?: boolean;
+  caption?: string;
+}
+
+export interface PublicPropertyListing {
+  id: string;
+  property_id: string;
+  property_code: string;
+  slug: string;
+  property_title: string;
+  property_category: PropertyCategory;
+  property_type: string;
+  bhk_configuration?: string;
+  bhk_type: string;
+  locality: string;
+  city: string;
+  pin_code?: string;
+  pincode: string;
+  approximate_location: string;
+  expected_monthly_rent: number;
+  monthly_rent: number;
+  security_deposit: number;
+  maintenance_charges: number;
+  other_charges?: string;
+  rent_negotiable: boolean | 'Yes' | 'No';
+  deposit_negotiable: 'Yes' | 'No';
+  built_up_area: number;
+  carpet_area: number;
+  area_unit: string;
+  furnishing_status: string;
+  bedrooms: number;
+  bathrooms: number;
+  balconies: number;
+  floor_number: string;
+  total_floors: string;
+  lift_available: 'Yes' | 'No';
+  parking_availability: string;
+  available_from_date?: string;
+  available_from: string;
+  preferred_tenant_type: string;
+  power_backup: string;
+  water_supply: string;
+  facing: string;
+  property_age: string;
+  availability_status: string;
+  property_description?: string;
+  description: string;
+  amenities: string[];
+  listing_status: PropertyListingStatus;
+  featured_image: string;
+  main_image: string;
+  photos: PublicPropertyPhoto[];
+  images: PublicPropertyPhoto[];
+  created_at: string;
+  published_at?: string;
+  updated_at?: string;
+}
+
+export interface PublicTenantEnquiryPayload {
+  property_id: string;
+  full_name: string;
+  mobile_number: string;
+  email?: string;
+  preferred_contact_time?: string;
+  preferred_visit_date?: string;
+  preferred_visit_time?: string;
+  number_of_occupants?: string;
+  additional_requirements?: string;
+  consent_to_contact: boolean;
+  website_url_honeypot?: string;
+}
 
 export const TENANT_ENQUIRY_STATUSES = [
   'New Enquiry',
