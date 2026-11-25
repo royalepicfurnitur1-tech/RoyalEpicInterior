@@ -379,10 +379,10 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
               target="_blank" 
               rel="noopener noreferrer" 
               className="p-2 rounded-xl bg-white border border-amber-600/40 text-stone-900 hover:bg-amber-50 transition-all flex items-center gap-1.5 font-bold shadow-xs"
-              title="Google My Business Listing & Reviews"
+              title="5-Star Google Rating - Royal Epic Interior"
             >
-              <MapPin className="w-4 h-4 text-amber-600" />
-              <span className="text-[11px] font-bold text-stone-900">Google Business</span>
+              <span className="text-amber-500 text-xs tracking-tight leading-none" aria-hidden="true">★★★★★</span>
+              <span className="text-[11px] font-bold text-stone-900">5-Star Google Rating</span>
             </a>
           </div>
         </div>

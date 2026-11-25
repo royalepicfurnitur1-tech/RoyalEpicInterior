@@ -42,7 +42,7 @@ export const ArchitecturalCollectionsShowcase: React.FC<ArchitecturalCollections
   onNavigateToProducts
 }) => {
   return (
-    <section className="py-16 sm:py-20 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="shop">
+    <section className="pt-8 pb-11 sm:pt-10 sm:pb-14 lg:pt-12 lg:pb-16 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="shop">
       {/* Subtle Floating Architectural Geometric Accents */}
       <div
         aria-hidden="true"
@@ -61,16 +61,16 @@ export const ArchitecturalCollectionsShowcase: React.FC<ArchitecturalCollections
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-stone-300/80"
+          className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 sm:mb-7 pb-4 border-b border-stone-300/80"
         >
           <div className="max-w-2xl">
-            <span className="text-xs font-bold uppercase tracking-widest text-amber-800 font-mono block mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-800 font-mono block mb-1.5">
               Explore by Space & Category
             </span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-stone-900 tracking-tight">
               Architectural Furniture & Material Collections
             </h2>
-            <p className="text-sm text-stone-700 mt-2 leading-relaxed">
+            <p className="text-sm text-stone-700 mt-1.5 leading-relaxed">
               Precision factory-crafted furniture, architectural door systems, and commercial equipment engineered for luxury residences and hotels.
             </p>
           </div>
@@ -134,7 +134,7 @@ export const ArchitecturalCollectionsShowcase: React.FC<ArchitecturalCollections
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-12 bg-white/90 backdrop-blur-sm border border-stone-200/90 rounded-2xl p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm"
+          className="mt-7 sm:mt-8 bg-white/90 backdrop-blur-sm border border-stone-200/90 rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">

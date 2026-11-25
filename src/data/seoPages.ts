@@ -78,11 +78,6 @@ const COMMON_ORGANIZATION_SCHEMA = {
     ],
     "opens": "09:30",
     "closes": "20:00"
-  },
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "4.9",
-    "reviewCount": "320"
   }
 };
 
@@ -164,11 +159,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         ],
         "opens": "09:30",
         "closes": "20:00"
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -284,7 +274,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     "title": "About Us | Royal Epic Interior & Furniture Bengaluru",
     "metaDescription": "Learn about Royal Epic Interior & Furniture - Bengaluru's premier turnkey interior design company with our own 10,000 sq.ft wood manufacturing plant in Thanisandra.",
     "h1": "Crafting Luxury Spaces Across Bengaluru Since 2012",
-    "subtitle": "10,000 Sq.Ft Factory | 500+ Turnkey Deliveries | 15-Year Warranty",
+    "subtitle": "10,000 Sq.Ft Factory | 500+ Completed Projects | 15-Year Warranty",
     "category": "main",
     "heroImage": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=80",
     "breadcrumbs": [
@@ -338,11 +328,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         },
         "description": "Royal Epic Interior & Furniture operates a 10,000 sq.ft wood manufacturing plant in Thanisandra, Bengaluru, delivering turnkey interiors with a 15-year warranty."
       }
@@ -681,11 +666,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       }
     },
@@ -797,7 +777,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     "slug": "/completed-projects",
     "title": "Completed Turnkey Interior Projects in Bengaluru | Royal Epic",
     "metaDescription": "View list of 500+ completed residential and commercial interior projects across Whitefield, HSR Layout, Thanisandra, Electronic City, and Indiranagar.",
-    "h1": "500+ Delivered Homes & Commercial Spaces",
+    "h1": "500+ Completed Projects Across Bengaluru",
     "subtitle": "100% On-Time Project Delivery Record in Bengaluru",
     "category": "main",
     "heroImage": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80",
@@ -852,11 +832,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       }
     },
@@ -1185,11 +1160,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "url": "https://royalepicfurniture.com/get-free-quote"
@@ -1291,9 +1261,9 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
   "/customer-reviews": {
     "slug": "/customer-reviews",
     "title": "Client Reviews & Testimonials | Royal Epic Interior Bengaluru",
-    "metaDescription": "Read 300+ genuine reviews and ratings from happy homeowners and business owners across Bengaluru about Royal Epic Interior & Furniture.",
-    "h1": "Customer Reviews & Ratings (4.9 / 5.0 Stars)",
-    "subtitle": "Over 300+ Verified Client Reviews Across Google & Social Platforms",
+    "metaDescription": "Explore genuine client testimonials and our 5-Star Google Rating across 500+ completed residential and commercial interior projects in Bengaluru.",
+    "h1": "Customer Reviews & 5-Star Google Rating",
+    "subtitle": "★★★★★ 5-Star Google Rating | 500+ Completed Projects | 15-Year Warranty",
     "category": "main",
     "heroImage": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1600&q=80",
     "breadcrumbs": [
@@ -1310,7 +1280,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "@context": "https://schema.org",
       "@type": "ItemPage",
       "name": "Client Reviews & Testimonials | Royal Epic Interior Bengaluru",
-      "description": "Read 300+ genuine reviews and ratings from happy homeowners and business owners across Bengaluru about Royal Epic Interior & Furniture.",
+      "description": "Explore genuine client testimonials and our 5-Star Google Rating across 500+ completed residential and commercial interior projects in Bengaluru.",
       "url": "https://royalepicfurniture.com/customer-reviews",
       "mainEntity": {
         "@context": "https://schema.org",
@@ -1347,11 +1317,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       }
     },
@@ -1449,7 +1414,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     ],
     "openGraph": {
       "title": "Client Reviews & Testimonials | Royal Epic Interior Bengaluru",
-      "description": "Read 300+ genuine reviews and ratings from happy homeowners and business owners across Bengaluru about Royal Epic Interior & Furniture.",
+      "description": "Explore genuine client testimonials and our 5-Star Google Rating across 500+ completed residential and commercial interior projects in Bengaluru.",
       "image": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1600&q=80",
       "type": "website"
     }
@@ -1651,11 +1616,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       }
     },
@@ -1818,11 +1778,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -1998,11 +1953,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -2178,11 +2128,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -2373,11 +2318,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -2553,11 +2493,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -2733,11 +2668,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -2928,11 +2858,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -3123,11 +3048,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -3318,11 +3238,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -3513,11 +3428,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -3708,11 +3618,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -3913,11 +3818,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -4118,11 +4018,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -4318,11 +4213,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -4518,11 +4408,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -4713,11 +4598,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -4908,11 +4788,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -5103,11 +4978,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -5312,17 +5182,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -5504,17 +5364,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -5696,17 +5546,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -5888,17 +5728,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -6080,17 +5910,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -6272,17 +6092,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -6464,17 +6274,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -6656,17 +6456,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -6848,17 +6638,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -7040,17 +6820,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "320"
       }
     },
     "faqs": [
@@ -7226,11 +6996,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -7403,11 +7168,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -7580,11 +7340,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -7757,11 +7512,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -7934,11 +7684,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -8041,7 +7786,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
   "/best-interior-design-company-bangalore": {
     "slug": "/best-interior-design-company-bangalore",
     "title": "Best Interior Design Company in Bangalore | Why Choose Royal Epic",
-    "metaDescription": "Discover why Royal Epic Interior & Furniture is rated the best interior design company in Bangalore with 500+ delivered projects and own factory.",
+    "metaDescription": "Discover why Royal Epic Interior & Furniture is rated the best interior design company in Bangalore with 500+ completed projects and own factory.",
     "h1": "How to Choose the Best Interior Design Company in Bangalore",
     "subtitle": "Key Factors: Factory Sourcing, Material Warranties, 3D Capabilities & Client Reviews",
     "category": "blog",
@@ -8064,7 +7809,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "@context": "https://schema.org",
       "@type": "Article",
       "headline": "How to Choose the Best Interior Design Company in Bangalore",
-      "description": "Discover why Royal Epic Interior & Furniture is rated the best interior design company in Bangalore with 500+ delivered projects and own factory.",
+      "description": "Discover why Royal Epic Interior & Furniture is rated the best interior design company in Bangalore with 500+ completed projects and own factory.",
       "image": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/best-interior-design-company-bangalore",
       "mainEntityOfPage": {
@@ -8111,11 +7856,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -8215,7 +7955,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     ],
     "openGraph": {
       "title": "Best Interior Design Company in Bangalore | Why Choose Royal Epic",
-      "description": "Discover why Royal Epic Interior & Furniture is rated the best interior design company in Bangalore with 500+ delivered projects and own factory.",
+      "description": "Discover why Royal Epic Interior & Furniture is rated the best interior design company in Bangalore with 500+ completed projects and own factory.",
       "image": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?auto=format&fit=crop&w=1600&q=80",
       "type": "article"
     }
@@ -8293,11 +8033,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -8470,11 +8205,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -8647,11 +8377,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "datePublished": "2026-01-15T08:00:00+05:30",
@@ -8820,11 +8545,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {
@@ -9045,11 +8765,6 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
           ],
           "opens": "09:30",
           "closes": "20:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "320"
         }
       },
       "areaServed": {

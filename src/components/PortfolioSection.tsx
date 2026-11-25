@@ -168,7 +168,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = () => {
   }, []);
 
   return (
-    <section className="py-16 sm:py-20 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="portfolio">
+    <section className="py-11 sm:py-14 lg:py-16 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="portfolio">
       {/* Subtle Floating Architectural Accents */}
       <div
         aria-hidden="true"
@@ -198,16 +198,22 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = () => {
           onMouseLeave={() => setIsCarouselHovered(false)}
         >
           {/* Centred Heading */}
-          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
-            <div className="inline-flex items-center gap-1.5 mb-2 px-2.5 py-0.5 rounded-full bg-black/10 border border-black/5 text-stone-900 text-[10px] font-mono uppercase tracking-widest font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-stone-900" />
-              <span>Client Testimonials</span>
+          <div className="text-center max-w-2xl mx-auto mb-5 sm:mb-6">
+            <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-black/10 border border-black/5 text-stone-900 text-[10px] font-mono uppercase tracking-widest font-semibold">
+              <span className="flex items-center gap-0.5 text-[#E5A93C]" aria-label="5 Gold Stars">
+                <Star className="w-3 h-3 fill-current text-[#E5A93C]" />
+                <Star className="w-3 h-3 fill-current text-[#E5A93C]" />
+                <Star className="w-3 h-3 fill-current text-[#E5A93C]" />
+                <Star className="w-3 h-3 fill-current text-[#E5A93C]" />
+                <Star className="w-3 h-3 fill-current text-[#E5A93C]" />
+              </span>
+              <span>5-Star Google Rating</span>
             </div>
             <h3 className="text-xl sm:text-2xl lg:text-3xl font-serif font-bold text-stone-900 tracking-tight">
               What Our Customers Say About Royal Epic Interiors
             </h3>
-            <p className="text-xs text-stone-800/80 mt-1 max-w-lg mx-auto leading-relaxed">
-              Authentic design journeys and client experiences from residential, commercial, and turnkey projects across Bengaluru.
+            <p className="text-xs text-stone-800/80 mt-1.5 max-w-lg mx-auto leading-relaxed">
+              Authentic design journeys and client experiences across 500+ Completed Projects in Bengaluru, backed by our 15-Year Warranty.
             </p>
           </div>
 
@@ -335,8 +341,10 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = () => {
 
           {/* Action Buttons & Google Links - Compact */}
           <div className="pt-4 border-t border-stone-300/40 flex flex-col sm:flex-row items-center justify-between gap-3 mt-2">
-            <p className="text-[11px] text-stone-800/80 text-center sm:text-left">
-              ⭐ Genuine reviews and curated design showcases managed via Royal Epic Admin Dashboard.
+            <p className="text-[11px] text-stone-800/80 text-center sm:text-left inline-flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+              <span className="text-[#E5A93C] tracking-wider" aria-hidden="true">★★★★★</span>
+              <strong className="font-semibold text-stone-900">5-Star Google Rating</strong>
+              <span>• 500+ Completed Projects • 15-Year Warranty</span>
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">

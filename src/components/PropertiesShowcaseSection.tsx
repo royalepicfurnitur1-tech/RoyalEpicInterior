@@ -42,17 +42,17 @@ export const PropertiesShowcaseSection: React.FC<PropertiesShowcaseSectionProps>
   return (
     <section
       id="royal-epic-properties-showcase"
-      className="py-16 md:py-20 bg-[#F9F6F0] border-t border-b border-stone-200/80"
+      className="py-11 sm:py-14 lg:py-16 bg-[#F9F6F0] border-t border-b border-stone-200/80"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6 sm:mb-7">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded border border-amber-600/30 bg-amber-500/10 text-amber-900 text-[11px] font-bold uppercase tracking-[0.18em] mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded border border-amber-600/30 bg-amber-500/10 text-amber-900 text-[11px] font-bold uppercase tracking-[0.18em] mb-2">
               <Sparkles className="w-3.5 h-3.5 text-amber-700" />
               New Service Vertical • Bengaluru Rentals
             </div>
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-stone-900 tracking-tight mb-3">
+            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-stone-900 tracking-tight mb-2.5">
               Royal Epic Properties –{' '}
               <span className="text-amber-800 italic font-normal">
                 Find Your Next Space in Bengaluru
@@ -79,7 +79,7 @@ export const PropertiesShowcaseSection: React.FC<PropertiesShowcaseSectionProps>
 
         {/* Live Featured Properties Grid (if published listings exist) or Vertical Highlights */}
         {featuredProperties.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 mb-6">
             {featuredProperties.map((prop) => (
               <div
                 key={prop.property_id}

@@ -259,9 +259,12 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
           <div className="mt-7 pt-4 border-t border-white/10 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-neutral-400">
             <span><strong className="text-neutral-200 font-medium tabular-nums">15-Year</strong> Warranty</span>
             <span aria-hidden="true" className="text-neutral-600">·</span>
-            <span><strong className="text-neutral-200 font-medium tabular-nums">500+</strong> Bengaluru Projects</span>
+            <span><strong className="text-neutral-200 font-medium tabular-nums">500+</strong> Completed Projects</span>
             <span aria-hidden="true" className="text-neutral-600">·</span>
-            <span><strong className="text-neutral-200 font-medium tabular-nums">4.9 / 5</strong> Client Rating</span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-amber-400 tracking-wider" aria-hidden="true">★★★★★</span>
+              <strong className="text-neutral-200 font-medium">5-Star Google Rating</strong>
+            </span>
             <span aria-hidden="true" className="text-neutral-600">·</span>
             <span>Thanisandra In-House Factory</span>
           </div>

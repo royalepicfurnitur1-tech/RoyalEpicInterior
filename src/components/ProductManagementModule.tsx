@@ -197,7 +197,7 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
       description: '',
       material: '',
       size: '',
-      warranty: '10 Years Warranty',
+      warranty: '15-Year Warranty',
       stock: 10,
       coverImage: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
       galleryImages: [],
@@ -1330,7 +1330,7 @@ export const ProductManagementModule: React.FC<ProductManagementModuleProps> = (
                   <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Warranty</label>
                   <input
                     type="text"
-                    placeholder="e.g. 10 Years Factory Guarantee"
+                    placeholder="e.g. 15-Year Warranty"
                     value={editingProduct.warranty || ''}
                     onChange={(e) => setEditingProduct({ ...editingProduct, warranty: e.target.value })}
                     className="w-full bg-black/70 border border-white/15 focus:border-gold rounded-xl p-3 text-white focus:outline-none"

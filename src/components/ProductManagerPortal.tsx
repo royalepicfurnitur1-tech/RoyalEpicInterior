@@ -160,7 +160,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
         material: 'Solid Burma Teak / CenturyPly HDHMR Core',
         size: 'Custom Factory Dimensions',
         finish: 'Italian PU Matte / High Gloss',
-        warranty: '10 Years Factory Warranty',
+        warranty: '15-Year Warranty',
         brand: 'Royal Epic Interior',
         origin: 'Bengaluru Factory',
         priceType: 'fixed'
@@ -1121,7 +1121,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                         ...(editingProduct.specifications || {
                           size: 'Custom',
                           finish: 'Italian PU',
-                          warranty: '10 Years',
+                          warranty: '15-Year Warranty',
                           brand: 'Royal Epic',
                           origin: 'Bengaluru'
                         }),
@@ -1146,7 +1146,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                         ...(editingProduct.specifications || {
                           material: 'Solid Teak',
                           finish: 'Italian PU',
-                          warranty: '10 Years',
+                          warranty: '15-Year Warranty',
                           brand: 'Royal Epic',
                           origin: 'Bengaluru'
                         }),
@@ -1163,7 +1163,7 @@ export const ProductManagerPortal: React.FC<ProductManagerPortalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="10 Years Factory Guarantee"
+                    placeholder="15-Year Warranty"
                     value={editingProduct.specifications?.warranty || ''}
                     onChange={(e) => setEditingProduct({
                       ...editingProduct,

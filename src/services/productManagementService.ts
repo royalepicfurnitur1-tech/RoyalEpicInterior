@@ -673,7 +673,7 @@ export function productToProductItem(p: Product): ProductItem {
     finish: p.finish || (p.specifications?.finish || ''),
     size: p.dimensions || (p.specifications?.size || ''),
     dimensions: p.dimensions || (p.specifications?.size || ''),
-    warranty: p.specifications?.warranty || '10 Years Warranty',
+    warranty: p.specifications?.warranty || '15-Year Warranty',
     stock: p.stockQuantity !== undefined ? p.stockQuantity : (p.inStock ? 10 : 0),
     coverImage: p.image,
     galleryImages: Array.isArray(p.galleryImages) && p.galleryImages.length > 0 ? p.galleryImages : [p.image],
@@ -730,7 +730,7 @@ export async function saveAddonProduct(prod: Partial<ProductItem>): Promise<{ su
         material: prod.material || '',
         finish: prod.finish || '',
         size: prod.size || prod.dimensions || '',
-        warranty: prod.warranty || '10 Years Warranty',
+        warranty: prod.warranty || '15-Year Warranty',
         sku: prod.sku || '',
         priceType
       },

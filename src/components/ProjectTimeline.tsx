@@ -101,7 +101,7 @@ const MOCK_MILESTONES: ProjectMilestone[] = [
     progressPercent: 0,
     deliverables: [
       '50-point Quality Check clearance',
-      '5-Year Warranty Certificate issuance',
+      '15-Year Warranty Certificate issuance',
       'Maintenance guide & care kit handover'
     ],
     notes: 'Project handover ceremony and key handover scheduled for August 12.'

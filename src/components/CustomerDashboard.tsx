@@ -271,7 +271,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 <span className="font-bold text-gold uppercase tracking-wider text-[11px] block mb-2 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Royal Epic Guarantee
                 </span>
-                <p className="text-neutral-300">● 10-Year Factory Warranty on Woodwork & German Hardware</p>
+                <p className="text-neutral-300">● 15-Year Warranty on Woodwork & German Hardware</p>
                 <p className="text-neutral-300">● White-glove doorstep delivery & professional carpenter installation in Bengaluru</p>
               </div>
             </div>

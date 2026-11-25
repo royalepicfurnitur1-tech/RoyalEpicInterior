@@ -126,7 +126,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   return (
     <section 
-      className="relative min-h-[640px] md:min-h-[720px] lg:min-h-[800px] w-full flex items-center justify-center overflow-hidden bg-neutral-950 text-white"
+      className="relative min-h-[600px] md:min-h-[680px] lg:min-h-[740px] w-full flex items-center justify-center overflow-hidden bg-neutral-950 text-white"
       aria-label="Royal Epic Interiors Hero"
     >
       {/* Background Image Container */}
@@ -165,8 +165,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       />
 
       {/* Main Content Grid */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* ========================================================= */}
           {/* LEFT COLUMN: BRAND MESSAGE                                */}

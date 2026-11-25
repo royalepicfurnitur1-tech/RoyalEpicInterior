@@ -27,7 +27,7 @@ const DEFAULT_SEO_PAGES: SeoPageData[] = [
     pageSlug: '/',
     pageName: 'Home Page',
     metaTitle: 'Royal Epic Interior & Furniture | Best Luxury Interior Designers in Thanisandra, Bangalore',
-    metaDescription: 'Top-rated interior design company in Thanisandra, Bangalore. 100% factory-made modular kitchens, 3BHK turnkey interiors & luxury furniture with 10-year warranty.',
+    metaDescription: 'Top-rated interior design company in Thanisandra, Bangalore. 100% factory-made modular kitchens, 3BHK turnkey interiors & luxury furniture with 15-Year Warranty.',
     metaKeywords: 'interior designers thanisandra, modular kitchen bangalore, 3bhk turnkey interior, luxury furniture thanisandra',
     canonicalUrl: 'https://royalepicfurniture.com/',
     ogTitle: 'Royal Epic Interior & Furniture | Thanisandra Bangalore',
@@ -69,7 +69,7 @@ const DEFAULT_SEO_PAGES: SeoPageData[] = [
     pageSlug: '/modular-kitchen',
     pageName: 'Modular Kitchens',
     metaTitle: 'Factory Modular Kitchen Designers Thanisandra | Acrylic, PU & Veneer Finishes',
-    metaDescription: 'Custom German & Italian modular kitchen designs in Bangalore. Waterproof Action TESA HDHMR, Hettich soft-close tandem boxes, and 10-year warranty.',
+    metaDescription: 'Custom German & Italian modular kitchen designs in Bangalore. Waterproof Action TESA HDHMR, Hettich soft-close tandem boxes, and 15-Year Warranty.',
     metaKeywords: 'modular kitchen thanisandra, acrylic kitchen bangalore, pu finish kitchen, hettich modular kitchen',
     canonicalUrl: 'https://royalepicfurniture.com/modular-kitchen',
     ogTitle: 'Factory Modular Kitchens | Royal Epic Interior',
@@ -331,7 +331,7 @@ export const SeoManager: React.FC = () => {
 
     if (slug === '/') {
       title = 'Royal Epic Interior | Top Luxury Interior Designers Thanisandra Bangalore';
-      desc = 'Award-winning turnkey interior design & factory modular kitchens in Thanisandra, Bangalore. 10-year warranty, 3D VR walkthroughs & 45-day guaranteed delivery.';
+      desc = 'Award-winning turnkey interior design & factory modular kitchens in Thanisandra, Bangalore. 15-Year Warranty, 3D VR walkthroughs & 45-day guaranteed delivery.';
       keywords = 'interior designers thanisandra, luxury interiors bangalore, turnkey interiors, factory modular kitchen';
     } else if (slug === '/modular-kitchen') {
       title = 'Factory Modular Kitchens Thanisandra | Acrylic, PU & Veneer Finishes';
@@ -703,10 +703,10 @@ export const SeoManager: React.FC = () => {
                 {/* Rich Snippet Extension */}
                 <div className="pt-2 border-t border-neutral-200 flex items-center gap-3 text-[10px] text-neutral-600 font-mono">
                   <span className="text-amber-600 font-bold flex items-center gap-1">
-                    ★★★★★ 4.9 (128 Reviews)
+                    ★★★★★ 5-Star Google Rating
                   </span>
                   <span>• Thanisandra HQ</span>
-                  <span>• 10-Yr Warranty</span>
+                  <span>• 15-Year Warranty</span>
                 </div>
               </div>
             )}

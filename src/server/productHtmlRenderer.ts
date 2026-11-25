@@ -231,7 +231,7 @@ export function injectProductIntoHtml(templateHtml: string, product: any, slug: 
                 <p style="margin: 0;"><strong>Brand:</strong> Royal Epic Interiors</p>
                 <p style="margin: 0;"><strong>SKU:</strong> ${escapeHtml(sku)}</p>
                 <p style="margin: 0;"><strong>Condition:</strong> Brand New (Factory Manufactured)</p>
-                <p style="margin: 0;"><strong>Warranty:</strong> 10-Year Factory Guarantee on Solid Wood &amp; Hardware</p>
+                <p style="margin: 0;"><strong>Warranty:</strong> 15-Year Warranty on Solid Wood &amp; Hardware</p>
                 <p style="margin: 0;"><strong>Delivery:</strong> Pan-India White-Glove Surface Logistics</p>
               </div>
             </div>
@@ -363,7 +363,7 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
         {
           heading: '5. Factory Warranty & Guarantee',
           paragraphs: [
-            'Royal Epic provides up to a 10-Year Factory Warranty covering structural wood integrity, anti-termite treatment, and mechanical hardware (such as soft-close drawer slides and hydraulic hinges) under normal residential use.',
+            'Royal Epic provides a 15-Year Warranty covering structural wood integrity, anti-termite treatment, and mechanical hardware (such as soft-close drawer slides and hydraulic hinges) under normal residential use.',
             'Warranties do not cover damage caused by unauthorized dismantling, external water flooding, fire, chemical corrosion, or deliberate misuse.'
           ]
         },
@@ -449,7 +449,7 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
           paragraphs: [
             'For custom-made architectural elements, personalized dining tables with custom-cut marble, bespoke modular kitchens, and custom-upholstered sofas manufactured to non-standard customer dimensions:',
             'Because these items are manufactured to your unique specifications, returns based solely on change of mind are not accepted after factory fabrication has commenced.',
-            'However, our 10-Year Factory Guarantee applies in full: any structural defect, hardware malfunction, or transit damage is repaired or replaced free of charge.'
+            'However, our 15-Year Warranty applies in full: any structural defect, hardware malfunction, or transit damage is repaired or replaced free of charge.'
           ]
         },
         {
@@ -677,7 +677,7 @@ export function injectHomepageIntoHtml(templateHtml: string, products: any[]): s
             </div>
             <div>
               <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 12px 0;">Factory Guarantees</h4>
-              <p style="line-height: 1.6; margin: 0 0 8px 0;">● 10-Year Factory Warranty on Solid Wood &amp; Hardware</p>
+              <p style="line-height: 1.6; margin: 0 0 8px 0;">● 15-Year Warranty on Solid Wood &amp; Hardware</p>
               <p style="line-height: 1.6; margin: 0 0 8px 0;">● Free White-Glove Installation Across Bengaluru</p>
               <p style="line-height: 1.6; margin: 0;">● Safe Transit Insurance on All Pan-India Freight</p>
             </div>
@@ -762,7 +762,7 @@ export function injectCatalogIntoHtml(templateHtml: string, products: any[]): st
             Luxury Handcrafted Furniture &amp; Architectural Woodwork Catalog
           </h1>
           <p style="font-size: 15px; line-height: 1.6; color: #4b5563; max-width: 800px; margin: 0 0 28px 0;">
-            Browse our complete collection of bespoke dining tables, designer sofas, modular sliding wardrobes, TV entertainment consoles, acoustic panels, and solid WPC waterproof doors manufactured in Bengaluru. All products are backed by our 10-year factory warranty.
+            Browse our complete collection of bespoke dining tables, designer sofas, modular sliding wardrobes, TV entertainment consoles, acoustic panels, and solid WPC waterproof doors manufactured in Bengaluru. All products are backed by our 15-Year Warranty.
           </p>
 
           <!-- Category Filter Quick Links -->

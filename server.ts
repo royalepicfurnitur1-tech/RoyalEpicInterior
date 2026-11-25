@@ -2442,7 +2442,7 @@ async function startServer() {
           material: "Solid Teak / Plywood Core",
           size: "Custom Dimensions",
           finish: "Italian PU Matte/Gloss",
-          warranty: "10 Years Factory Guarantee",
+          warranty: "15-Year Warranty",
           brand: "Royal Epic Interior",
           origin: "Bengaluru Factory"
         },
@@ -2926,7 +2926,7 @@ Provide a JSON response with the following keys:
     languages: ["English", "Hindi", "Kannada", "Tamil", "Telugu", "Malayalam"],
     companyInfo: "10,000 Sq.Ft In-House Factory at Thanisandra Bengaluru. 15-Year Waterproof Guarantee.",
     pricingGuidelines: "2BHK Turnkey starting at ₹3.5 Lakhs; 3BHK starting at ₹5.2 Lakhs; Villa Turnkey starting at ₹9.8 Lakhs.",
-    warrantyInfo: "10-Year Factory Replacement Warranty & 15-Year BWR Waterproof Plywood Guarantee.",
+    warrantyInfo: "15-Year Warranty & BWR Waterproof Plywood Guarantee.",
     missedQuestionsLog: [
       { id: "q1", question: "Do you supply Italian Botticino Marble for staircase cladding?", frequency: 12, status: "Pending Knowledge Base" },
       { id: "q2", question: "What is the lead time for Lacquered Glass Wardrobe sliding channels?", frequency: 8, status: "Answer Added" }
@@ -2972,11 +2972,11 @@ Provide a JSON response with the following keys:
 
   // MATERIAL LIBRARY MASTER API
   let masterMaterials = [
-    { id: "mat-1", name: "18mm BWR Marine Plywood", brand: "CenturyPly / Greenply", category: "Core Wood", pricePerSqFt: "₹120 - ₹165/sqft", warranty: "15 Years Waterproof", stockStatus: "In Stock" },
-    { id: "mat-2", name: "High Density HDHMR Board", brand: "Action TESA", category: "Core Wood", pricePerSqFt: "₹85 - ₹110/sqft", warranty: "10 Years Moisture Resistant", stockStatus: "In Stock" },
-    { id: "mat-3", name: "Soft Close Tandem Drawer Box", brand: "Hettich / Hafele", category: "Hardware", pricePerSqFt: "₹2,800 - ₹4,500/set", warranty: "Lifetime German Warranty", stockStatus: "In Stock" },
-    { id: "mat-4", name: "Calacatta Quartz Countertop", brand: "Kalingastone", category: "Stone & Marble", pricePerSqFt: "₹280 - ₹420/sqft", warranty: "10 Years Stain Proof", stockStatus: "In Stock" },
-    { id: "mat-5", name: "1.5mm Italian PU Matte Finish", brand: "Sirca / ICA", category: "Surface Finishes", pricePerSqFt: "₹180 - ₹260/sqft", warranty: "7 Years Scratch Proof", stockStatus: "In Stock" }
+    { id: "mat-1", name: "18mm BWR Marine Plywood", brand: "CenturyPly / Greenply", category: "Core Wood", pricePerSqFt: "₹120 - ₹165/sqft", warranty: "15-Year Warranty", stockStatus: "In Stock" },
+    { id: "mat-2", name: "High Density HDHMR Board", brand: "Action TESA", category: "Core Wood", pricePerSqFt: "₹85 - ₹110/sqft", warranty: "15-Year Warranty", stockStatus: "In Stock" },
+    { id: "mat-3", name: "Soft Close Tandem Drawer Box", brand: "Hettich / Hafele", category: "Hardware", pricePerSqFt: "₹2,800 - ₹4,500/set", warranty: "15-Year Warranty", stockStatus: "In Stock" },
+    { id: "mat-4", name: "Calacatta Quartz Countertop", brand: "Kalingastone", category: "Stone & Marble", pricePerSqFt: "₹280 - ₹420/sqft", warranty: "15-Year Warranty", stockStatus: "In Stock" },
+    { id: "mat-5", name: "1.5mm Italian PU Matte Finish", brand: "Sirca / ICA", category: "Surface Finishes", pricePerSqFt: "₹180 - ₹260/sqft", warranty: "15-Year Warranty", stockStatus: "In Stock" }
   ];
 
   app.get("/api/cms/materials", (req, res) => {

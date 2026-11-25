@@ -82,7 +82,7 @@ export const DocumentRepository: React.FC = () => {
     },
     {
       id: 'DOC-AGR-992',
-      title: 'Turnkey Architectural Execution Agreement & 10-Yr Guarantee',
+      title: 'Turnkey Architectural Execution Agreement & 15-Year Warranty',
       category: 'agreements',
       fileType: 'PDF',
       fileSize: '1.8 MB',
@@ -90,12 +90,12 @@ export const DocumentRepository: React.FC = () => {
       uploadDate: 'Jul 10, 2026',
       status: 'Signed & Executed',
       author: 'Royal Epic Legal & Operations Cell',
-      description: 'Fully signed binding turnkey execution contract, milestone payout schedules, and 10-Year anti-termite warranty clause.',
+      description: 'Fully signed binding turnkey execution contract, milestone payout schedules, and 15-Year anti-termite warranty clause.',
       pagesCount: 12,
       previewSummary: {
         keyClauses: [
           'Penalty-free completion guarantee on or before Aug 22, 2026',
-          '10-Year structural anti-warp & anti-termite replacement warranty',
+          '15-Year structural anti-warp & anti-termite replacement warranty',
           'Zero hidden cost escalation clause post-BOQ signature'
         ]
       }
@@ -141,7 +141,7 @@ export const DocumentRepository: React.FC = () => {
     },
     {
       id: 'DOC-WARR-2026',
-      title: '10-Year Comprehensive Material & Hardware Warranty Card',
+      title: '15-Year Comprehensive Material & Hardware Warranty Card',
       category: 'agreements',
       fileType: 'PDF',
       fileSize: '1.1 MB',
@@ -149,7 +149,7 @@ export const DocumentRepository: React.FC = () => {
       uploadDate: 'Jul 26, 2026',
       status: 'Signed & Executed',
       author: 'Quality Audit Dept.',
-      description: 'Official digital certificate outlining 10-year warranty coverage on Hettich/Blum hardware and moisture-resistant plywood.',
+      description: 'Official digital certificate outlining 15-Year Warranty coverage on Hettich/Blum hardware and moisture-resistant plywood.',
       pagesCount: 3
     }
   ];

@@ -10,7 +10,7 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
   return (
     <section 
       id="vision" 
-      className="py-16 sm:py-20 lg:py-24 bg-[#FAF7F2] text-stone-900 border-b border-[#E7E2DA] relative overflow-hidden"
+      className="py-12 sm:py-14 lg:py-18 bg-[#FAF7F2] text-stone-900 border-b border-[#E7E2DA] relative overflow-hidden"
     >
       {/* Subtle Floating Architectural Brass Ornaments */}
       <div
@@ -23,7 +23,7 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* LEFT COLUMN: Architect's Message */}
           <motion.div
@@ -35,17 +35,17 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
           >
             
             {/* Eyebrow Label */}
-            <span className="text-[11px] sm:text-xs uppercase tracking-[0.24em] text-[#8C6D3B] font-mono font-semibold block mb-3">
+            <span className="text-[11px] sm:text-xs uppercase tracking-[0.24em] text-[#8C6D3B] font-mono font-semibold block mb-2.5">
               A MESSAGE FROM OUR MANAGING DIRECTOR & ARCHITECT
             </span>
 
             {/* Main Heading */}
-            <h2 className="text-3xl sm:text-4xl lg:text-[2.65rem] font-serif font-bold text-stone-900 tracking-tight leading-[1.2] mb-6">
+            <h2 className="text-3xl sm:text-4xl lg:text-[2.65rem] font-serif font-bold text-stone-900 tracking-tight leading-[1.2] mb-5">
               A Vision Beyond Spaces. A Passion for Perfection.
             </h2>
 
             {/* Highlighted Quotation */}
-            <div className="relative my-2 pl-5 sm:pl-6 border-l-2 border-[#C49746] py-1">
+            <div className="relative my-1.5 pl-5 sm:pl-6 border-l-2 border-[#C49746] py-1">
               <Quote className="w-5 h-5 text-[#C49746]/40 absolute -top-1 -left-2.5 bg-[#FAF7F2] fill-[#C49746]/10" />
               <p className="font-serif italic text-lg sm:text-xl text-stone-800 leading-relaxed">
                 "Every space has a story to tell, and thoughtful design brings that story to life."
@@ -53,12 +53,12 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
             </div>
 
             {/* Supporting Paragraph */}
-            <p className="text-stone-700 text-sm sm:text-[15px] leading-relaxed mt-6 mb-6 font-normal">
+            <p className="text-stone-700 text-sm sm:text-[15px] leading-relaxed mt-4 mb-5 font-normal">
               At Royal Epic Interiors, my vision is to transform ordinary spaces into extraordinary experiences. Through innovative design, exceptional craftsmanship and attention to detail, we create timeless spaces that reflect the dreams, personality and aspirations of every client.
             </p>
 
             {/* Small Subheading & Philosophy Sentence */}
-            <div className="bg-white/70 rounded-2xl p-5 border border-[#E7E2DA] mb-8 transition-shadow duration-300 hover:shadow-sm">
+            <div className="bg-white/70 rounded-2xl p-4 sm:p-5 border border-[#E7E2DA] mb-6 transition-shadow duration-300 hover:shadow-sm">
               <span className="text-xs font-mono uppercase tracking-[0.2em] text-[#8C6D3B] font-bold block mb-1.5">
                 Our Philosophy
               </span>
@@ -68,7 +68,7 @@ export const ArchitectVisionSection: React.FC<ArchitectVisionSectionProps> = () 
             </div>
 
             {/* Signature Block */}
-            <div className="pt-6 border-t border-[#E5DFD5] flex flex-col gap-1">
+            <div className="pt-5 border-t border-[#E5DFD5] flex flex-col gap-1">
               <p className="font-serif font-bold text-stone-900 text-base sm:text-lg tracking-wide">
                 Managing Director & Architect
               </p>

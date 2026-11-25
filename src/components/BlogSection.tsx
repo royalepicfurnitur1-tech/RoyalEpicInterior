@@ -54,7 +54,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
   return (
     <section 
       id="blog" 
-      className="py-10 sm:py-12 lg:py-14 bg-[#FAF7F2] text-stone-900 border-t border-b border-[#E7E2DA] relative overflow-hidden selection:bg-[#C49746]/20"
+      className="py-11 sm:py-14 lg:py-16 bg-[#FAF7F2] text-stone-900 border-t border-b border-[#E7E2DA] relative overflow-hidden selection:bg-[#C49746]/20"
     >
       {/* Subtle Floating Architectural Brass Line Accents */}
       <div

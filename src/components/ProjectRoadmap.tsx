@@ -114,11 +114,11 @@ export const ProjectRoadmap: React.FC = () => {
       completionDate: 'Aug 22, 2026',
       lead: 'Karan Mehra (Site Installation Lead)',
       icon: <Wrench className="w-5 h-5" />,
-      summary: 'Dust-free site installation, soft-close alignment, final deep polish, and 10-year warranty certificate handover.',
+      summary: 'Dust-free site installation, soft-close alignment, final deep polish, and 15-Year Warranty certificate handover.',
       deliverables: [
         'Turnkey site installation',
         'Joint inspection sign-off sheet',
-        '10-Year Comprehensive Warranty Card'
+        '15-Year Comprehensive Warranty Card'
       ],
       notes: 'Final white-glove cleaning & key handover ceremony planned.'
     }

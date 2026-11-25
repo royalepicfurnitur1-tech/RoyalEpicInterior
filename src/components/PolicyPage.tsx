@@ -119,7 +119,7 @@ const POLICIES: Record<PolicyType, PolicyContent> = {
       {
         heading: '5. Factory Warranty & Guarantee',
         paragraphs: [
-          'Royal Epic provides up to a 10-Year Factory Warranty covering structural wood integrity, anti-termite treatment, and mechanical hardware (such as soft-close drawer slides and hydraulic hinges) under normal residential use.',
+          'Royal Epic provides a 15-Year Warranty covering structural wood integrity, anti-termite treatment, and mechanical hardware (such as soft-close drawer slides and hydraulic hinges) under normal residential use.',
           'Warranties do not cover damage caused by unauthorized dismantling, external water flooding, fire, chemical corrosion, or deliberate misuse.'
         ]
       },
@@ -214,7 +214,7 @@ const POLICIES: Record<PolicyType, PolicyContent> = {
         paragraphs: [
           'For custom-made architectural elements, personalized dining tables with custom-cut marble, bespoke modular kitchens, and custom-upholstered sofas manufactured to non-standard customer dimensions:',
           'Because these items are manufactured to your unique specifications, returns based solely on change of mind are not accepted after factory fabrication has commenced.',
-          'However, our 10-Year Factory Guarantee applies in full: any structural defect, hardware malfunction, or transit damage is repaired or replaced free of charge.'
+          'However, our 15-Year Warranty applies in full: any structural defect, hardware malfunction, or transit damage is repaired or replaced free of charge.'
         ]
       },
       {

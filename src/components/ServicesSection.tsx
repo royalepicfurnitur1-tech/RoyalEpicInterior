@@ -132,7 +132,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
     : ALL_SERVICE_ITEMS.filter(s => s.category === selectedFilter);
 
   return (
-    <section className="py-20 sm:py-24 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="services">
+    <section className="pt-11 pb-8 sm:pt-14 sm:pb-10 lg:pt-16 lg:pb-12 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="services">
       {/* Subtle Floating Architectural Accents */}
       <div
         aria-hidden="true"
@@ -151,7 +151,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+          className="mb-10 sm:mb-12 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5"
         >
           <div className="p-5 sm:p-6 rounded-2xl bg-white border border-stone-200/90 shadow-sm flex items-start gap-4 hover:border-amber-400/60 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
             <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200/60">
@@ -182,7 +182,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
               <Award className="w-5 h-5 text-amber-700" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-stone-900">10-Year Warranty</h4>
+              <h4 className="text-sm font-bold text-stone-900">15-Year Warranty</h4>
               <p className="text-xs text-stone-500 mt-1 leading-relaxed">
                 German Hettich/Hafele hardware & 100% waterproof WPC core.
               </p>
@@ -208,10 +208,10 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10"
+          className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 sm:mb-7"
         >
           <div className="max-w-2xl">
-            <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-1.5">
               Comprehensive Manufacturing & Design
             </span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-stone-900 tracking-tight">
@@ -247,7 +247,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
         {/* Major Service Category Cards with Clean Text-Based Dropdowns */}
         <div 
           ref={scrollContainerRef}
-          className="flex gap-6 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory scroll-smooth no-scrollbar mb-8"
+          className="flex gap-5 sm:gap-6 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory scroll-smooth no-scrollbar"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {SERVICES_DATA.map((service) => {

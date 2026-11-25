@@ -165,7 +165,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     welcomeMessage: 'Welcome to Royal Epic Interior & Furniture! How can I assist you today?',
     aiPersonality: 'Senior Master Interior Designer & Turnkey Director',
     pricingGuidelines: '2BHK Turnkey starting at ₹3.5 Lakhs; 3BHK starting at ₹5.2 Lakhs',
-    warrantyInfo: '10-Year Factory Replacement Warranty & 15-Year Waterproof Guarantee'
+    warrantyInfo: '15-Year Warranty & Waterproof Guarantee'
   });
   const [isSavingAiConfig, setIsSavingAiConfig] = useState(false);
 
@@ -375,7 +375,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           brand: newMatBrand,
           category: 'Core Interior Wood',
           pricePerSqFt: newMatPrice || '₹140/sqft',
-          warranty: '10 Years Factory Guarantee',
+          warranty: '15-Year Warranty',
           stockStatus: 'In Stock'
         })
       });
@@ -1846,7 +1846,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
 
                   <div className="p-4 rounded-2xl bg-neutral-900 border border-white/10 space-y-2">
-                    <span className="font-bold text-gold uppercase text-[11px] block">10-Year Warranty Card</span>
+                    <span className="font-bold text-gold uppercase text-[11px] block">15-Year Warranty Card</span>
                     <p className="text-emerald-400 font-bold text-xs">15-Yr BWR Waterproof Certified</p>
                     <button className="text-gold underline text-[11px]">View Digital Certificate</button>
                   </div>
@@ -2342,7 +2342,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <label className="block text-[11px] font-bold text-neutral-300 uppercase mb-1">Factory Warranty</label>
                   <input
                     type="text"
-                    placeholder="10 Years Factory Guarantee"
+                    placeholder="15-Year Warranty"
                     value={editingProduct.specifications?.warranty || ''}
                     onChange={(e) => setEditingProduct({
                       ...editingProduct,

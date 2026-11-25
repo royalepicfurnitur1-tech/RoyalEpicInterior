@@ -45,7 +45,7 @@ export const ContactSection: React.FC = () => {
 
 
   return (
-    <section className="py-20 sm:py-28 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="contact">
+    <section className="py-12 sm:py-14 lg:py-16 bg-[#A8A492] text-stone-900 relative overflow-hidden" id="contact">
       {/* Subtle Floating Architectural Accents */}
       <div
         aria-hidden="true"
@@ -64,10 +64,10 @@ export const ContactSection: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
+          className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7 sm:mb-8"
         >
           <div className="max-w-2xl">
-            <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-700 font-mono block mb-1.5">
               Corporate Office & Experience Center
             </span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-stone-900 tracking-tight">
@@ -79,7 +79,7 @@ export const ContactSection: React.FC = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-7 items-start">
           
           {/* Left: Contact Info Card & Google Maps Simulation */}
           <motion.div
@@ -87,12 +87,12 @@ export const ContactSection: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-5 space-y-6"
+            className="lg:col-span-5 space-y-5"
           >
             
             {/* Contact Details Card */}
             <div className="bg-white border border-stone-200/90 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
-              <h3 className="text-xl font-serif font-bold text-stone-900 mb-6">
+              <h3 className="text-xl font-serif font-bold text-stone-900 mb-5">
                 Corporate Office & Experience Center
               </h3>
 

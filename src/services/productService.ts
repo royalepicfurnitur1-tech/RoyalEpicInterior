@@ -33,7 +33,7 @@ export function mapRowToProduct(row: any): Product {
       material: specs.material || 'Solid Teak / HDHMR Plywood Core',
       size: specs.dimensions || specs.size || 'Custom Factory Dimensions',
       finish: specs.finish || 'Italian PU Matte / Satin',
-      warranty: specs.warranty || '10 Years Factory Guarantee',
+      warranty: specs.warranty || '15-Year Warranty',
       brand: specs.brand || 'Royal Epic Interior',
       origin: specs.origin || 'Bengaluru Factory',
       ...specs
@@ -75,7 +75,7 @@ export function mapProductToRow(product: Partial<Product>): any {
     material: product.material || existingSpecs.material || 'Solid Burma Teak Core',
     finish: product.finish || existingSpecs.finish || 'Italian PU Matte',
     dimensions: product.dimensions || existingSpecs.dimensions || existingSpecs.size || 'Custom Dimensions',
-    warranty: existingSpecs.warranty || '10 Years Factory Guarantee',
+    warranty: existingSpecs.warranty || '15-Year Warranty',
     brand: existingSpecs.brand || 'Royal Epic Interior',
     origin: existingSpecs.origin || 'Bengaluru Factory',
     status: product.status || (product.inStock === false ? 'Inactive' : 'Active'),

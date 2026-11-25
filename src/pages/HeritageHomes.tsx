@@ -85,7 +85,7 @@ export const HeritageHomes: React.FC<HeritageHomesProps> = ({ onNavigate, onRequ
       title: 'Turnkey Execution',
       desc: 'End-to-end single-point construction and interior execution from ground excavation to final brass polish with guaranteed on-time delivery.',
       icon: <Shield className="w-6 h-6 text-amber-600" />,
-      features: ['Single-contract ownership', 'Strict milestone timeline', '10-year structural warranty']
+      features: ['Single-contract ownership', 'Strict milestone timeline', '15-Year Warranty']
     }
   ];
 
@@ -512,7 +512,7 @@ export const HeritageHomes: React.FC<HeritageHomesProps> = ({ onNavigate, onRequ
                 The Royal Epic Heritage Craftsmanship Guarantee
               </h4>
               <p className="text-xs sm:text-sm text-neutral-300 font-light leading-relaxed">
-                All our traditional woodwork is crafted using genuine, seasoned Burma or CP Teakwood with anti-termite treatment and 10-year warranty. Turnkey projects include dedicated project managers and milestone-based progress tracking.
+                All our traditional woodwork is crafted using genuine, seasoned Burma or CP Teakwood with anti-termite treatment and 15-Year Warranty. Turnkey projects include dedicated project managers and milestone-based progress tracking.
               </p>
             </div>
             <div className="flex md:justify-end">
