@@ -76,6 +76,20 @@ export const PROPERTY_CALL_OUTCOMES = [
 
 export type PropertyCallOutcome = (typeof PROPERTY_CALL_OUTCOMES)[number];
 
+export const TENANT_CALL_OUTCOMES = [
+  'Connected - Interested',
+  'Connected - Site Visit Requested',
+  'Connected - Negotiating Rent',
+  'Connected - Follow-up Needed',
+  'Connected - Not Interested',
+  'Not Answered',
+  'Busy / Switched Off',
+  'Call Back Requested',
+  'Wrong Number'
+] as const;
+
+export type TenantCallOutcome = (typeof TENANT_CALL_OUTCOMES)[number] | string;
+
 export const PROPERTY_AMENITIES = [
   'Lift',
   'Covered Parking',
@@ -118,6 +132,7 @@ export const PROPERTY_LISTING_STATUSES = [
   'Ready to Publish',
   'Published',
   'Unpublished',
+  'Temporarily On Hold',
   'Rented',
   'Occupied',
   'Unavailable',
@@ -126,6 +141,37 @@ export const PROPERTY_LISTING_STATUSES = [
 ] as const;
 
 export type PropertyListingStatus = (typeof PROPERTY_LISTING_STATUSES)[number];
+
+export const FURNISHING_STATUSES = [
+  'Fully Furnished',
+  'Semi Furnished',
+  'Unfurnished'
+] as const;
+
+export type FurnishingStatusOption = (typeof FURNISHING_STATUSES)[number];
+
+// PHASE 3: PROPERTY AVAILABILITY STATUSES
+export const PROPERTY_AVAILABILITY_STATUSES = [
+  'Available',
+  'Temporarily On Hold',
+  'Site Visit in Progress',
+  'Negotiation in Progress',
+  'Rented',
+  'Unavailable'
+] as const;
+
+export type PropertyAvailabilityStatus = (typeof PROPERTY_AVAILABILITY_STATUSES)[number];
+
+export interface AvailabilityHistoryEntry {
+  action: string;
+  status: PropertyAvailabilityStatus;
+  previous_status?: string;
+  owner_confirmed?: boolean;
+  notes?: string;
+  staff_id?: string;
+  staff_name?: string;
+  timestamp: string;
+}
 
 export interface PublicPropertyPhoto {
   id: string;
@@ -177,6 +223,7 @@ export interface PublicPropertyListing {
   facing: string;
   property_age: string;
   availability_status: string;
+  accepting_enquiries?: boolean;
   property_description?: string;
   description: string;
   amenities: string[];
@@ -210,13 +257,66 @@ export const TENANT_ENQUIRY_STATUSES = [
   'Interested',
   'Site Visit Required',
   'Site Visit Scheduled',
+  'Visited',
   'Negotiation',
   'Converted',
+  'Deal Completed',
+  'Not Interested',
   'Lost',
   'Closed'
 ] as const;
 
 export type TenantEnquiryStatus = (typeof TENANT_ENQUIRY_STATUSES)[number];
+
+export const TENANT_ENQUIRY_SOURCES = [
+  'Website',
+  'Direct Call',
+  'WhatsApp',
+  'Walk-in',
+  'Referral',
+  'Property Portal',
+  'Other'
+] as const;
+
+export const NEGOTIATION_STATUSES = [
+  'Not Started',
+  'Negotiation in Progress',
+  'Awaiting Owner Confirmation',
+  'Awaiting Tenant Confirmation',
+  'Agreed',
+  'Failed'
+] as const;
+
+export type NegotiationStatus = (typeof NEGOTIATION_STATUSES)[number];
+
+export interface NegotiationHistoryEntry {
+  id: string;
+  timestamp: string;
+  staff_id?: string;
+  staff_name?: string;
+  negotiation_status: NegotiationStatus;
+  original_expected_rent?: number;
+  tenant_offered_rent?: number;
+  owner_expected_rent?: number;
+  final_agreed_rent?: number;
+  original_deposit?: number;
+  final_agreed_deposit?: number;
+  maintenance_charges?: number;
+  notes?: string;
+}
+
+export interface EnquiryCallLogEntry {
+  id: string;
+  call_datetime: string;
+  call_date_time?: string;
+  call_outcome: string;
+  call_notes?: string;
+  next_followup_date?: string;
+  followup_notes?: string;
+  logged_by?: string;
+  logged_by_name?: string;
+  staff_name?: string;
+}
 
 export const SITE_VISIT_STATUSES = [
   'Scheduled',
@@ -228,6 +328,17 @@ export const SITE_VISIT_STATUSES = [
 ] as const;
 
 export type SiteVisitStatus = (typeof SITE_VISIT_STATUSES)[number];
+
+export const DEAL_LIFECYCLE_STATUSES = [
+  'Deal Pending',
+  'Deal Confirmed',
+  'Agreement in Progress',
+  'Agreement Completed',
+  'Tenant Moved In',
+  'Deal Cancelled'
+] as const;
+
+export type DealLifecycleStatus = (typeof DEAL_LIFECYCLE_STATUSES)[number];
 
 export const DEAL_PAYMENT_STATUSES = [
   'Pending',
@@ -247,6 +358,18 @@ export const PAYMENT_MODES = [
   'Cash',
   'Other'
 ] as const;
+
+export const INTERIOR_INTEREST_OPTIONS = ['Yes', 'No', 'Follow-up'] as const;
+export type InteriorInterestOption = (typeof INTERIOR_INTEREST_OPTIONS)[number];
+
+export const INTERIOR_SERVICE_REQUIREMENTS = [
+  'Home Interior',
+  'Office Interior',
+  'Renovation',
+  'Modular Kitchen',
+  'Other'
+] as const;
+export type InteriorServiceRequirement = (typeof INTERIOR_SERVICE_REQUIREMENTS)[number];
 
 export interface PropertyLead {
   id: string;
@@ -312,7 +435,10 @@ export interface PropertyCallLog {
 
 export interface ApprovalHistoryEntry {
   action: string;
-  status: PropertyListingStatus;
+  status: PropertyListingStatus | string;
+  availability_status?: PropertyAvailabilityStatus;
+  previous_status?: string;
+  owner_confirmed?: boolean;
   notes?: string;
   staff_id?: string;
   staff_name?: string;
@@ -322,6 +448,7 @@ export interface ApprovalHistoryEntry {
 export interface PropertyRecord {
   id: string;
   property_code?: string;
+  slug?: string;
   lead_id: string;
   property_title: string;
   property_category: PropertyCategory;
@@ -371,6 +498,11 @@ export interface PropertyRecord {
   verified_by_name?: string;
   verification_date?: string;
   listing_status: PropertyListingStatus;
+  availability_status?: PropertyAvailabilityStatus;
+  availability_updated_at?: string;
+  availability_updated_by?: string;
+  availability_notes?: string;
+  availability_history?: AvailabilityHistoryEntry[];
   approved_by?: string;
   approved_by_name?: string;
   approved_at?: string;
@@ -411,6 +543,7 @@ export interface PropertyActivityLog {
   entity_type: string;
   entity_id: string;
   action: string;
+  action_type?: string;
   description: string;
   previous_status?: string;
   old_status?: string;
@@ -418,6 +551,7 @@ export interface PropertyActivityLog {
   metadata?: Record<string, any>;
   performed_by?: string;
   performed_by_name?: string;
+  staff_name?: string;
   created_at: string;
 }
 
@@ -433,21 +567,54 @@ export interface PropertyTenantEnquiry {
   tenant_email?: string;
   interested_property_id?: string | null;
   property_id?: string | null;
+  property_code?: string;
   interested_property_title?: string;
   property_title?: string;
   preferred_location?: string;
+  // Section 3: Tenant Requirements
+  property_category?: PropertyCategory;
   property_type?: string;
   property_type_needed?: string;
+  bhk_requirement?: string;
+  min_budget?: number | null;
+  max_budget?: number | null;
+  minimum_budget?: number | null;
+  maximum_budget?: number | null;
   budget?: number;
   budget_range?: string;
+  furnishing_preference?: string;
   move_in_date?: string;
+  parking_requirement?: string;
   family_or_company_profile?: string;
+  tenant_profile?: string;
+  number_of_occupants?: string | number;
   requirements?: string;
+  additional_requirements?: string;
+  // Assignment, Follow-up & Calls
   enquiry_source?: string;
   assigned_staff_id?: string;
   assigned_staff_name?: string;
+  assigned_staff?: string;
   assigned_telecaller?: string;
   enquiry_status: TenantEnquiryStatus;
+  next_followup_date?: string;
+  followup_notes?: string;
+  last_contact_date?: string;
+  preferred_contact_time?: string;
+  preferred_visit_date?: string;
+  preferred_visit_time?: string;
+  call_history?: EnquiryCallLogEntry[];
+  // Section 6: Rent Negotiation
+  original_expected_rent?: number | null;
+  tenant_offered_rent?: number | null;
+  owner_expected_rent?: number | null;
+  final_agreed_rent?: number | null;
+  original_deposit?: number | null;
+  final_agreed_deposit?: number | null;
+  maintenance_charges?: number | null;
+  negotiation_notes?: string;
+  negotiation_status?: NegotiationStatus;
+  negotiation_history?: NegotiationHistoryEntry[];
   notes?: string;
   is_archived?: boolean;
   created_by?: string;
@@ -458,10 +625,21 @@ export interface PropertyTenantEnquiry {
   updated_at: string;
 }
 
+export interface SiteVisitHistoryEntry {
+  timestamp: string;
+  action: string;
+  status: SiteVisitStatus;
+  scheduled_date?: string;
+  scheduled_time?: string;
+  staff_name?: string;
+  notes?: string;
+}
+
 export interface PropertySiteVisit {
   id: string;
   visit_code?: string;
   property_id: string;
+  property_code?: string;
   property_title?: string;
   lead_id?: string;
   enquiry_id?: string | null;
@@ -470,6 +648,7 @@ export interface PropertySiteVisit {
   tenant_contact?: string;
   tenant_mobile?: string;
   owner_name?: string;
+  owner_mobile?: string;
   scheduled_date?: string;
   visit_date?: string;
   scheduled_time?: string;
@@ -479,8 +658,14 @@ export interface PropertySiteVisit {
   assigned_staff?: string;
   visit_status: SiteVisitStatus;
   visit_feedback?: string;
+  tenant_feedback?: string;
   owner_feedback?: string;
+  followup_notes?: string;
   next_action?: string;
+  reschedule_reason?: string;
+  cancel_reason?: string;
+  visit_number?: number;
+  visit_history?: SiteVisitHistoryEntry[];
   is_archived?: boolean;
   created_by?: string;
   created_by_name?: string;
@@ -494,28 +679,50 @@ export interface PropertyDeal {
   id: string;
   deal_code?: string;
   property_id: string;
+  property_code?: string;
   property_title?: string;
   lead_id?: string;
+  tenant_enquiry_id?: string | null;
+  enquiry_id?: string | null;
+  site_visit_id?: string | null;
   owner_name: string;
+  owner_mobile?: string;
   tenant_name: string;
   tenant_mobile?: string;
+  tenant_email?: string;
   monthly_rent?: number;
   final_monthly_rent?: number;
   security_deposit: number;
+  maintenance_charges?: number;
   deal_confirmed_date?: string;
   agreement_date?: string;
   move_in_date?: string;
+  rental_duration?: string;
+  final_negotiated_terms?: string;
+  deal_status?: DealLifecycleStatus;
   placement_fee?: number;
   placement_fee_expected?: number;
   placement_fee_payer?: string;
   amount_due: number;
+  balance_pending?: number;
   amount_received: number;
   payment_date?: string;
   payment_mode?: string;
   transaction_reference?: string;
+  receipt_number?: string;
   payment_status: DealPaymentStatus;
   handled_by?: string;
   notes?: string;
+  // Section 9: Interior Design Opportunity
+  interior_interest?: InteriorInterestOption;
+  interested_in_interior?: InteriorInterestOption | string;
+  interior_service_requirement?: InteriorServiceRequirement | string;
+  interior_followup_date?: string;
+  interior_notes?: string;
+  interior_contact_person?: 'Tenant' | 'Owner';
+  linked_interior_lead_id?: string | null;
+  interior_crm_lead_id?: string | null;
+  payments?: PropertyPaymentRecord[];
   is_archived?: boolean;
   created_by?: string;
   created_by_name?: string;
@@ -527,6 +734,7 @@ export interface PropertyDeal {
 
 export interface PropertyPaymentRecord {
   id: string;
+  receipt_number?: string;
   deal_id: string;
   property_id?: string;
   amount: number;
@@ -538,6 +746,61 @@ export interface PropertyPaymentRecord {
   recorded_by?: string;
   recorded_by_name?: string;
   created_at: string;
+}
+
+export interface PropertyPaymentReceiptData {
+  receipt_number: string;
+  receipt_date: string;
+  deal_id: string;
+  deal_code: string;
+  deal_status: string;
+  property_id: string;
+  property_code?: string;
+  property_title: string;
+  property_locality: string;
+  owner_name: string;
+  tenant_name: string;
+  tenant_mobile: string;
+  final_monthly_rent: number;
+  security_deposit: number;
+  agreement_date: string;
+  move_in_date: string;
+  placement_fee_payer: string;
+  total_placement_fee: number;
+  total_amount_received: number;
+  current_payment_amount?: number;
+  balance_due: number;
+  payment_status: string;
+  payment_mode?: string;
+  transaction_reference?: string;
+  notes?: string;
+  issued_by?: string;
+  company_name?: string;
+  parent_brand?: string;
+  company_address?: string;
+  company_phone?: string;
+  company_email?: string;
+  latest_payment?: {
+    id: string;
+    receipt_number: string;
+    amount: number;
+    payment_date: string;
+    payment_mode: string;
+    transaction_reference: string;
+    notes: string;
+    recorded_by_name: string;
+  };
+  payments: PropertyPaymentRecord[];
+  generated_by: string;
+  generated_at: string;
+}
+
+export interface PropertyCrmStaffMember {
+  id: string;
+  name: string;
+  fullName?: string;
+  email: string;
+  role: string;
 }
 
 export interface PropertyDashboardData {
@@ -556,7 +819,23 @@ export interface PropertyDashboardData {
     dealsCompleted: number;
     totalPlacementFeesCollected: number;
     totalPlacementFeesDue: number;
+    placementFeesCollected?: number;
+    placementFeesPending?: number;
     rejectedProperties: number;
+    // Phase 3 Rental Operations Metrics
+    newTenantEnquiries: number;
+    unassignedEnquiries: number;
+    followupsDueToday: number;
+    followUpsDueToday?: number;
+    overdueFollowups: number;
+    overdueFollowUps?: number;
+    siteVisitsToday: number;
+    upcomingSiteVisits: number;
+    negotiationsInProgress: number;
+    dealsConfirmed: number;
+    propertiesOnHold: number;
+    propertiesRented: number;
+    propertiesAvailable: number;
   };
   charts: {
     leadsByDate: Array<{ date: string; count: number }>;
@@ -569,7 +848,14 @@ export interface PropertyDashboardData {
       leadsCount: number;
       callsLogged: number;
       callsCount: number;
+      enquiriesAssigned?: number;
+      enquiriesFollowedUp?: number;
+      siteVisitsConducted?: number;
+      siteVisitsHandled?: number;
+      negotiationsActive?: number;
       dealsClosed: number;
+      feesCollected?: number;
+      approvedProperties?: number;
     }>;
     monthlyDealsAndFees: Array<{ month: string; dealsCount: number; feesCollected: number; feesDue: number }>;
     leadsBySalesExecutive: Array<{ salesExecutive: string; count: number }>;
@@ -584,6 +870,12 @@ export interface PropertyDashboardData {
       assignedLeads: number;
       callsLogged: number;
       approvedProperties: number;
+      enquiriesAssigned?: number;
+      siteVisitsConducted?: number;
+      siteVisitsHandled?: number;
+      negotiationsActive?: number;
+      dealsClosed?: number;
+      feesCollected?: number;
     }>;
   };
 }

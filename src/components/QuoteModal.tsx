@@ -80,7 +80,7 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
     generateQuotePdf({
       quoteId: quoteId || `RE-QT-${Math.floor(100000 + Math.random() * 900000)}`,
       clientName: formData.name || 'Valued Client',
-      clientPhone: formData.phone || '+91 99166 33338',
+      clientPhone: formData.phone || '+91 70261 19311',
       clientEmail: formData.email || 'royalepicfurnitur1@gmail.com',
       cityLocation: formData.city || 'Bengaluru / India',
       projectType: formData.projectType,

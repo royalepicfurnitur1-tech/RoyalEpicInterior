@@ -524,7 +524,7 @@ export const CustomersSubdomainPortal: React.FC<CustomersSubdomainPortalProps> =
                         required
                         value={customerPhoneInput}
                         onChange={e => setCustomerPhoneInput(e.target.value)}
-                        placeholder="+91 99166 33338"
+                        placeholder="+91 70261 19311"
                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder:text-neutral-600 text-xs focus:border-gold focus:outline-none transition font-mono"
                       />
                     </div>
@@ -1104,7 +1104,7 @@ export const CustomersSubdomainPortal: React.FC<CustomersSubdomainPortalProps> =
                       required
                       value={newLeadForm.phone}
                       onChange={e => setNewLeadForm({ ...newLeadForm, phone: e.target.value })}
-                      placeholder="+91 99166 33338"
+                      placeholder="+91 70261 19311"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:border-gold focus:outline-none font-mono"
                     />
                   </div>

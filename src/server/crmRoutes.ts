@@ -490,7 +490,7 @@ const adminUser: ServerCrmUser = {
   id: 'crm_admin_primary',
   email: 'admin@royalepicinterior.com',
   name: 'Royal Epic Admin',
-  phone: '+91 99166 33338',
+  phone: '+91 70261 19311',
   password: 'Admin@RoyalEpic2026',
   role: 'admin',
   status: 'active',
@@ -502,7 +502,7 @@ const execAdminUser: ServerCrmUser = {
   id: 'crm_admin_executive',
   email: 'royalepicfurnitur1@gmail.com',
   name: 'Royal Epic Executive Admin',
-  phone: '+91 99166 33338',
+  phone: '+91 70261 19311',
   password: 'Admin@RoyalEpic2026',
   role: 'admin',
   status: 'active',
@@ -1998,3 +1998,154 @@ crmRouter.post('/migrate-to-supabase', async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: err.message || 'Migration error' });
   }
 });
+
+// -----------------------------------------------------------------------------
+// PHASE 3: HELPERS FOR ROYAL EPIC PROPERTIES RENTAL OPERATIONS
+// 1. Get Active CRM Staff List (for assignment dropdowns & reports)
+// 2. Interior Design Opportunity Conversion (creates linked lead in Interior CRM
+//    with strict duplicate protection and confirmed Supabase persistence)
+// -----------------------------------------------------------------------------
+export function getActiveCrmStaffList(): Array<{ id: string; name: string; email: string; role: string }> {
+  return Object.values(dbCrmUsers)
+    .filter(u => u && u.status === 'active')
+    .map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role
+    }));
+}
+
+export async function createOrCheckInteriorCrmLeadFromPropertyDeal(params: {
+  customer_name: string;
+  phone: string;
+  email?: string;
+  interested_service: string;
+  city?: string;
+  project_address?: string;
+  budget?: string;
+  next_followup_date?: string;
+  notes?: string;
+  property_deal_id: string;
+  property_id: string;
+  user: ServerCrmUser;
+  linkExistingIfDuplicate?: boolean;
+}): Promise<{
+  success: boolean;
+  isDuplicate?: boolean;
+  linkedExisting?: boolean;
+  leadId?: string;
+  lead?: any;
+  error?: string;
+}> {
+  const rawName = (params.customer_name || '').trim();
+  const rawPhone = (params.phone || '').trim();
+  if (!rawName || !rawPhone) {
+    return { success: false, error: 'Customer Name and Mobile Number are required to create an Interior CRM enquiry.' };
+  }
+
+  const normPhone = normalizePhone(rawPhone);
+  if (rawPhone.replace(/\D/g, '').length < 10) {
+    return { success: false, error: 'Please provide a valid 10-digit mobile number.' };
+  }
+
+  // Check if an active lead already exists with this phone number or linked to this deal
+  const existingLead = Object.values(dbCrmLeads).find(
+    l =>
+      !dbCrmDeletedLeadIds.has(l.id) &&
+      (normalizePhone(l.phone) === normPhone ||
+        (l.raw_payload && l.raw_payload.property_deal_id === params.property_deal_id))
+  );
+
+  if (existingLead) {
+    if (params.linkExistingIfDuplicate) {
+      return {
+        success: true,
+        linkedExisting: true,
+        leadId: existingLead.id,
+        lead: formatLeadWithAliases(existingLead)
+      };
+    }
+    return {
+      success: false,
+      isDuplicate: true,
+      leadId: existingLead.id,
+      lead: formatLeadWithAliases(existingLead),
+      error: `An Interior CRM lead already exists for "${existingLead.customer_name || existingLead.name}" (${existingLead.phone}) with Lead ID ${existingLead.id}.`
+    };
+  }
+
+  const now = new Date().toISOString();
+  const id = `CRM-${now.slice(2, 7).replace('-', '')}-${Math.floor(10000 + Math.random() * 90000)}`;
+  const followupDate = params.next_followup_date ? params.next_followup_date.slice(0, 10) : undefined;
+  const followupAt = followupDate ? `${followupDate}T10:00:00` : undefined;
+
+  const newLead: ServerCrmLead = {
+    id,
+    customer_name: rawName,
+    name: rawName,
+    phone: normPhone,
+    normalized_phone: normPhone,
+    email: params.email?.trim() || undefined,
+    source: 'Royal Epic Properties Deal Conversion',
+    interested_service: params.interested_service || 'Home Interior',
+    projectType: params.interested_service || 'Home Interior',
+    city: params.city || 'Bengaluru',
+    location: params.city || 'Bengaluru',
+    project_address: params.project_address || undefined,
+    budget: params.budget || 'To be discussed',
+    temperature: 'Hot',
+    status: 'New Lead',
+    notes: params.notes || `Converted from Royal Epic Properties Deal ${params.property_deal_id} (Property: ${params.property_id})`,
+    assigned_to: params.user.id,
+    assigned_to_name: params.user.name,
+    next_followup_at: followupAt,
+    next_followup_date: followupDate,
+    next_followup_time: '10:00',
+    raw_payload: {
+      property_deal_id: params.property_deal_id,
+      property_id: params.property_id,
+      converted_from_module: 'Royal Epic Properties'
+    },
+    created_by: params.user.id,
+    created_by_name: params.user.name,
+    created_at: now,
+    updated_at: now
+  };
+
+  // Persist to Supabase leads_and_inquiries first and confirm write
+  const syncRes = await syncLeadToSupabase(newLead);
+  if (!syncRes.success) {
+    return {
+      success: false,
+      error: `Failed to persist Interior CRM lead to Supabase: ${syncRes.error || 'Unknown error'}`
+    };
+  }
+
+  dbCrmLeads[id] = newLead;
+  saveLeads();
+
+  dbCrmAudit.push({
+    id: `AUDIT-${Date.now()}`,
+    lead_id: id,
+    action: 'CREATE_FROM_PROPERTY_DEAL',
+    performed_by: params.user.id,
+    performed_by_name: params.user.name,
+    details: {
+      customer_name: rawName,
+      phone: normPhone,
+      interested_service: newLead.interested_service,
+      property_deal_id: params.property_deal_id,
+      property_id: params.property_id
+    },
+    created_at: now
+  });
+  saveAudit();
+
+  return {
+    success: true,
+    leadId: newLead.id,
+    lead: formatLeadWithAliases(newLead)
+  };
+}
+

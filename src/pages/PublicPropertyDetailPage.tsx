@@ -252,7 +252,7 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
         });
       }
     } catch (err: any) {
-      setFormError('Network error while submitting your enquiry. Please try again or call +91 99166 33338.');
+      setFormError('Network error while submitting your enquiry. Please try again or call +91 70261 19311.');
     } finally {
       setSubmitting(false);
     }
@@ -744,14 +744,14 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
 
               <div className="grid grid-cols-2 gap-2.5">
                 <a
-                  href="tel:+919916633338"
+                  href="tel:+917026119311"
                   className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition-colors"
                 >
                   <Phone className="w-3.5 h-3.5" />
                   Call Royal Epic
                 </a>
                 <a
-                  href={`https://wa.me/919916633338?text=${whatsappMessage}`}
+                  href={`https://wa.me/917026119311?text=${whatsappMessage}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors"
@@ -772,7 +772,20 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
                 <strong className="text-stone-800">{property.property_id}</strong>.
               </p>
 
-              {submissionSuccess ? (
+              {property.availability_status === 'Temporarily On Hold' ||
+              (property as any).accepting_enquiries === false ? (
+                <div className="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-2.5">
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-semibold">
+                    Temporarily On Hold
+                  </div>
+                  <h3 className="text-base font-serif font-bold text-stone-900">
+                    Not Accepting New Enquiries Right Now
+                  </h3>
+                  <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                    This property is currently on hold while an active tenant application is being processed. Please explore our other verified properties or contact our rental desk for similar options.
+                  </p>
+                </div>
+              ) : submissionSuccess ? (
                 <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-3">
                   <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-6 h-6" />

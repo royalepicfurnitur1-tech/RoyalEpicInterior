@@ -520,7 +520,7 @@ export const ProjectEstimator: React.FC<ProjectEstimatorProps> = ({ onRequestQuo
                 </button>
 
                 <a
-                  href={`https://wa.me/919916633338?text=${encodeURIComponent(
+                  href={`https://wa.me/917026119311?text=${encodeURIComponent(
                     `Hello Royal Epic Team, I generated a project estimate on your website:\n📌 *Space:* ${propertyType.toUpperCase()} (${areaSqFt} sq.ft)\n💰 *Estimated Cost Range:* ₹${estimation.formattedMin}L - ₹${estimation.formattedMax} Lakhs\n🏆 *Finish Tier:* ${finishQuality.toUpperCase()}\n\nPlease schedule a free site measurement.`
                   )}`}
                   target="_blank"

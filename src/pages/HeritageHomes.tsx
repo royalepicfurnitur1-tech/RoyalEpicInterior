@@ -224,7 +224,7 @@ export const HeritageHomes: React.FC<HeritageHomesProps> = ({ onNavigate, onRequ
                 </button>
 
                 <a
-                  href="https://wa.me/919900000000?text=Hi%20Royal%20Epic%20Interiors,%20I%20am%20interested%20in%20Heritage%20Homes%20and%20Traditional%20House%20Design"
+                  href="https://wa.me/917026119311?text=Hi%20Royal%20Epic%20Interiors,%20I%20am%20interested%20in%20Heritage%20Homes%20and%20Traditional%20House%20Design"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-6 py-3.5 rounded-xl bg-neutral-900/80 hover:bg-neutral-800 text-white border border-white/15 font-medium text-sm transition-all flex items-center gap-2"
@@ -555,15 +555,15 @@ export const HeritageHomes: React.FC<HeritageHomesProps> = ({ onNavigate, onRequ
             </button>
 
             <a
-              href="tel:+919900000000"
+              href="tel:+917026119311"
               className="px-7 py-4 rounded-xl bg-white border border-neutral-300 hover:bg-neutral-50 text-neutral-900 font-bold text-sm tracking-wide transition-all shadow-sm flex items-center gap-2"
             >
               <Phone className="w-4 h-4 text-amber-700" />
-              <span>Call +91 99000 00000</span>
+              <span>Call +91 70261 19311</span>
             </a>
 
             <a
-              href="https://wa.me/919900000000?text=Hi%20Royal%20Epic%20Interiors,%20I%20would%20like%20a%20Heritage%20Home%20Design%20quote"
+              href="https://wa.me/917026119311?text=Hi%20Royal%20Epic%20Interiors,%20I%20would%20like%20a%20Heritage%20Home%20Design%20quote"
               target="_blank"
               rel="noopener noreferrer"
               className="px-7 py-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-sm tracking-wide transition-all shadow-sm flex items-center gap-2"

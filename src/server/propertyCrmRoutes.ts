@@ -1,5 +1,13 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { extractUserFromReq, normalizePhone, getIstDateString, ServerCrmUser } from './crmRoutes';
+import {
+  extractUserFromReq,
+  normalizePhone,
+  getIstDateString,
+  ServerCrmUser,
+  getActiveCrmStaffList,
+  createOrCheckInteriorCrmLeadFromPropertyDeal
+} from './crmRoutes';
+import { sendLeadNotificationEmail } from './emailNotificationService';
 
 export const propertyCrmRouter = express.Router();
 
@@ -311,11 +319,17 @@ function parseNumericOrNull(val: any): number | null {
 }
 
 function encodeEnquiryMetadataInNotes(notes: string | undefined, extra?: Record<string, any>): string | undefined {
-  const cleanNotes = (notes || '').replace(/\s*\[REP_META:[^\]]+\]/g, '').trim();
-  const meta: Record<string, any> = {};
+  const { cleanNotes, meta: existingMeta } = decodeEnquiryMetadataFromNotes(notes);
+  const meta: Record<string, any> = { ...existingMeta };
   if (extra) {
     Object.entries(extra).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') meta[k] = v;
+      if (v !== undefined) {
+        if (v === null || v === '') {
+          delete meta[k];
+        } else {
+          meta[k] = v;
+        }
+      }
     });
   }
   if (Object.keys(meta).length === 0) return cleanNotes || undefined;
@@ -347,20 +361,74 @@ function sanitizeRecordForDedicatedTable(table: PropertyTableName, raw: Record<s
     rec.carpet_area = parseNumericOrNull(rec.carpet_area);
   } else if (table === 'property_tenant_enquiries') {
     rec.notes = encodeEnquiryMetadataInNotes(rec.notes, {
+      ui_status: rec.enquiry_status,
       lead_id: rec.lead_id,
-      move_in_date: rec.move_in_date,
-      family_or_company_profile: rec.family_or_company_profile,
+      property_category: rec.property_category,
+      bhk_requirement: rec.bhk_requirement,
+      min_budget: rec.min_budget,
+      max_budget: rec.max_budget,
       budget_range: rec.budget_range,
+      furnishing_preference: rec.furnishing_preference,
+      move_in_date: rec.move_in_date,
+      parking_requirement: rec.parking_requirement,
+      family_or_company_profile: rec.family_or_company_profile || rec.tenant_profile,
+      tenant_profile: rec.tenant_profile || rec.family_or_company_profile,
+      number_of_occupants: rec.number_of_occupants,
+      additional_requirements: rec.additional_requirements,
+      next_followup_date: rec.next_followup_date,
+      followup_notes: rec.followup_notes,
+      last_contact_date: rec.last_contact_date,
       preferred_contact_time: rec.preferred_contact_time,
       preferred_visit_date: rec.preferred_visit_date,
       preferred_visit_time: rec.preferred_visit_time,
-      number_of_occupants: rec.number_of_occupants,
-      consent_to_contact: rec.consent_to_contact
+      consent_to_contact: rec.consent_to_contact,
+      call_history: rec.call_history,
+      original_expected_rent: rec.original_expected_rent,
+      tenant_offered_rent: rec.tenant_offered_rent,
+      owner_expected_rent: rec.owner_expected_rent,
+      final_agreed_rent: rec.final_agreed_rent,
+      original_deposit: rec.original_deposit,
+      final_agreed_deposit: rec.final_agreed_deposit,
+      maintenance_charges: rec.maintenance_charges,
+      negotiation_notes: rec.negotiation_notes,
+      negotiation_status: rec.negotiation_status,
+      negotiation_history: rec.negotiation_history
     });
   } else if (table === 'property_site_visits') {
     if (rec.tenant_feedback !== undefined && !rec.visit_feedback) {
       rec.visit_feedback = rec.tenant_feedback;
     }
+    rec.next_action = encodeEnquiryMetadataInNotes(rec.next_action, {
+      owner_mobile: rec.owner_mobile,
+      followup_notes: rec.followup_notes,
+      reschedule_reason: rec.reschedule_reason,
+      cancel_reason: rec.cancel_reason,
+      visit_number: rec.visit_number,
+      visit_history: rec.visit_history
+    });
+  } else if (table === 'property_deals') {
+    rec.notes = encodeEnquiryMetadataInNotes(rec.notes, {
+      deal_status: rec.deal_status,
+      tenant_enquiry_id: rec.tenant_enquiry_id || rec.enquiry_id,
+      site_visit_id: rec.site_visit_id,
+      owner_mobile: rec.owner_mobile,
+      tenant_email: rec.tenant_email,
+      maintenance_charges: rec.maintenance_charges,
+      rental_duration: rec.rental_duration,
+      final_negotiated_terms: rec.final_negotiated_terms,
+      receipt_number: rec.receipt_number,
+      handled_by: rec.handled_by,
+      interior_interest: rec.interior_interest,
+      interior_service_requirement: rec.interior_service_requirement,
+      interior_followup_date: rec.interior_followup_date,
+      interior_notes: rec.interior_notes,
+      interior_contact_person: rec.interior_contact_person,
+      linked_interior_lead_id: rec.linked_interior_lead_id
+    });
+  } else if (table === 'property_payments') {
+    rec.notes = encodeEnquiryMetadataInNotes(rec.notes, {
+      receipt_number: rec.receipt_number
+    });
   }
 
   const allowedCols = DEDICATED_TABLE_COLUMNS[table];
@@ -465,6 +533,29 @@ async function sbUpsert<T extends { id: string }>(
         return { ...row, listing_status: requestedStatus } as T;
       }
     }
+    if (table === 'property_tenant_enquiries' && errText.includes('property_tenant_enquiries_enquiry_status_check')) {
+      const requestedEnqStatus = payload.enquiry_status;
+      const compatEnqMap: Record<string, string> = {
+        'Site Visit Required': 'Interested',
+        'Deal Completed': 'Converted',
+        'Lost': 'Closed'
+      };
+      const fallbackEnqStatus = compatEnqMap[requestedEnqStatus] || 'Contacted';
+      const retryPayload = {
+        ...payload,
+        enquiry_status: fallbackEnqStatus
+      };
+      const retryRes = await fetch(`${url}/rest/v1/${table}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(retryPayload)
+      });
+      if (retryRes.ok) {
+        const retryRows = await retryRes.json();
+        const row = Array.isArray(retryRows) && retryRows.length > 0 ? retryRows[0] : retryPayload;
+        return { ...row, enquiry_status: requestedEnqStatus } as T;
+      }
+    }
     throw new Error(`Supabase WRITE error on dedicated table ${table} (HTTP ${res.status}): ${errText}`);
   }
   const rows = await res.json();
@@ -515,6 +606,17 @@ export function isPropertyPubliclyVisible(rawProp: any): boolean {
   const p = formatPropertyAliases(rawProp);
   if (p.is_archived || p.listing_status === 'Archived') return false;
 
+  // Phase 3 Rule: Rented and Unavailable properties must disappear from public website listings
+  if (
+    p.availability_status === 'Rented' ||
+    p.availability_status === 'Unavailable' ||
+    ['Rented', 'Occupied', 'Unavailable', 'Rejected', 'Unpublished', 'Draft', 'Details Pending', 'Verification Pending'].includes(
+      p.listing_status
+    )
+  ) {
+    return false;
+  }
+
   const isVerified =
     p.owner_identity_verified === 'Yes' &&
     p.ownership_auth_confirmed === 'Yes' &&
@@ -563,6 +665,12 @@ export function toPublicPropertyListing(rawProp: any, allImages: any[]) {
     p.property_description ||
     `Verified ${p.furnishing_status || ''} ${p.property_type || 'Property'} available for rent in ${locality}, ${city}. Managed by Royal Epic Properties.`;
 
+  const resolvedAvailability = p.availability_status || 'Available';
+  const acceptingEnquiries =
+    resolvedAvailability !== 'Temporarily On Hold' &&
+    resolvedAvailability !== 'Rented' &&
+    resolvedAvailability !== 'Unavailable';
+
   return {
     id: p.id,
     property_id: p.id,
@@ -603,7 +711,8 @@ export function toPublicPropertyListing(rawProp: any, allImages: any[]) {
     water_supply: '24x7 Supply',
     facing: 'East',
     property_age: 'Well Maintained',
-    availability_status: 'Published',
+    availability_status: resolvedAvailability,
+    accepting_enquiries: acceptingEnquiries,
     property_description: descVal,
     description: descVal,
     amenities: Array.isArray(p.amenities) ? p.amenities : [],
@@ -725,23 +834,66 @@ function formatPropertyAliases(prop: any) {
   if (!prop) return prop;
   const ownership = prop.ownership_confirmed || prop.ownership_auth_confirmed || 'Pending';
   const avail = prop.property_availability_confirmed || prop.availability_confirmed || 'Pending';
-  const latestHistory =
-    Array.isArray(prop.approval_history) && prop.approval_history.length > 0
-      ? prop.approval_history[0]
-      : null;
+  const rawHistory: any[] = Array.isArray(prop.approval_history) ? prop.approval_history : [];
+  const latestListingHistory =
+    rawHistory.find((h: any) => !h.is_availability_change && h.status) ||
+    (rawHistory.length > 0 && rawHistory[0]?.listing_status_override
+      ? { status: rawHistory[0].listing_status_override, db_compat: true }
+      : null);
+
   const resolvedListingStatus =
     prop.is_archived
       ? 'Archived'
-      : latestHistory &&
-        latestHistory.status &&
-        (latestHistory.db_compat ||
-          ['Ready to Publish', 'Unpublished', 'Occupied', 'Archived'].includes(latestHistory.status))
-      ? latestHistory.status
+      : latestListingHistory &&
+        latestListingHistory.status &&
+        (latestListingHistory.db_compat ||
+          ['Ready to Publish', 'Unpublished', 'Occupied', 'Archived'].includes(latestListingHistory.status))
+      ? latestListingHistory.status
       : prop.listing_status;
+
+  // Hydrate Phase 3 availability_history and availability_status from approval_history JSONB
+  const availabilityHistory = rawHistory
+    .filter((h: any) => Boolean(h && (h.is_availability_change || h.availability_status)))
+    .map((h: any) => ({
+      action: h.action || 'AVAILABILITY_UPDATED',
+      status: h.availability_status || h.status || 'Available',
+      previous_status: h.previous_status || undefined,
+      owner_confirmed: Boolean(h.owner_confirmed),
+      requires_owner_confirmation: Boolean(h.requires_owner_confirmation),
+      notes: h.notes || '',
+      staff_id: h.staff_id || '',
+      staff_name: h.staff_name || 'Staff',
+      timestamp: h.timestamp || prop.updated_at || prop.created_at
+    }));
+
+  const latestAvailEntry = availabilityHistory.length > 0 ? availabilityHistory[0] : null;
+  const newestRawEntry = rawHistory.length > 0 ? rawHistory[0] : null;
+  let resolvedAvailabilityStatus = prop.availability_status;
+  if (!resolvedAvailabilityStatus) {
+    if (newestRawEntry && (newestRawEntry.is_availability_change || newestRawEntry.availability_status)) {
+      resolvedAvailabilityStatus = newestRawEntry.availability_status || newestRawEntry.status || 'Available';
+    } else if (resolvedListingStatus === 'Rented' || resolvedListingStatus === 'Occupied') {
+      resolvedAvailabilityStatus = 'Rented';
+    } else if (resolvedListingStatus === 'Unavailable') {
+      resolvedAvailabilityStatus = 'Unavailable';
+    } else if (latestAvailEntry && latestAvailEntry.status) {
+      resolvedAvailabilityStatus = latestAvailEntry.status;
+    } else {
+      resolvedAvailabilityStatus = 'Available';
+    }
+  }
 
   return {
     ...prop,
     listing_status: resolvedListingStatus,
+    availability_status: resolvedAvailabilityStatus,
+    requires_owner_confirmation: Boolean(latestAvailEntry?.requires_owner_confirmation),
+    availability_updated_at: prop.availability_updated_at || latestAvailEntry?.timestamp || prop.updated_at,
+    availability_updated_by: prop.availability_updated_by || latestAvailEntry?.staff_name || prop.updated_by_name,
+    availability_notes: prop.availability_notes || latestAvailEntry?.notes || '',
+    availability_history: Array.isArray(prop.availability_history)
+      ? prop.availability_history
+      : availabilityHistory,
     slug: generatePublicPropertySlug(prop),
     property_code: prop.property_code || prop.id,
     full_property_address: prop.full_property_address || prop.full_address || '',
@@ -786,19 +938,87 @@ function formatEnquiryAliases(enq: any) {
   const propTitle = enq.property_title || enq.interested_property_title || '';
   const propType = enq.property_type_needed || enq.property_type || '2 BHK';
   const resolvedStatus = meta.ui_status || enq.enquiry_status || 'New Enquiry';
+  const profile =
+    enq.family_or_company_profile ||
+    enq.tenant_profile ||
+    meta.family_or_company_profile ||
+    meta.tenant_profile ||
+    meta.number_of_occupants ||
+    '';
+  const minBudget =
+    enq.min_budget !== undefined
+      ? parseNumericOrNull(enq.min_budget)
+      : parseNumericOrNull(meta.min_budget);
+  const maxBudget =
+    enq.max_budget !== undefined
+      ? parseNumericOrNull(enq.max_budget)
+      : parseNumericOrNull(meta.max_budget) ?? (enq.budget ? Number(enq.budget) : null);
+
   return {
     ...enq,
     enquiry_code: enq.enquiry_code || enq.id,
     enquiry_status: resolvedStatus,
     notes: cleanNotes,
     lead_id: enq.lead_id || meta.lead_id || null,
+    property_category: enq.property_category || meta.property_category || 'Residential',
+    bhk_requirement: enq.bhk_requirement || meta.bhk_requirement || (propType.includes('BHK') ? propType : ''),
+    min_budget: minBudget,
+    max_budget: maxBudget,
+    furnishing_preference: enq.furnishing_preference || meta.furnishing_preference || 'Any',
     move_in_date: enq.move_in_date || meta.move_in_date || meta.preferred_visit_date || '',
-    family_or_company_profile:
-      enq.family_or_company_profile || meta.family_or_company_profile || meta.number_of_occupants || '',
+    parking_requirement: enq.parking_requirement || meta.parking_requirement || 'Any',
+    family_or_company_profile: profile,
+    tenant_profile: profile,
     preferred_contact_time: enq.preferred_contact_time || meta.preferred_contact_time || '',
     preferred_visit_date: enq.preferred_visit_date || meta.preferred_visit_date || '',
     preferred_visit_time: enq.preferred_visit_time || meta.preferred_visit_time || '',
     number_of_occupants: enq.number_of_occupants || meta.number_of_occupants || '',
+    additional_requirements:
+      enq.additional_requirements || meta.additional_requirements || enq.requirements || '',
+    requirements: enq.requirements || enq.additional_requirements || meta.additional_requirements || '',
+    next_followup_date: enq.next_followup_date || meta.next_followup_date || '',
+    followup_notes: enq.followup_notes || meta.followup_notes || '',
+    last_contact_date: enq.last_contact_date || meta.last_contact_date || '',
+    call_history: Array.isArray(enq.call_history)
+      ? enq.call_history
+      : Array.isArray(meta.call_history)
+      ? meta.call_history
+      : [],
+    original_expected_rent:
+      enq.original_expected_rent !== undefined
+        ? parseNumericOrNull(enq.original_expected_rent)
+        : parseNumericOrNull(meta.original_expected_rent),
+    tenant_offered_rent:
+      enq.tenant_offered_rent !== undefined
+        ? parseNumericOrNull(enq.tenant_offered_rent)
+        : parseNumericOrNull(meta.tenant_offered_rent),
+    owner_expected_rent:
+      enq.owner_expected_rent !== undefined
+        ? parseNumericOrNull(enq.owner_expected_rent)
+        : parseNumericOrNull(meta.owner_expected_rent),
+    final_agreed_rent:
+      enq.final_agreed_rent !== undefined
+        ? parseNumericOrNull(enq.final_agreed_rent)
+        : parseNumericOrNull(meta.final_agreed_rent),
+    original_deposit:
+      enq.original_deposit !== undefined
+        ? parseNumericOrNull(enq.original_deposit)
+        : parseNumericOrNull(meta.original_deposit),
+    final_agreed_deposit:
+      enq.final_agreed_deposit !== undefined
+        ? parseNumericOrNull(enq.final_agreed_deposit)
+        : parseNumericOrNull(meta.final_agreed_deposit),
+    maintenance_charges:
+      enq.maintenance_charges !== undefined
+        ? parseNumericOrNull(enq.maintenance_charges)
+        : parseNumericOrNull(meta.maintenance_charges),
+    negotiation_notes: enq.negotiation_notes || meta.negotiation_notes || '',
+    negotiation_status: enq.negotiation_status || meta.negotiation_status || 'Not Started',
+    negotiation_history: Array.isArray(enq.negotiation_history)
+      ? enq.negotiation_history
+      : Array.isArray(meta.negotiation_history)
+      ? meta.negotiation_history
+      : [],
     consent_to_contact: enq.consent_to_contact ?? meta.consent_to_contact ?? true,
     tenant_mobile: mob,
     mobile_number: mob,
@@ -810,13 +1030,21 @@ function formatEnquiryAliases(enq: any) {
     interested_property_title: propTitle,
     property_type_needed: propType,
     property_type: propType,
-    budget_range: enq.budget_range || meta.budget_range || (enq.budget ? String(enq.budget) : ''),
+    budget_range:
+      enq.budget_range ||
+      meta.budget_range ||
+      (minBudget && maxBudget
+        ? `₹${minBudget.toLocaleString('en-IN')} - ₹${maxBudget.toLocaleString('en-IN')}`
+        : enq.budget
+        ? String(enq.budget)
+        : ''),
     assigned_telecaller: enq.assigned_telecaller || enq.assigned_staff_name || ''
   };
 }
 
 function formatVisitAliases(v: any) {
   if (!v) return v;
+  const { cleanNotes, meta } = decodeEnquiryMetadataFromNotes(v.next_action);
   const mob = v.tenant_mobile || v.tenant_contact || '';
   const vDate = v.visit_date || v.scheduled_date || '';
   const vTime = v.visit_time || v.scheduled_time || '';
@@ -828,6 +1056,7 @@ function formatVisitAliases(v: any) {
     visit_code: v.visit_code || v.id,
     tenant_mobile: mob,
     tenant_contact: mob,
+    owner_mobile: v.owner_mobile || meta.owner_mobile || '',
     visit_date: vDate,
     scheduled_date: vDate,
     visit_time: vTime,
@@ -837,28 +1066,89 @@ function formatVisitAliases(v: any) {
     assigned_staff: staff,
     assigned_staff_name: staff,
     visit_feedback: feedback,
-    tenant_feedback: feedback
+    tenant_feedback: feedback,
+    next_action: cleanNotes,
+    followup_notes: v.followup_notes || meta.followup_notes || cleanNotes || '',
+    reschedule_reason: v.reschedule_reason || meta.reschedule_reason || '',
+    cancel_reason: v.cancel_reason || meta.cancel_reason || '',
+    visit_number: Number(v.visit_number || meta.visit_number || 1),
+    visit_history: Array.isArray(v.visit_history)
+      ? v.visit_history
+      : Array.isArray(meta.visit_history)
+      ? meta.visit_history
+      : []
+  };
+}
+
+function formatPaymentAliases(p: any) {
+  if (!p) return p;
+  const { cleanNotes, meta } = decodeEnquiryMetadataFromNotes(p.notes);
+  const fallbackReceipt = `RCPT-${String(p.id || '').replace(/^REP-PAY-/, '')}`;
+  return {
+    ...p,
+    notes: cleanNotes,
+    receipt_number: p.receipt_number || meta.receipt_number || fallbackReceipt
   };
 }
 
 function formatDealAliases(d: any) {
   if (!d) return d;
+  const { cleanNotes, meta } = decodeEnquiryMetadataFromNotes(d.notes);
   const rent = d.final_monthly_rent ?? d.monthly_rent ?? 0;
   const fee = d.placement_fee_expected ?? d.placement_fee ?? 0;
   const bal = d.balance_pending ?? d.pending_amount ?? Math.max(0, Number(fee) - Number(d.amount_received || 0));
+  const enqId = d.tenant_enquiry_id ?? d.enquiry_id ?? meta.tenant_enquiry_id ?? null;
+  const fallbackReceipt = `RCPT-${String(d.id || '').replace(/^REP-DL-/, '')}`;
   return {
     ...d,
+    notes: cleanNotes,
     deal_code: d.deal_code || d.id,
+    deal_status: d.deal_status || meta.deal_status || (d.payment_status === 'Cancelled' ? 'Deal Cancelled' : 'Deal Confirmed'),
+    tenant_enquiry_id: enqId,
+    enquiry_id: enqId,
+    site_visit_id: d.site_visit_id || meta.site_visit_id || null,
+    owner_mobile: d.owner_mobile || meta.owner_mobile || '',
+    tenant_email: d.tenant_email || meta.tenant_email || '',
     final_monthly_rent: rent,
     monthly_rent: rent,
+    maintenance_charges:
+      d.maintenance_charges !== undefined
+        ? Number(d.maintenance_charges) || 0
+        : Number(meta.maintenance_charges) || 0,
+    rental_duration: d.rental_duration || meta.rental_duration || '11 Months',
+    final_negotiated_terms: d.final_negotiated_terms || meta.final_negotiated_terms || '',
     placement_fee_expected: fee,
     placement_fee: fee,
     balance_pending: bal,
     pending_amount: bal,
+    amount_due: bal,
+    receipt_number: d.receipt_number || meta.receipt_number || fallbackReceipt,
     deal_confirmed_date: d.deal_confirmed_date || d.agreement_date || '',
-    handled_by: d.handled_by || d.created_by_name || ''
+    handled_by: d.handled_by || meta.handled_by || d.created_by_name || '',
+    interior_interest: d.interior_interest || meta.interior_interest || 'No',
+    interior_service_requirement: d.interior_service_requirement || meta.interior_service_requirement || '',
+    interior_followup_date: d.interior_followup_date || meta.interior_followup_date || '',
+    interior_notes: d.interior_notes || meta.interior_notes || '',
+    interior_contact_person: d.interior_contact_person || meta.interior_contact_person || 'Tenant',
+    linked_interior_lead_id: d.linked_interior_lead_id || meta.linked_interior_lead_id || null
   };
 }
+
+// -----------------------------------------------------------------------------
+// 0. ACTIVE CRM STAFF LIST (For Enquiry / Visit / Lead Assignment & Filtering)
+// GET /api/crm/properties/staff
+// -----------------------------------------------------------------------------
+propertyCrmRouter.get('/staff', (_req: Request, res: Response) => {
+  try {
+    const staff = getActiveCrmStaffList();
+    res.json({
+      success: true,
+      staff
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Error loading CRM staff list' });
+  }
+});
 
 // -----------------------------------------------------------------------------
 // 1. PROPERTY DASHBOARD & REPORTS METRICS
@@ -868,6 +1158,7 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
   try {
     const startDate = ((req.query.startDate as string) || '').trim();
     const endDate = ((req.query.endDate as string) || '').trim();
+    const staffFilter = ((req.query.staff as string) || '').toLowerCase().trim();
 
     const [
       allLeadsRaw,
@@ -894,20 +1185,76 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
       return true;
     };
 
-    const leads = allLeadsRaw.filter((l: any) => !l.is_archived && inDateRange(l.date_received || l.created_at));
-    const calls = allCalls.filter((c: any) => inDateRange(c.call_datetime || c.created_at));
-    const properties = allPropertiesRaw.filter((p: any) => !p.is_archived && inDateRange(p.created_at));
-    const enquiries = allEnquiriesRaw.filter((e: any) => !e.is_archived && inDateRange(e.enquiry_date || e.created_at));
-    const visits = allVisitsRaw.filter((v: any) => !v.is_archived && inDateRange(v.scheduled_date || v.created_at));
-    const deals = allDealsRaw.filter((d: any) => !d.is_archived && inDateRange(d.agreement_date || d.created_at));
+    const matchesStaff = (name?: string, id?: string) => {
+      if (!staffFilter || staffFilter === 'all') return true;
+      return (
+        (name || '').toLowerCase().includes(staffFilter) ||
+        (id || '').toLowerCase() === staffFilter
+      );
+    };
+
+    const leads = allLeadsRaw
+      .filter((l: any) => !l.is_archived && inDateRange(l.date_received || l.created_at))
+      .filter((l: any) => matchesStaff(l.telecaller_name || l.created_by_name, l.telecaller_id));
+    const calls = allCalls
+      .filter((c: any) => inDateRange(c.call_datetime || c.created_at))
+      .filter((c: any) => matchesStaff(c.logged_by_name, c.logged_by));
+    const properties = allPropertiesRaw
+      .filter((p: any) => !p.is_archived && inDateRange(p.created_at))
+      .map(formatPropertyAliases)
+      .filter((p: any) => matchesStaff(p.approved_by_name || p.verified_by_name || p.created_by_name, p.created_by));
+    const enquiries = allEnquiriesRaw
+      .filter((e: any) => !e.is_archived && inDateRange(e.enquiry_date || e.created_at))
+      .map(formatEnquiryAliases)
+      .filter((e: any) => matchesStaff(e.assigned_staff_name || e.assigned_telecaller, e.assigned_staff_id));
+    const visits = allVisitsRaw
+      .filter((v: any) => !v.is_archived && inDateRange(v.scheduled_date || v.created_at))
+      .map(formatVisitAliases)
+      .filter((v: any) => matchesStaff(v.assigned_staff_name, v.assigned_staff_id));
+    const deals = allDealsRaw
+      .filter((d: any) => !d.is_archived && inDateRange(d.agreement_date || d.created_at))
+      .map(formatDealAliases)
+      .filter((d: any) => matchesStaff(d.handled_by || d.created_by_name, d.created_by));
 
     const todayStr = getIstDateString();
 
     const newLeads = leads.filter((l: any) => l.lead_status === 'New Lead' || l.lead_status === 'First Call Pending').length;
-    const followupsPending = leads.filter((l: any) => {
-      if (['Approved', 'Rejected', 'Not Available'].includes(l.lead_status)) return false;
-      return l.lead_status === 'Follow-up Required' || Boolean(l.next_followup_date && l.next_followup_date.slice(0, 10) <= todayStr);
-    }).length;
+
+    const leadFollowupsToday = leads.filter(
+      (l: any) =>
+        !['Approved', 'Rejected', 'Not Available'].includes(l.lead_status) &&
+        Boolean(l.next_followup_date && l.next_followup_date.slice(0, 10) === todayStr)
+    ).length;
+    const leadFollowupsOverdue = leads.filter(
+      (l: any) =>
+        !['Approved', 'Rejected', 'Not Available'].includes(l.lead_status) &&
+        Boolean(l.next_followup_date && l.next_followup_date.slice(0, 10) < todayStr)
+    ).length;
+
+    const enquiryFollowupsToday = enquiries.filter(
+      (e: any) =>
+        !['Converted', 'Deal Completed', 'Not Interested', 'Lost', 'Closed'].includes(e.enquiry_status) &&
+        Boolean(e.next_followup_date && e.next_followup_date.slice(0, 10) === todayStr)
+    ).length;
+    const enquiryFollowupsOverdue = enquiries.filter(
+      (e: any) =>
+        !['Converted', 'Deal Completed', 'Not Interested', 'Lost', 'Closed'].includes(e.enquiry_status) &&
+        Boolean(e.next_followup_date && e.next_followup_date.slice(0, 10) < todayStr)
+    ).length;
+
+    const followupsDueToday = leadFollowupsToday + enquiryFollowupsToday;
+    const overdueFollowups = leadFollowupsOverdue + enquiryFollowupsOverdue;
+
+    const followupsPending =
+      leads.filter((l: any) => {
+        if (['Approved', 'Rejected', 'Not Available'].includes(l.lead_status)) return false;
+        return l.lead_status === 'Follow-up Required' || Boolean(l.next_followup_date && l.next_followup_date.slice(0, 10) <= todayStr);
+      }).length +
+      enquiries.filter((e: any) => {
+        if (['Converted', 'Deal Completed', 'Not Interested', 'Lost', 'Closed'].includes(e.enquiry_status)) return false;
+        return Boolean(e.next_followup_date && e.next_followup_date.slice(0, 10) <= todayStr);
+      }).length;
+
     const ownerDetailsPending = leads.filter((l: any) =>
       l.lead_status === 'Details Pending' || l.details_collected === 'No' || l.details_collected === 'Partially'
     ).length;
@@ -918,17 +1265,62 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
     const approvedProperties = properties.filter((p: any) =>
       ['Approved', 'Approved for Website', 'Ready to Publish', 'Published', 'Rented'].includes(p.listing_status)
     ).length;
-    const publishedProperties = properties.filter((p: any) => p.listing_status === 'Published').length;
+    const publishedProperties = properties.filter((p: any) => isPropertyPubliclyVisible(p)).length;
     const rejectedProperties =
       properties.filter((p: any) => p.listing_status === 'Rejected').length +
       leads.filter((l: any) => l.lead_status === 'Rejected' && !properties.some((p: any) => p.lead_id === l.id && p.listing_status === 'Rejected')).length;
 
-    const siteVisitsScheduled = visits.filter((v: any) =>
-      ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.visit_status)
+    // Phase 3 Rental Operations Metrics
+    const newTenantEnquiries = enquiries.filter((e: any) => e.enquiry_status === 'New Enquiry').length;
+    const unassignedEnquiries = enquiries.filter(
+      (e: any) =>
+        !e.assigned_staff_name ||
+        ['unassigned', 'website queue', ''].includes(String(e.assigned_staff_name).toLowerCase().trim())
     ).length;
 
-    const validDeals = deals.filter((d: any) => d.payment_status !== 'Cancelled');
-    const dealsCompleted = validDeals.length;
+    const activeVisits = visits.filter((v: any) =>
+      ['Scheduled', 'Confirmed', 'Rescheduled'].includes(v.visit_status)
+    );
+    const siteVisitsScheduled = activeVisits.length;
+    const siteVisitsToday = activeVisits.filter(
+      (v: any) => (v.scheduled_date || '').slice(0, 10) === todayStr
+    ).length;
+    const upcomingSiteVisits = activeVisits.filter(
+      (v: any) => (v.scheduled_date || '').slice(0, 10) > todayStr
+    ).length;
+
+    const negotiationsInProgress =
+      enquiries.filter(
+        (e: any) =>
+          e.enquiry_status === 'Negotiation' ||
+          ['Negotiation in Progress', 'Awaiting Owner Confirmation', 'Awaiting Tenant Confirmation'].includes(
+            e.negotiation_status
+          )
+      ).length ||
+      properties.filter((p: any) => p.availability_status === 'Negotiation in Progress').length;
+
+    const validDeals = deals.filter((d: any) => d.payment_status !== 'Cancelled' && d.deal_status !== 'Deal Cancelled');
+    const dealsConfirmed = validDeals.filter((d: any) =>
+      ['Deal Confirmed', 'Agreement in Progress', 'Agreement Completed', 'Tenant Moved In'].includes(
+        d.deal_status || 'Deal Confirmed'
+      )
+    ).length;
+    const dealsCompleted = validDeals.filter((d: any) =>
+      ['Agreement Completed', 'Tenant Moved In'].includes(d.deal_status) || d.payment_status === 'Paid'
+    ).length || validDeals.length;
+
+    const propertiesOnHold = properties.filter(
+      (p: any) => p.availability_status === 'Temporarily On Hold'
+    ).length;
+    const propertiesRented = properties.filter(
+      (p: any) => p.availability_status === 'Rented' || p.listing_status === 'Rented' || p.listing_status === 'Occupied'
+    ).length;
+    const propertiesAvailable = properties.filter(
+      (p: any) =>
+        p.availability_status === 'Available' &&
+        !['Rented', 'Occupied', 'Unavailable', 'Rejected', 'Archived'].includes(p.listing_status)
+    ).length;
+
     const totalPlacementFeesCollected = validDeals.reduce((sum: number, d: any) => sum + (Number(d.amount_received) || 0), 0);
     const totalPlacementFeesDue = validDeals.reduce(
       (sum: number, d: any) => sum + Math.max(0, (Number(d.placement_fee) || 0) - (Number(d.amount_received) || 0)),
@@ -976,7 +1368,7 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
       .map(([status, count]) => ({ status, count }))
       .sort((a, b) => b.count - a.count);
 
-    // 5. Staff-wise Property Lead Activity
+    // 5. Staff-wise Rental Operations & Lead Activity
     const staffMap: Record<
       string,
       {
@@ -985,7 +1377,12 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
         leadsCount: number;
         callsLogged: number;
         callsCount: number;
+        enquiriesAssigned: number;
+        enquiriesFollowedUp: number;
+        siteVisitsConducted: number;
+        negotiationsActive: number;
         dealsClosed: number;
+        feesCollected: number;
         approvedProperties: number;
       }
     > = {};
@@ -998,7 +1395,12 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
           leadsCount: 0,
           callsLogged: 0,
           callsCount: 0,
+          enquiriesAssigned: 0,
+          enquiriesFollowedUp: 0,
+          siteVisitsConducted: 0,
+          negotiationsActive: 0,
           dealsClosed: 0,
+          feesCollected: 0,
           approvedProperties: 0
         };
       }
@@ -1014,6 +1416,30 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
       st.callsLogged += 1;
       st.callsCount += 1;
     });
+    enquiries.forEach((e: any) => {
+      const st = ensureStaff(e.assigned_staff_name || e.assigned_telecaller);
+      st.enquiriesAssigned += 1;
+      const callHistoryLen = Array.isArray(e.call_history) ? e.call_history.length : 0;
+      if (callHistoryLen > 0 || e.enquiry_status !== 'New Enquiry') {
+        st.enquiriesFollowedUp += 1;
+      }
+      if (callHistoryLen > 0) {
+        st.callsLogged += callHistoryLen;
+        st.callsCount += callHistoryLen;
+      }
+      if (
+        e.enquiry_status === 'Negotiation' ||
+        ['Negotiation in Progress', 'Awaiting Owner Confirmation', 'Awaiting Tenant Confirmation'].includes(
+          e.negotiation_status
+        )
+      ) {
+        st.negotiationsActive += 1;
+      }
+    });
+    visits.forEach((v: any) => {
+      const st = ensureStaff(v.assigned_staff_name);
+      st.siteVisitsConducted += 1;
+    });
     properties.forEach((p: any) => {
       if (['Approved', 'Ready to Publish', 'Published', 'Rented'].includes(p.listing_status)) {
         const st = ensureStaff(p.approved_by_name || p.verified_by_name || p.created_by_name);
@@ -1021,10 +1447,14 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
       }
     });
     validDeals.forEach((d: any) => {
-      ensureStaff(d.handled_by || d.created_by_name).dealsClosed += 1;
+      const st = ensureStaff(d.handled_by || d.created_by_name);
+      st.dealsClosed += 1;
+      st.feesCollected += Number(d.amount_received) || 0;
     });
     const staffActivity = Object.values(staffMap).sort(
-      (a, b) => b.leadsAssigned + b.callsLogged - (a.leadsAssigned + a.callsLogged)
+      (a, b) =>
+        b.leadsAssigned + b.enquiriesAssigned + b.callsLogged + b.dealsClosed -
+        (a.leadsAssigned + a.enquiriesAssigned + a.callsLogged + a.dealsClosed)
     );
 
     // 6. Monthly Completed Deals and Fees
@@ -1080,7 +1510,19 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
       siteVisitsScheduled,
       dealsCompleted,
       totalPlacementFeesCollected,
-      totalPlacementFeesDue
+      totalPlacementFeesDue,
+      // Phase 3 Rental Operations Metrics
+      newTenantEnquiries,
+      unassignedEnquiries,
+      followupsDueToday,
+      overdueFollowups,
+      siteVisitsToday,
+      upcomingSiteVisits,
+      negotiationsInProgress,
+      dealsConfirmed,
+      propertiesOnHold,
+      propertiesRented,
+      propertiesAvailable
     };
 
     const chartsPayload = {
@@ -1102,7 +1544,12 @@ propertyCrmRouter.get('/dashboard', async (req: Request, res: Response) => {
         telecaller: s.staffName,
         assignedLeads: s.leadsAssigned,
         callsLogged: s.callsLogged,
-        approvedProperties: s.approvedProperties
+        approvedProperties: s.approvedProperties,
+        enquiriesAssigned: s.enquiriesAssigned,
+        siteVisitsConducted: s.siteVisitsConducted,
+        negotiationsActive: s.negotiationsActive,
+        dealsClosed: s.dealsClosed,
+        feesCollected: s.feesCollected
       }))
     };
 
@@ -1771,6 +2218,7 @@ propertyCrmRouter.get('/listings', async (req: Request, res: Response) => {
   try {
     const search = ((req.query.search as string) || '').toLowerCase().trim();
     const status = (req.query.listing_status as string) || '';
+    const availabilityStatus = (req.query.availability_status as string) || '';
     const category = (req.query.property_category as string) || '';
     const locality = ((req.query.locality as string) || '').toLowerCase().trim();
 
@@ -1797,6 +2245,10 @@ propertyCrmRouter.get('/listings', async (req: Request, res: Response) => {
 
     if (status && status !== 'All') {
       list = list.filter((p: any) => p.listing_status === status);
+    }
+
+    if (availabilityStatus && availabilityStatus !== 'All') {
+      list = list.filter((p: any) => p.availability_status === availabilityStatus);
     }
 
     if (category && category !== 'All') {
@@ -1826,6 +2278,39 @@ propertyCrmRouter.get('/listings', async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Database error loading property listings' });
+  }
+});
+
+propertyCrmRouter.get('/listings/:id', async (req: Request, res: Response) => {
+  try {
+    const propId = req.params.id;
+    const [propRaw, allImages, allActivities] = await Promise.all([
+      sbSelectById('properties', propId),
+      sbSelectAll('property_images'),
+      sbSelectAll('property_activities')
+    ]);
+    if (!propRaw) {
+      return res.status(404).json({ success: false, error: 'Property listing not found.' });
+    }
+    const prop = formatPropertyAliases(propRaw);
+    const images = allImages
+      .filter((img: any) => img.property_id === prop.id || img.lead_id === prop.lead_id)
+      .map(formatImageAliases);
+    const activities = allActivities
+      .filter((a: any) => a.property_id === prop.id || a.lead_id === prop.lead_id)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map(formatActivityAliases);
+
+    res.json({
+      success: true,
+      property: {
+        ...prop,
+        images,
+        activities
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Database error loading property detail' });
   }
 });
 
@@ -2210,6 +2695,188 @@ propertyCrmRouter.post('/listings/:id/review', async (req: Request, res: Respons
 });
 
 // -----------------------------------------------------------------------------
+// PHASE 3 SECTION 4: PROPERTY AVAILABILITY TRACKING
+// POST /api/crm/properties/listings/:id/availability
+// Allowed statuses:
+//   - Available
+//   - Temporarily On Hold
+//   - Site Visit in Progress
+//   - Negotiation in Progress
+//   - Rented
+//   - Unavailable
+// Rules:
+//   - Rented and Unavailable properties disappear from public website listings.
+//   - Temporarily On Hold properties do not accept new public enquiries.
+//   - Reactivating to Available from Rented / Unavailable / Temporarily On Hold
+//     requires owner confirmation (owner_confirmed: true).
+//   - Maintains full availability history with date, time, and staff attribution.
+// -----------------------------------------------------------------------------
+const handlePropertyAvailabilityUpdate = async (req: Request, res: Response) => {
+  try {
+    const user: ServerCrmUser = (req as any).crmUser;
+    const propId = req.params.id;
+    const propRaw = await sbSelectById('properties', propId);
+    if (!propRaw) {
+      return res.status(404).json({ success: false, error: 'Property listing not found.' });
+    }
+    const prop = formatPropertyAliases(propRaw);
+
+    const body = req.body || {};
+    const targetAvailability = (body.availability_status || '').trim();
+    const notes = (body.notes || body.availability_notes || '').trim();
+    const ownerConfirmed =
+      body.owner_confirmed === true ||
+      body.owner_confirmed === 'true' ||
+      body.owner_confirmed === 'Yes';
+
+    const allowedAvailability = [
+      'Available',
+      'Temporarily On Hold',
+      'Site Visit in Progress',
+      'Negotiation in Progress',
+      'Rented',
+      'Unavailable'
+    ];
+    if (!allowedAvailability.includes(targetAvailability)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid availability_status. Allowed values: ${allowedAvailability.join(', ')}.`
+      });
+    }
+
+    const prevAvailability = prop.availability_status || 'Available';
+    const prevListingStatus = prop.listing_status;
+    const requiresOwnerConfirmationFromHistory = Boolean(prop.requires_owner_confirmation);
+
+    // Rule: When a property becomes available again from Rented, Unavailable, Temporarily On Hold,
+    // or after a cancelled deal, management must confirm with the owner before reactivating it.
+    if (
+      targetAvailability === 'Available' &&
+      (['Rented', 'Unavailable', 'Temporarily On Hold'].includes(prevAvailability) ||
+        requiresOwnerConfirmationFromHistory) &&
+      !ownerConfirmed
+    ) {
+      return res.status(400).json({
+        success: false,
+        code: 'OWNER_CONFIRMATION_REQUIRED',
+        requiresOwnerConfirmation: true,
+        error: `Owner confirmation is required before reactivating this property from "${prevAvailability}" to "Available".`
+      });
+    }
+
+    const now = new Date().toISOString();
+    let nextListingStatus = prevListingStatus;
+    if (targetAvailability === 'Rented') {
+      nextListingStatus = 'Rented';
+    } else if (targetAvailability === 'Unavailable') {
+      nextListingStatus = 'Unavailable';
+    } else if (
+      ['Available', 'Temporarily On Hold', 'Site Visit in Progress', 'Negotiation in Progress'].includes(
+        targetAvailability
+      ) &&
+      ['Rented', 'Occupied', 'Unavailable'].includes(prevListingStatus)
+    ) {
+      const verCheck = checkPropertyVerificationComplete(prop);
+      if (verCheck.valid && body.republish !== false) {
+        nextListingStatus = 'Published';
+      } else {
+        nextListingStatus = 'Approved';
+      }
+    }
+
+    const history = Array.isArray(propRaw.approval_history) ? [...propRaw.approval_history] : [];
+    history.unshift({
+      is_availability_change: true,
+      action:
+        targetAvailability === 'Available' &&
+        (['Rented', 'Unavailable', 'Temporarily On Hold'].includes(prevAvailability) ||
+          requiresOwnerConfirmationFromHistory)
+          ? 'AVAILABILITY_REACTIVATED'
+          : `AVAILABILITY_${targetAvailability.toUpperCase().replace(/\s+/g, '_')}`,
+      availability_status: targetAvailability,
+      status: nextListingStatus,
+      listing_status_override: nextListingStatus,
+      previous_status: prevAvailability,
+      owner_confirmed: ownerConfirmed,
+      requires_owner_confirmation: false,
+      notes:
+        notes ||
+        `Availability updated from "${prevAvailability}" to "${targetAvailability}"${
+          ownerConfirmed ? ' (Owner confirmed)' : ''
+        }.`,
+      staff_id: user.id,
+      staff_name: user.name,
+      timestamp: now
+    });
+
+    const updatedPropRaw = {
+      ...propRaw,
+      listing_status: nextListingStatus,
+      approval_history: history,
+      updated_by: user.id,
+      updated_by_name: user.name,
+      updated_at: now
+    };
+
+    const savedPropRaw = await sbUpsert('properties', updatedPropRaw, prop.lead_id);
+    const savedProp = formatPropertyAliases({
+      ...savedPropRaw,
+      availability_status: targetAvailability
+    });
+
+    if (prop.lead_id) {
+      const lead = await sbSelectById('property_leads', prop.lead_id);
+      if (lead) {
+        let nextLeadStatus = lead.lead_status;
+        if (targetAvailability === 'Rented' || targetAvailability === 'Unavailable') {
+          nextLeadStatus = 'Not Available';
+        } else if (targetAvailability === 'Available' && lead.lead_status === 'Not Available') {
+          nextLeadStatus = 'Approved';
+        }
+        if (nextLeadStatus !== lead.lead_status) {
+          await sbUpsert('property_leads', {
+            ...lead,
+            lead_status: nextLeadStatus,
+            updated_by: user.id,
+            updated_by_name: user.name,
+            updated_at: now
+          });
+        }
+      }
+    }
+
+    await recordPropertyActivity({
+      lead_id: prop.lead_id,
+      property_id: propId,
+      entity_type: 'availability',
+      entity_id: propId,
+      action: `AVAILABILITY_${targetAvailability.toUpperCase().replace(/\s+/g, '_')}`,
+      description: `Property "${prop.property_title}" availability changed from "${prevAvailability}" to "${targetAvailability}" by ${user.name}${
+        ownerConfirmed ? ' (Confirmed with Owner)' : ''
+      }.${notes ? ' Notes: ' + notes : ''}`,
+      previous_status: prevAvailability,
+      new_status: targetAvailability,
+      metadata: {
+        owner_confirmed: ownerConfirmed,
+        listing_status: nextListingStatus
+      },
+      user
+    });
+
+    res.json({
+      success: true,
+      property: savedProp
+    });
+  } catch (err: any) {
+    console.error('[Properties CRM] Error updating property availability:', err?.message || err);
+    res.status(500).json({ success: false, error: err?.message || 'Database error updating property availability' });
+  }
+};
+
+propertyCrmRouter.post('/listings/:id/availability', handlePropertyAvailabilityUpdate);
+propertyCrmRouter.put('/listings/:id/availability', handlePropertyAvailabilityUpdate);
+
+// -----------------------------------------------------------------------------
 // 5. PROPERTY PHOTOS & PRIVATE DOCUMENTS
 // POST /api/crm/properties/media
 // DELETE /api/crm/properties/media/:imageId
@@ -2402,12 +3069,16 @@ propertyCrmRouter.delete('/media/:imageId', async (req: Request, res: Response) 
 });
 
 // -----------------------------------------------------------------------------
-// 6. TENANT ENQUIRIES CRUD
+// 6. TENANT ENQUIRIES, REQUIREMENTS, CALL LOGGING & RENT NEGOTIATION
 // -----------------------------------------------------------------------------
 propertyCrmRouter.get('/enquiries', async (req: Request, res: Response) => {
   try {
     const search = ((req.query.search as string) || '').toLowerCase().trim();
     const status = (req.query.enquiry_status as string) || '';
+    const source = (req.query.enquiry_source as string) || '';
+    const assignedStaff = ((req.query.assigned_staff as string) || '').toLowerCase().trim();
+    const followupFilter = ((req.query.followup_filter as string) || '').trim();
+    const negotiationStatus = (req.query.negotiation_status as string) || '';
 
     const all = await sbSelectAll('property_tenant_enquiries');
     let list = all.filter((e: any) => !e.is_archived).map(formatEnquiryAliases);
@@ -2418,13 +3089,54 @@ propertyCrmRouter.get('/enquiries', async (req: Request, res: Response) => {
           (e.id || '').toLowerCase().includes(search) ||
           (e.tenant_name || '').toLowerCase().includes(search) ||
           (e.tenant_mobile || '').toLowerCase().includes(search) ||
+          (e.tenant_email || '').toLowerCase().includes(search) ||
           (e.preferred_location || '').toLowerCase().includes(search) ||
-          (e.property_title || '').toLowerCase().includes(search)
+          (e.property_id || '').toLowerCase().includes(search) ||
+          (e.property_title || '').toLowerCase().includes(search) ||
+          (e.assigned_staff_name || '').toLowerCase().includes(search)
       );
     }
 
     if (status && status !== 'All') {
       list = list.filter((e: any) => e.enquiry_status === status);
+    }
+
+    if (source && source !== 'All') {
+      list = list.filter((e: any) => (e.enquiry_source || 'Direct Call') === source);
+    }
+
+    if (negotiationStatus && negotiationStatus !== 'All') {
+      list = list.filter((e: any) => (e.negotiation_status || 'Not Started') === negotiationStatus);
+    }
+
+    if (assignedStaff && assignedStaff !== 'all') {
+      if (assignedStaff === 'unassigned') {
+        list = list.filter(
+          (e: any) =>
+            !e.assigned_staff_name ||
+            ['unassigned', 'website queue', ''].includes(String(e.assigned_staff_name).toLowerCase().trim())
+        );
+      } else {
+        list = list.filter(
+          (e: any) =>
+            (e.assigned_staff_name || '').toLowerCase().includes(assignedStaff) ||
+            (e.assigned_staff_id || '').toLowerCase() === assignedStaff
+        );
+      }
+    }
+
+    const todayStr = getIstDateString();
+    if (followupFilter === 'today') {
+      list = list.filter((e: any) => e.next_followup_date && e.next_followup_date.slice(0, 10) === todayStr);
+    } else if (followupFilter === 'overdue') {
+      list = list.filter(
+        (e: any) =>
+          e.next_followup_date &&
+          e.next_followup_date.slice(0, 10) < todayStr &&
+          !['Converted', 'Deal Completed', 'Not Interested', 'Lost', 'Closed'].includes(e.enquiry_status)
+      );
+    } else if (followupFilter === 'upcoming') {
+      list = list.filter((e: any) => e.next_followup_date && e.next_followup_date.slice(0, 10) > todayStr);
     }
 
     list.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -2436,6 +3148,57 @@ propertyCrmRouter.get('/enquiries', async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Database error loading tenant enquiries' });
+  }
+});
+
+propertyCrmRouter.get('/enquiries/:id', async (req: Request, res: Response) => {
+  try {
+    const enqId = req.params.id;
+    const [enqRaw, allProps, allVisits, allDeals, allActivities] = await Promise.all([
+      sbSelectById('property_tenant_enquiries', enqId),
+      sbSelectAll('properties'),
+      sbSelectAll('property_site_visits'),
+      sbSelectAll('property_deals'),
+      sbSelectAll('property_activities')
+    ]);
+    if (!enqRaw || enqRaw.is_archived) {
+      return res.status(404).json({ success: false, error: 'Tenant enquiry not found.' });
+    }
+    const enquiry = formatEnquiryAliases(enqRaw);
+    const linkedPropertyRaw = enquiry.interested_property_id
+      ? allProps.find((p: any) => p.id === enquiry.interested_property_id)
+      : null;
+    const linkedProperty = linkedPropertyRaw ? formatPropertyAliases(linkedPropertyRaw) : null;
+
+    const siteVisits = allVisits
+      .filter((v: any) => !v.is_archived && (v.enquiry_id === enqId || (enquiry.interested_property_id && v.property_id === enquiry.interested_property_id && v.tenant_name === enquiry.tenant_name)))
+      .map(formatVisitAliases)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const deals = allDeals
+      .map(formatDealAliases)
+      .filter((d: any) => !d.is_archived && (d.tenant_enquiry_id === enqId || (enquiry.interested_property_id && d.property_id === enquiry.interested_property_id && d.tenant_name === enquiry.tenant_name)));
+
+    const activities = allActivities
+      .filter(
+        (a: any) =>
+          a.entity_id === enqId ||
+          (a.metadata && a.metadata.enquiry_id === enqId) ||
+          (enquiry.interested_property_id && a.property_id === enquiry.interested_property_id && a.entity_type === 'enquiry')
+      )
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map(formatActivityAliases);
+
+    res.json({
+      success: true,
+      enquiry,
+      property: linkedProperty,
+      siteVisits,
+      deals,
+      activities
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Database error loading enquiry detail' });
   }
 });
 
@@ -2455,8 +3218,16 @@ propertyCrmRouter.post('/enquiries', async (req: Request, res: Response) => {
 
     const normMobile = normalizePhone(mobile);
     const propId = body.property_id || body.interested_property_id || undefined;
-    const propTitle = (body.property_title || body.interested_property_title || '').trim() || undefined;
-    const propType = body.property_type_needed || body.property_type || '2 BHK';
+    let propTitle = (body.property_title || body.interested_property_title || '').trim() || undefined;
+    let linkedProp: any = null;
+    if (propId) {
+      const pRaw = await sbSelectById('properties', propId);
+      if (pRaw) {
+        linkedProp = formatPropertyAliases(pRaw);
+        if (!propTitle) propTitle = linkedProp.property_title;
+      }
+    }
+    const propType = body.property_type_needed || body.property_type || linkedProp?.property_type || '2 BHK';
 
     const existingAll = await sbSelectAll('property_tenant_enquiries');
     const recentDup = existingAll.find(
@@ -2466,7 +3237,7 @@ propertyCrmRouter.post('/enquiries', async (req: Request, res: Response) => {
         (e.interested_property_id || e.property_id || '') === (propId || '') &&
         Date.now() - new Date(e.created_at || 0).getTime() < 60000
     );
-    if (recentDup) {
+    if (recentDup && !body.allowDuplicate) {
       return res.status(409).json({
         success: false,
         isDuplicate: true,
@@ -2476,6 +3247,16 @@ propertyCrmRouter.post('/enquiries', async (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     const enqId = generateUniqueId('REP-ENQ');
+    const minBudget = parseNumericOrNull(body.min_budget);
+    const maxBudget = parseNumericOrNull(body.max_budget);
+    const rawBudget =
+      body.budget !== undefined && body.budget !== ''
+        ? Number(body.budget) || 0
+        : maxBudget || minBudget || Number(linkedProp?.expected_monthly_rent) || 0;
+
+    const profile = (body.family_or_company_profile || body.tenant_profile || '').trim() || undefined;
+    const reqText = (body.additional_requirements || body.requirements || '').trim() || undefined;
+
     const record = {
       id: enqId,
       enquiry_code: enqId,
@@ -2490,19 +3271,48 @@ propertyCrmRouter.post('/enquiries', async (req: Request, res: Response) => {
       property_id: propId,
       interested_property_title: propTitle,
       property_title: propTitle,
-      preferred_location: (body.preferred_location || '').trim() || undefined,
+      preferred_location: (body.preferred_location || linkedProp?.locality || '').trim() || undefined,
+      property_category: body.property_category || linkedProp?.property_category || 'Residential',
       property_type: propType,
       property_type_needed: propType,
-      budget: body.budget !== undefined && body.budget !== '' ? Number(body.budget) || 0 : 0,
-      budget_range: (body.budget_range || (body.budget ? String(body.budget) : '')).trim() || undefined,
+      bhk_requirement: body.bhk_requirement || (propType.includes('BHK') ? propType : linkedProp?.bhk_configuration || ''),
+      min_budget: minBudget,
+      max_budget: maxBudget,
+      budget: rawBudget,
+      budget_range:
+        (body.budget_range ||
+          (minBudget && maxBudget
+            ? `₹${minBudget.toLocaleString('en-IN')} - ₹${maxBudget.toLocaleString('en-IN')}`
+            : rawBudget
+            ? `₹${rawBudget.toLocaleString('en-IN')}`
+            : '')).trim() || undefined,
+      furnishing_preference: body.furnishing_preference || 'Any',
       move_in_date: body.move_in_date || undefined,
-      family_or_company_profile: (body.family_or_company_profile || '').trim() || undefined,
-      requirements: (body.requirements || '').trim() || undefined,
+      parking_requirement: body.parking_requirement || 'Any',
+      family_or_company_profile: profile,
+      tenant_profile: profile,
+      number_of_occupants: (body.number_of_occupants || '').trim() || undefined,
+      requirements: reqText,
+      additional_requirements: reqText,
       enquiry_source: body.enquiry_source || 'Direct Call',
       assigned_staff_id: body.assigned_staff_id || user.id,
       assigned_staff_name: (body.assigned_telecaller || body.assigned_staff_name || '').trim() || user.name,
       assigned_telecaller: (body.assigned_telecaller || body.assigned_staff_name || '').trim() || user.name,
       enquiry_status: body.enquiry_status || 'New Enquiry',
+      next_followup_date: body.next_followup_date || undefined,
+      followup_notes: (body.followup_notes || '').trim() || undefined,
+      original_expected_rent:
+        parseNumericOrNull(body.original_expected_rent) ??
+        (linkedProp ? Number(linkedProp.expected_monthly_rent) || null : null),
+      original_deposit:
+        parseNumericOrNull(body.original_deposit) ??
+        (linkedProp ? Number(linkedProp.security_deposit) || null : null),
+      maintenance_charges:
+        parseNumericOrNull(body.maintenance_charges) ??
+        (linkedProp ? Number(linkedProp.maintenance_charges) || null : null),
+      negotiation_status: body.negotiation_status || 'Not Started',
+      call_history: [],
+      negotiation_history: [],
       notes: (body.notes || '').trim() || undefined,
       is_archived: false,
       created_by: user.id,
@@ -2520,8 +3330,9 @@ propertyCrmRouter.post('/enquiries', async (req: Request, res: Response) => {
       entity_type: 'enquiry',
       entity_id: record.id,
       action: 'TENANT_ENQUIRY_CREATED',
-      description: `Tenant enquiry created for ${record.tenant_name} (${record.property_type || 'Any'} in ${record.preferred_location || 'Bengaluru'}).`,
+      description: `Tenant enquiry created for ${record.tenant_name} (${record.property_type || 'Any'} in ${record.preferred_location || 'Bengaluru'}) assigned to ${record.assigned_staff_name}.`,
       new_status: record.enquiry_status,
+      metadata: { enquiry_id: record.id },
       user
     });
 
@@ -2546,8 +3357,37 @@ propertyCrmRouter.put('/enquiries/:id', async (req: Request, res: Response) => {
     const mobRaw = body.tenant_mobile || body.mobile_number;
     const normMob = mobRaw ? normalizePhone(mobRaw) : existing.mobile_number || existing.tenant_mobile;
     const propId = body.property_id !== undefined ? body.property_id : body.interested_property_id ?? existing.interested_property_id;
-    const propTitle = body.property_title ?? body.interested_property_title ?? existing.interested_property_title;
+    let propTitle = body.property_title ?? body.interested_property_title ?? existing.interested_property_title;
+    if (propId && propId !== existing.interested_property_id && !body.property_title) {
+      const pRaw = await sbSelectById('properties', propId);
+      if (pRaw) propTitle = pRaw.property_title;
+    }
     const propType = body.property_type_needed ?? body.property_type ?? existing.property_type;
+
+    const minBudget =
+      body.min_budget !== undefined ? parseNumericOrNull(body.min_budget) : existing.min_budget;
+    const maxBudget =
+      body.max_budget !== undefined ? parseNumericOrNull(body.max_budget) : existing.max_budget;
+    const rawBudget =
+      body.budget !== undefined
+        ? Number(body.budget) || 0
+        : maxBudget || minBudget || Number(existing.budget) || 0;
+
+    const profile =
+      body.family_or_company_profile !== undefined
+        ? body.family_or_company_profile
+        : body.tenant_profile !== undefined
+        ? body.tenant_profile
+        : existing.family_or_company_profile;
+    const reqText =
+      body.additional_requirements !== undefined
+        ? body.additional_requirements
+        : body.requirements !== undefined
+        ? body.requirements
+        : existing.requirements;
+
+    const assignedStaffName =
+      body.assigned_telecaller ?? body.assigned_staff_name ?? existing.assigned_staff_name;
 
     const updated = {
       ...existing,
@@ -2564,19 +3404,158 @@ propertyCrmRouter.put('/enquiries/:id', async (req: Request, res: Response) => {
       interested_property_title: propTitle,
       property_title: propTitle,
       preferred_location: body.preferred_location ?? existing.preferred_location,
+      property_category: body.property_category ?? existing.property_category,
       property_type: propType,
       property_type_needed: propType,
-      budget: body.budget !== undefined ? Number(body.budget) || 0 : existing.budget,
-      budget_range: body.budget_range ?? existing.budget_range,
+      bhk_requirement: body.bhk_requirement ?? existing.bhk_requirement,
+      min_budget: minBudget,
+      max_budget: maxBudget,
+      budget: rawBudget,
+      budget_range:
+        body.budget_range ??
+        (minBudget && maxBudget
+          ? `₹${minBudget.toLocaleString('en-IN')} - ₹${maxBudget.toLocaleString('en-IN')}`
+          : existing.budget_range),
+      furnishing_preference: body.furnishing_preference ?? existing.furnishing_preference,
       move_in_date: body.move_in_date ?? existing.move_in_date,
-      family_or_company_profile: body.family_or_company_profile ?? existing.family_or_company_profile,
-      requirements: body.requirements ?? existing.requirements,
+      parking_requirement: body.parking_requirement ?? existing.parking_requirement,
+      family_or_company_profile: profile,
+      tenant_profile: profile,
+      number_of_occupants: body.number_of_occupants ?? existing.number_of_occupants,
+      requirements: reqText,
+      additional_requirements: reqText,
       enquiry_source: body.enquiry_source ?? existing.enquiry_source,
       assigned_staff_id: body.assigned_staff_id ?? existing.assigned_staff_id,
-      assigned_staff_name: body.assigned_telecaller ?? body.assigned_staff_name ?? existing.assigned_staff_name,
-      assigned_telecaller: body.assigned_telecaller ?? body.assigned_staff_name ?? existing.assigned_telecaller,
+      assigned_staff_name: assignedStaffName,
+      assigned_telecaller: assignedStaffName,
       enquiry_status: body.enquiry_status || existing.enquiry_status,
+      next_followup_date:
+        body.next_followup_date !== undefined ? body.next_followup_date : existing.next_followup_date,
+      followup_notes:
+        body.followup_notes !== undefined ? body.followup_notes : existing.followup_notes,
+      last_contact_date:
+        body.last_contact_date !== undefined ? body.last_contact_date : existing.last_contact_date,
+      original_expected_rent:
+        body.original_expected_rent !== undefined
+          ? parseNumericOrNull(body.original_expected_rent)
+          : existing.original_expected_rent,
+      tenant_offered_rent:
+        body.tenant_offered_rent !== undefined
+          ? parseNumericOrNull(body.tenant_offered_rent)
+          : existing.tenant_offered_rent,
+      owner_expected_rent:
+        body.owner_expected_rent !== undefined
+          ? parseNumericOrNull(body.owner_expected_rent)
+          : existing.owner_expected_rent,
+      final_agreed_rent:
+        body.final_agreed_rent !== undefined
+          ? parseNumericOrNull(body.final_agreed_rent)
+          : existing.final_agreed_rent,
+      original_deposit:
+        body.original_deposit !== undefined
+          ? parseNumericOrNull(body.original_deposit)
+          : existing.original_deposit,
+      final_agreed_deposit:
+        body.final_agreed_deposit !== undefined
+          ? parseNumericOrNull(body.final_agreed_deposit)
+          : existing.final_agreed_deposit,
+      maintenance_charges:
+        body.maintenance_charges !== undefined
+          ? parseNumericOrNull(body.maintenance_charges)
+          : existing.maintenance_charges,
+      negotiation_notes:
+        body.negotiation_notes !== undefined ? body.negotiation_notes : existing.negotiation_notes,
+      negotiation_status:
+        body.negotiation_status !== undefined ? body.negotiation_status : existing.negotiation_status,
       notes: body.notes ?? existing.notes,
+      updated_by: user.id,
+      updated_by_name: user.name,
+      updated_at: now
+    };
+
+    const saved = await sbUpsert('property_tenant_enquiries', updated, updated.interested_property_id || undefined);
+
+    const assignmentChanged = assignedStaffName && assignedStaffName !== existing.assigned_staff_name;
+    await recordPropertyActivity({
+      property_id: updated.interested_property_id || undefined,
+      entity_type: 'enquiry',
+      entity_id: enqId,
+      action: assignmentChanged ? 'TENANT_ENQUIRY_ASSIGNED' : 'TENANT_ENQUIRY_UPDATED',
+      description: assignmentChanged
+        ? `Tenant enquiry ${enqId} (${updated.tenant_name}) assigned to ${assignedStaffName} (Status: "${updated.enquiry_status}").`
+        : `Tenant enquiry ${enqId} (${updated.tenant_name}) updated to status "${updated.enquiry_status}" by ${user.name}.`,
+      previous_status: existing.enquiry_status,
+      new_status: updated.enquiry_status,
+      metadata: { enquiry_id: enqId, assigned_staff_name: assignedStaffName },
+      user
+    });
+
+    res.json({ success: true, enquiry: formatEnquiryAliases(saved) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Database error updating tenant enquiry' });
+  }
+});
+
+// Phase 3 Section 2: Call Tenants, Record Call Notes, Schedule Follow-ups & Update Status
+propertyCrmRouter.post('/enquiries/:id/calls', async (req: Request, res: Response) => {
+  try {
+    const user: ServerCrmUser = (req as any).crmUser;
+    const enqId = req.params.id;
+    const existingRaw = await sbSelectById('property_tenant_enquiries', enqId);
+    if (!existingRaw || existingRaw.is_archived) {
+      return res.status(404).json({ success: false, error: 'Tenant enquiry not found.' });
+    }
+    const existing = formatEnquiryAliases(existingRaw);
+
+    const body = req.body || {};
+    const callOutcome = (body.call_outcome || '').trim();
+    if (!callOutcome) {
+      return res.status(400).json({ success: false, error: 'Call Outcome is required.' });
+    }
+
+    const now = new Date().toISOString();
+    const callEntry = {
+      id: generateUniqueId('REP-TCL'),
+      call_datetime: body.call_datetime || now,
+      call_outcome: callOutcome,
+      call_notes: (body.call_notes || '').trim(),
+      next_followup_date: body.next_followup_date || undefined,
+      followup_notes: (body.followup_notes || '').trim() || undefined,
+      logged_by: user.id,
+      logged_by_name: user.name
+    };
+
+    const callHistory = Array.isArray(existing.call_history) ? [...existing.call_history] : [];
+    callHistory.unshift(callEntry);
+
+    let nextStatus = body.enquiry_status || existing.enquiry_status;
+    if (!body.enquiry_status) {
+      if (callOutcome === 'Connected - Interested') nextStatus = 'Interested';
+      else if (callOutcome === 'Connected - Site Visit Requested') nextStatus = 'Site Visit Required';
+      else if (callOutcome === 'Connected - Negotiating Rent') nextStatus = 'Negotiation';
+      else if (callOutcome === 'Connected - Not Interested' || callOutcome === 'Wrong Number')
+        nextStatus = 'Not Interested';
+      else if (existing.enquiry_status === 'New Enquiry') nextStatus = 'Contacted';
+    }
+
+    const assignedStaffName =
+      body.assigned_staff_name ||
+      (existing.assigned_staff_name && existing.assigned_staff_name !== 'Website Queue'
+        ? existing.assigned_staff_name
+        : user.name);
+
+    const updated = {
+      ...existing,
+      enquiry_status: nextStatus,
+      assigned_staff_id: body.assigned_staff_id || existing.assigned_staff_id || user.id,
+      assigned_staff_name: assignedStaffName,
+      assigned_telecaller: assignedStaffName,
+      last_contact_date: callEntry.call_datetime,
+      next_followup_date:
+        body.next_followup_date !== undefined ? body.next_followup_date : existing.next_followup_date,
+      followup_notes:
+        body.followup_notes !== undefined ? body.followup_notes : existing.followup_notes,
+      call_history: callHistory,
       updated_by: user.id,
       updated_by_name: user.name,
       updated_at: now
@@ -2588,33 +3567,211 @@ propertyCrmRouter.put('/enquiries/:id', async (req: Request, res: Response) => {
       property_id: updated.interested_property_id || undefined,
       entity_type: 'enquiry',
       entity_id: enqId,
-      action: 'TENANT_ENQUIRY_UPDATED',
-      description: `Tenant enquiry ${enqId} (${updated.tenant_name}) updated to status "${updated.enquiry_status}".`,
+      action: 'TENANT_CALL_LOGGED',
+      description: `Tenant call logged for ${existing.tenant_name} (${callOutcome}) by ${user.name}.${
+        callEntry.call_notes ? ' Notes: ' + callEntry.call_notes : ''
+      }${callEntry.next_followup_date ? ' Next Follow-up: ' + callEntry.next_followup_date : ''}`,
       previous_status: existing.enquiry_status,
-      new_status: updated.enquiry_status,
+      new_status: nextStatus,
+      metadata: { enquiry_id: enqId, call_id: callEntry.id },
       user
     });
 
-    res.json({ success: true, enquiry: formatEnquiryAliases(saved) });
+    res.status(201).json({
+      success: true,
+      callLog: callEntry,
+      enquiry: formatEnquiryAliases(saved)
+    });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err?.message || 'Database error updating tenant enquiry' });
+    res.status(500).json({ success: false, error: err?.message || 'Database error logging tenant call' });
+  }
+});
+
+// Phase 3 Section 6: Rent Negotiation Management & History
+propertyCrmRouter.post('/enquiries/:id/negotiation', async (req: Request, res: Response) => {
+  try {
+    const user: ServerCrmUser = (req as any).crmUser;
+    const enqId = req.params.id;
+    const existingRaw = await sbSelectById('property_tenant_enquiries', enqId);
+    if (!existingRaw || existingRaw.is_archived) {
+      return res.status(404).json({ success: false, error: 'Tenant enquiry not found.' });
+    }
+    const existing = formatEnquiryAliases(existingRaw);
+
+    const body = req.body || {};
+    const now = new Date().toISOString();
+
+    const negStatus = body.negotiation_status || existing.negotiation_status || 'Negotiation in Progress';
+    const origRent =
+      body.original_expected_rent !== undefined
+        ? parseNumericOrNull(body.original_expected_rent)
+        : existing.original_expected_rent;
+    const tenantRent =
+      body.tenant_offered_rent !== undefined
+        ? parseNumericOrNull(body.tenant_offered_rent)
+        : existing.tenant_offered_rent;
+    const ownerRent =
+      body.owner_expected_rent !== undefined
+        ? parseNumericOrNull(body.owner_expected_rent)
+        : existing.owner_expected_rent;
+    const finalRent =
+      body.final_agreed_rent !== undefined
+        ? parseNumericOrNull(body.final_agreed_rent)
+        : existing.final_agreed_rent;
+    const origDeposit =
+      body.original_deposit !== undefined
+        ? parseNumericOrNull(body.original_deposit)
+        : existing.original_deposit;
+    const finalDeposit =
+      body.final_agreed_deposit !== undefined
+        ? parseNumericOrNull(body.final_agreed_deposit)
+        : existing.final_agreed_deposit;
+    const maint =
+      body.maintenance_charges !== undefined
+        ? parseNumericOrNull(body.maintenance_charges)
+        : existing.maintenance_charges;
+    const negNotes =
+      body.negotiation_notes !== undefined ? body.negotiation_notes.trim() : existing.negotiation_notes;
+
+    const historyEntry = {
+      id: generateUniqueId('REP-NEG'),
+      timestamp: now,
+      staff_id: user.id,
+      staff_name: user.name,
+      negotiation_status: negStatus,
+      original_expected_rent: origRent ?? undefined,
+      tenant_offered_rent: tenantRent ?? undefined,
+      owner_expected_rent: ownerRent ?? undefined,
+      final_agreed_rent: finalRent ?? undefined,
+      original_deposit: origDeposit ?? undefined,
+      final_agreed_deposit: finalDeposit ?? undefined,
+      maintenance_charges: maint ?? undefined,
+      notes: negNotes || `Negotiation status updated to ${negStatus}`
+    };
+
+    const negHistory = Array.isArray(existing.negotiation_history)
+      ? [...existing.negotiation_history]
+      : [];
+    negHistory.unshift(historyEntry);
+
+    let nextEnquiryStatus = body.enquiry_status || existing.enquiry_status;
+    if (!body.enquiry_status) {
+      if (['Negotiation in Progress', 'Awaiting Owner Confirmation', 'Awaiting Tenant Confirmation'].includes(negStatus)) {
+        nextEnquiryStatus = 'Negotiation';
+      } else if (negStatus === 'Agreed' && !['Converted', 'Deal Completed'].includes(existing.enquiry_status)) {
+        nextEnquiryStatus = 'Negotiation';
+      }
+    }
+
+    const updated = {
+      ...existing,
+      enquiry_status: nextEnquiryStatus,
+      original_expected_rent: origRent,
+      tenant_offered_rent: tenantRent,
+      owner_expected_rent: ownerRent,
+      final_agreed_rent: finalRent,
+      original_deposit: origDeposit,
+      final_agreed_deposit: finalDeposit,
+      maintenance_charges: maint,
+      negotiation_notes: negNotes,
+      negotiation_status: negStatus,
+      negotiation_history: negHistory,
+      updated_by: user.id,
+      updated_by_name: user.name,
+      updated_at: now
+    };
+
+    const saved = await sbUpsert('property_tenant_enquiries', updated, updated.interested_property_id || undefined);
+
+    // Optionally update linked property availability to 'Negotiation in Progress' when active negotiation starts
+    if (
+      updated.interested_property_id &&
+      ['Negotiation in Progress', 'Awaiting Owner Confirmation', 'Awaiting Tenant Confirmation'].includes(negStatus)
+    ) {
+      const propRaw = await sbSelectById('properties', updated.interested_property_id);
+      if (propRaw) {
+        const prop = formatPropertyAliases(propRaw);
+        if (['Available', 'Site Visit in Progress'].includes(prop.availability_status || 'Available')) {
+          const pHist = Array.isArray(propRaw.approval_history) ? [...propRaw.approval_history] : [];
+          pHist.unshift({
+            is_availability_change: true,
+            action: 'AVAILABILITY_NEGOTIATION_IN_PROGRESS',
+            availability_status: 'Negotiation in Progress',
+            status: prop.listing_status,
+            previous_status: prop.availability_status || 'Available',
+            notes: `Rent negotiation in progress with tenant ${existing.tenant_name} (${enqId}).`,
+            staff_id: user.id,
+            staff_name: user.name,
+            timestamp: now
+          });
+          await sbUpsert(
+            'properties',
+            {
+              ...propRaw,
+              approval_history: pHist,
+              updated_by: user.id,
+              updated_by_name: user.name,
+              updated_at: now
+            },
+            prop.lead_id
+          );
+        }
+      }
+    }
+
+    await recordPropertyActivity({
+      property_id: updated.interested_property_id || undefined,
+      entity_type: 'negotiation',
+      entity_id: enqId,
+      action: 'RENT_NEGOTIATION_UPDATED',
+      description: `Rent negotiation for ${existing.tenant_name} (${enqId}) updated to "${negStatus}" by ${user.name}. Offered: ₹${(
+        tenantRent || 0
+      ).toLocaleString('en-IN')}, Agreed: ₹${(finalRent || 0).toLocaleString('en-IN')}.`,
+      previous_status: existing.negotiation_status || 'Not Started',
+      new_status: negStatus,
+      metadata: { enquiry_id: enqId, negotiation_entry: historyEntry },
+      user
+    });
+
+    res.json({
+      success: true,
+      enquiry: formatEnquiryAliases(saved),
+      negotiationEntry: historyEntry
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Database error updating rent negotiation' });
   }
 });
 
 // -----------------------------------------------------------------------------
-// 7. SITE VISITS CRUD
+// 7. SITE VISITS CRUD (Phase 3 Section 5: Multi-visit support, Confirm, Reschedule,
+//    Cancel, Tenant Feedback, Owner Feedback, Follow-up Notes)
 // -----------------------------------------------------------------------------
 propertyCrmRouter.get('/site-visits', async (req: Request, res: Response) => {
   try {
     const search = ((req.query.search as string) || '').toLowerCase().trim();
     const status = (req.query.visit_status as string) || '';
     const propertyId = (req.query.property_id as string) || '';
+    const enquiryId = (req.query.enquiry_id as string) || '';
+    const assignedStaff = ((req.query.assigned_staff as string) || '').toLowerCase().trim();
 
     const all = await sbSelectAll('property_site_visits');
     let list = all.filter((v: any) => !v.is_archived).map(formatVisitAliases);
 
     if (propertyId) {
       list = list.filter((v: any) => v.property_id === propertyId);
+    }
+
+    if (enquiryId) {
+      list = list.filter((v: any) => v.enquiry_id === enquiryId || v.tenant_enquiry_id === enquiryId);
+    }
+
+    if (assignedStaff && assignedStaff !== 'all') {
+      list = list.filter(
+        (v: any) =>
+          (v.assigned_staff_name || '').toLowerCase().includes(assignedStaff) ||
+          (v.assigned_staff_id || '').toLowerCase() === assignedStaff
+      );
     }
 
     if (search) {
@@ -2624,7 +3781,9 @@ propertyCrmRouter.get('/site-visits', async (req: Request, res: Response) => {
           (v.tenant_name || '').toLowerCase().includes(search) ||
           (v.tenant_mobile || '').toLowerCase().includes(search) ||
           (v.owner_name || '').toLowerCase().includes(search) ||
-          (v.property_title || '').toLowerCase().includes(search)
+          (v.property_id || '').toLowerCase().includes(search) ||
+          (v.property_title || '').toLowerCase().includes(search) ||
+          (v.assigned_staff_name || '').toLowerCase().includes(search)
       );
     }
 
@@ -2667,22 +3826,55 @@ propertyCrmRouter.post('/site-visits', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Tenant Name is required.' });
     }
 
+    // Lookup property to auto-fill property_title and owner_name if not supplied
+    const [propRaw, existingVisitsRaw] = await Promise.all([
+      sbSelectById('properties', body.property_id),
+      sbSelectAll('property_site_visits')
+    ]);
+    const prop = propRaw ? formatPropertyAliases(propRaw) : null;
+    const normContact = tenantContact ? normalizePhone(tenantContact) : '';
+
+    // Support multiple visits for the same property and tenant — compute visit_number
+    const priorVisitsForTenantAndProp = existingVisitsRaw.filter(
+      (v: any) =>
+        !v.is_archived &&
+        v.property_id === body.property_id &&
+        ((enqId && v.enquiry_id === enqId) ||
+          (normContact && normalizePhone(v.tenant_contact || '') === normContact) ||
+          (v.tenant_name || '').toLowerCase() === body.tenant_name.trim().toLowerCase())
+    );
+    const visitNumber = priorVisitsForTenantAndProp.length + 1;
+
     const now = new Date().toISOString();
     const visitId = generateUniqueId('REP-SV');
-    const normContact = tenantContact ? normalizePhone(tenantContact) : '';
     const feedback = (body.tenant_feedback ?? body.visit_feedback ?? '').trim() || undefined;
+    const followupNotes = (body.followup_notes ?? body.next_action ?? '').trim() || undefined;
+    const initialStatus = body.visit_status || 'Scheduled';
+
+    const visitHistory = [
+      {
+        timestamp: now,
+        action: 'SCHEDULED',
+        status: initialStatus,
+        scheduled_date: visitDate,
+        scheduled_time: visitTime,
+        staff_name: user.name,
+        notes: `Visit #${visitNumber} scheduled for ${visitDate} at ${visitTime} (Assigned: ${assignedStaff}).`
+      }
+    ];
+
     const record = {
       id: visitId,
       visit_code: visitId,
       property_id: body.property_id,
-      property_title: (body.property_title || '').trim() || undefined,
-      lead_id: body.lead_id || undefined,
+      property_title: (body.property_title || prop?.property_title || '').trim() || undefined,
+      lead_id: body.lead_id || prop?.lead_id || undefined,
       enquiry_id: enqId,
       tenant_enquiry_id: enqId,
       tenant_name: body.tenant_name.trim(),
       tenant_contact: normContact,
       tenant_mobile: normContact,
-      owner_name: (body.owner_name || '').trim() || undefined,
+      owner_name: (body.owner_name || prop?.owner_full_name || '').trim() || undefined,
       scheduled_date: visitDate,
       visit_date: visitDate,
       scheduled_time: visitTime,
@@ -2690,11 +3882,14 @@ propertyCrmRouter.post('/site-visits', async (req: Request, res: Response) => {
       assigned_staff_id: body.assigned_staff_id || user.id,
       assigned_staff_name: assignedStaff,
       assigned_staff: assignedStaff,
-      visit_status: body.visit_status || 'Scheduled',
+      visit_status: initialStatus,
       visit_feedback: feedback,
       tenant_feedback: feedback,
       owner_feedback: (body.owner_feedback || '').trim() || undefined,
-      next_action: (body.next_action || '').trim() || undefined,
+      next_action: followupNotes,
+      followup_notes: followupNotes,
+      visit_number: visitNumber,
+      visit_history: visitHistory,
       is_archived: false,
       created_by: user.id,
       created_by_name: user.name,
@@ -2706,14 +3901,38 @@ propertyCrmRouter.post('/site-visits', async (req: Request, res: Response) => {
 
     const saved = await sbUpsert('property_site_visits', record, record.property_id);
 
+    // Sync linked tenant enquiry status to 'Site Visit Scheduled' if applicable
+    if (enqId) {
+      const enqRaw = await sbSelectById('property_tenant_enquiries', enqId);
+      if (enqRaw && !enqRaw.is_archived) {
+        const enq = formatEnquiryAliases(enqRaw);
+        if (['New Enquiry', 'Contacted', 'Interested', 'Site Visit Required'].includes(enq.enquiry_status)) {
+          await sbUpsert(
+            'property_tenant_enquiries',
+            {
+              ...enq,
+              enquiry_status: 'Site Visit Scheduled',
+              interested_property_id: enq.interested_property_id || record.property_id,
+              interested_property_title: enq.interested_property_title || record.property_title,
+              updated_by: user.id,
+              updated_by_name: user.name,
+              updated_at: now
+            },
+            record.property_id
+          );
+        }
+      }
+    }
+
     await recordPropertyActivity({
       lead_id: record.lead_id,
       property_id: record.property_id,
       entity_type: 'site_visit',
       entity_id: record.id,
       action: 'SITE_VISIT_SCHEDULED',
-      description: `Site visit scheduled for tenant ${record.tenant_name} at "${record.property_title || record.property_id}" on ${record.scheduled_date} ${record.scheduled_time}.`,
+      description: `Site visit #${visitNumber} (${visitId}) scheduled for tenant ${record.tenant_name} at "${record.property_title || record.property_id}" on ${record.scheduled_date} ${record.scheduled_time} (Staff: ${assignedStaff}).`,
       new_status: record.visit_status,
+      metadata: { enquiry_id: enqId, visit_number: visitNumber },
       user
     });
 
@@ -2728,10 +3947,11 @@ propertyCrmRouter.put('/site-visits/:id', async (req: Request, res: Response) =>
   try {
     const user: ServerCrmUser = (req as any).crmUser;
     const visitId = req.params.id;
-    const existing = await sbSelectById('property_site_visits', visitId);
-    if (!existing || existing.is_archived) {
+    const existingRaw = await sbSelectById('property_site_visits', visitId);
+    if (!existingRaw || existingRaw.is_archived) {
       return res.status(404).json({ success: false, error: 'Site visit record not found.' });
     }
+    const existing = formatVisitAliases(existingRaw);
 
     const body = req.body || {};
     const now = new Date().toISOString();
@@ -2741,12 +3961,43 @@ propertyCrmRouter.put('/site-visits/:id', async (req: Request, res: Response) =>
     const vTime = body.visit_time ?? body.scheduled_time ?? existing.scheduled_time;
     const staffName = body.assigned_staff ?? body.assigned_staff_name ?? existing.assigned_staff_name;
     const feedback = body.tenant_feedback ?? body.visit_feedback ?? existing.visit_feedback;
+    const ownerFeedback = body.owner_feedback ?? existing.owner_feedback;
+    const followupNotes = body.followup_notes ?? body.next_action ?? existing.followup_notes ?? existing.next_action;
+    const nextStatus = body.visit_status || existing.visit_status;
+    const rescheduleReason = body.reschedule_reason ?? existing.reschedule_reason;
+    const cancelReason = body.cancel_reason ?? existing.cancel_reason;
+
+    const visitHistory = Array.isArray(existing.visit_history) ? [...existing.visit_history] : [];
+    if (
+      nextStatus !== existing.visit_status ||
+      vDate !== existing.scheduled_date ||
+      vTime !== existing.scheduled_time ||
+      feedback !== existing.tenant_feedback ||
+      ownerFeedback !== existing.owner_feedback
+    ) {
+      visitHistory.unshift({
+        timestamp: now,
+        action: nextStatus.toUpperCase().replace(/\s+/g, '_'),
+        status: nextStatus,
+        scheduled_date: vDate,
+        scheduled_time: vTime,
+        staff_name: user.name,
+        notes:
+          (nextStatus === 'Rescheduled' && rescheduleReason
+            ? `Rescheduled to ${vDate} ${vTime}: ${rescheduleReason}`
+            : nextStatus === 'Cancelled' && cancelReason
+            ? `Cancelled: ${cancelReason}`
+            : feedback || ownerFeedback || followupNotes || `Status updated to ${nextStatus}`)
+      });
+    }
 
     const updated = {
       ...existing,
       visit_code: existing.visit_code || existing.id,
       property_id: body.property_id ?? existing.property_id,
       property_title: body.property_title ?? existing.property_title,
+      enquiry_id: body.tenant_enquiry_id ?? body.enquiry_id ?? existing.enquiry_id,
+      tenant_enquiry_id: body.tenant_enquiry_id ?? body.enquiry_id ?? existing.tenant_enquiry_id,
       tenant_name: body.tenant_name ? body.tenant_name.trim() : existing.tenant_name,
       tenant_contact: normContact,
       tenant_mobile: normContact,
@@ -2758,11 +4009,16 @@ propertyCrmRouter.put('/site-visits/:id', async (req: Request, res: Response) =>
       assigned_staff_id: body.assigned_staff_id ?? existing.assigned_staff_id,
       assigned_staff_name: staffName,
       assigned_staff: staffName,
-      visit_status: body.visit_status || existing.visit_status,
+      visit_status: nextStatus,
       visit_feedback: feedback,
       tenant_feedback: feedback,
-      owner_feedback: body.owner_feedback ?? existing.owner_feedback,
-      next_action: body.next_action ?? existing.next_action,
+      owner_feedback: ownerFeedback,
+      next_action: followupNotes,
+      followup_notes: followupNotes,
+      reschedule_reason: rescheduleReason,
+      cancel_reason: cancelReason,
+      visit_number: existing.visit_number || 1,
+      visit_history: visitHistory,
       updated_by: user.id,
       updated_by_name: user.name,
       updated_at: now
@@ -2770,15 +4026,40 @@ propertyCrmRouter.put('/site-visits/:id', async (req: Request, res: Response) =>
 
     const saved = await sbUpsert('property_site_visits', updated, updated.property_id);
 
+    // Sync linked enquiry status when visit is Completed
+    const linkedEnqId = updated.enquiry_id || updated.tenant_enquiry_id;
+    if (linkedEnqId && nextStatus === 'Completed') {
+      const enqRaw = await sbSelectById('property_tenant_enquiries', linkedEnqId);
+      if (enqRaw && !enqRaw.is_archived) {
+        const enq = formatEnquiryAliases(enqRaw);
+        if (['New Enquiry', 'Contacted', 'Interested', 'Site Visit Required', 'Site Visit Scheduled'].includes(enq.enquiry_status)) {
+          await sbUpsert(
+            'property_tenant_enquiries',
+            {
+              ...enq,
+              enquiry_status: 'Visited',
+              updated_by: user.id,
+              updated_by_name: user.name,
+              updated_at: now
+            },
+            updated.property_id
+          );
+        }
+      }
+    }
+
     await recordPropertyActivity({
       lead_id: updated.lead_id,
       property_id: updated.property_id,
       entity_type: 'site_visit',
       entity_id: visitId,
-      action: 'SITE_VISIT_UPDATED',
-      description: `Site visit ${visitId} (${updated.tenant_name}) updated to "${updated.visit_status}".`,
+      action: `SITE_VISIT_${nextStatus.toUpperCase().replace(/\s+/g, '_')}`,
+      description: `Site visit ${visitId} (${updated.tenant_name}) updated to "${updated.visit_status}" (${vDate} ${vTime}) by ${user.name}.${
+        feedback ? ' Tenant Feedback: ' + feedback : ''
+      }${ownerFeedback ? ' Owner Feedback: ' + ownerFeedback : ''}`,
       previous_status: existing.visit_status,
       new_status: updated.visit_status,
+      metadata: { enquiry_id: linkedEnqId },
       user
     });
 
@@ -2790,34 +4071,42 @@ propertyCrmRouter.put('/site-visits/:id', async (req: Request, res: Response) =>
 });
 
 // -----------------------------------------------------------------------------
-// 8. DEALS & PLACEMENT FEE TRACKING + PAYMENT HISTORY
+// 8. DEALS, PLACEMENT FEE TRACKING, PAYMENT RECEIPTS & INTERIOR CRM CONVERSION
 // -----------------------------------------------------------------------------
 propertyCrmRouter.get('/deals', async (req: Request, res: Response) => {
   try {
     const search = ((req.query.search as string) || '').toLowerCase().trim();
     const status = (req.query.payment_status as string) || '';
+    const dealStatus = (req.query.deal_status as string) || '';
 
-    const [allDeals, allPayments] = await Promise.all([
+    const [allDeals, allPaymentsRaw] = await Promise.all([
       sbSelectAll('property_deals'),
       sbSelectAll('property_payments')
     ]);
 
+    const allPayments = allPaymentsRaw.map(formatPaymentAliases);
     let list = allDeals.filter((d: any) => !d.is_archived).map(formatDealAliases);
 
     if (search) {
       list = list.filter(
         (d: any) =>
           (d.id || '').toLowerCase().includes(search) ||
+          (d.property_id || '').toLowerCase().includes(search) ||
           (d.property_title || '').toLowerCase().includes(search) ||
           (d.owner_name || '').toLowerCase().includes(search) ||
           (d.tenant_name || '').toLowerCase().includes(search) ||
           (d.tenant_mobile || '').toLowerCase().includes(search) ||
+          (d.receipt_number || '').toLowerCase().includes(search) ||
           (d.transaction_reference || '').toLowerCase().includes(search)
       );
     }
 
     if (status && status !== 'All') {
       list = list.filter((d: any) => d.payment_status === status);
+    }
+
+    if (dealStatus && dealStatus !== 'All') {
+      list = list.filter((d: any) => d.deal_status === dealStatus);
     }
 
     const enriched = list
@@ -2859,8 +4148,11 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
     const amountReceived = Number(body.amount_received) || 0;
     const amountDue = Math.max(0, placementFee - amountReceived);
 
+    const dealStatus = body.deal_status || 'Deal Confirmed';
     let paymentStatus = body.payment_status;
-    if (!paymentStatus) {
+    if (dealStatus === 'Deal Cancelled' || paymentStatus === 'Cancelled') {
+      paymentStatus = 'Cancelled';
+    } else if (!paymentStatus) {
       if (amountReceived <= 0) paymentStatus = 'Pending';
       else if (amountReceived >= placementFee && placementFee > 0) paymentStatus = 'Paid';
       else paymentStatus = 'Partially Paid';
@@ -2868,7 +4160,10 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     const dealId = generateUniqueId('REP-DL');
+    const receiptNum = (body.receipt_number || '').trim() || `RCPT-${dealId.replace(/^REP-DL-/, '')}`;
     const confirmedDate = body.deal_confirmed_date || body.agreement_date || getIstDateString();
+    const enqId = body.tenant_enquiry_id || body.enquiry_id || undefined;
+    const visitId = body.site_visit_id || undefined;
 
     const dealRecord = {
       id: dealId,
@@ -2876,15 +4171,24 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
       property_id: body.property_id,
       property_title: (body.property_title || '').trim() || undefined,
       lead_id: body.lead_id || undefined,
+      tenant_enquiry_id: enqId,
+      enquiry_id: enqId,
+      site_visit_id: visitId,
       owner_name: body.owner_name.trim(),
+      owner_mobile: body.owner_mobile ? normalizePhone(body.owner_mobile) : undefined,
       tenant_name: body.tenant_name.trim(),
       tenant_mobile: body.tenant_mobile ? normalizePhone(body.tenant_mobile) : '',
+      tenant_email: (body.tenant_email || '').trim() || undefined,
       monthly_rent: monthlyRent,
       final_monthly_rent: monthlyRent,
       security_deposit: Number(body.security_deposit) || 0,
+      maintenance_charges: Number(body.maintenance_charges) || 0,
       agreement_date: confirmedDate,
       deal_confirmed_date: confirmedDate,
       move_in_date: body.move_in_date || undefined,
+      rental_duration: (body.rental_duration || '11 Months').trim(),
+      final_negotiated_terms: (body.final_negotiated_terms || '').trim() || undefined,
+      deal_status: dealStatus,
       placement_fee: placementFee,
       placement_fee_expected: placementFee,
       placement_fee_payer: body.placement_fee_payer || 'Tenant',
@@ -2893,9 +4197,16 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
       payment_date: body.payment_date || (amountReceived > 0 ? getIstDateString() : undefined),
       payment_mode: (body.payment_mode || '').trim() || undefined,
       transaction_reference: (body.transaction_reference || '').trim() || undefined,
+      receipt_number: receiptNum,
       payment_status: paymentStatus,
       handled_by: (body.handled_by || '').trim() || user.name,
       notes: (body.notes || '').trim() || undefined,
+      interior_interest: body.interior_interest || 'No',
+      interior_service_requirement: body.interior_service_requirement || undefined,
+      interior_followup_date: body.interior_followup_date || undefined,
+      interior_notes: (body.interior_notes || '').trim() || undefined,
+      interior_contact_person: body.interior_contact_person || 'Tenant',
+      linked_interior_lead_id: body.linked_interior_lead_id || undefined,
       is_archived: false,
       created_by: user.id,
       created_by_name: user.name,
@@ -2908,14 +4219,17 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
     const savedDeal = await sbUpsert('property_deals', dealRecord, dealRecord.property_id);
 
     const payments: any[] = [];
-    if (amountReceived > 0) {
+    if (amountReceived > 0 && paymentStatus !== 'Cancelled') {
+      const payId = generateUniqueId('REP-PAY');
+      const payReceipt = (body.receipt_number || '').trim() || `RCPT-${payId.replace(/^REP-PAY-/, '')}`;
       const initialPayment = {
-        id: generateUniqueId('REP-PAY'),
+        id: payId,
+        receipt_number: payReceipt,
         deal_id: dealId,
         property_id: dealRecord.property_id,
         amount: amountReceived,
         payment_date: dealRecord.payment_date || getIstDateString(),
-        payment_mode: dealRecord.payment_mode || 'UPI / Bank Transfer',
+        payment_mode: dealRecord.payment_mode || 'UPI',
         transaction_reference: dealRecord.transaction_reference || undefined,
         payment_status: paymentStatus,
         notes: dealRecord.notes || 'Initial placement fee payment recorded with deal.',
@@ -2924,35 +4238,20 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
         created_at: now
       };
       const savedPayment = await sbUpsert('property_payments', initialPayment, dealId);
-      payments.push(savedPayment);
+      payments.push(formatPaymentAliases(savedPayment));
     }
 
-    if (paymentStatus !== 'Cancelled') {
-      const prop = await sbSelectById('properties', dealRecord.property_id);
-      if (prop && !prop.is_archived && prop.listing_status !== 'Rented') {
-        const history = Array.isArray(prop.approval_history) ? [...prop.approval_history] : [];
-        history.unshift({
-          action: 'RENTED',
-          status: 'Rented',
-          notes: `Rental deal ${dealId} closed with tenant ${dealRecord.tenant_name}.`,
-          staff_id: user.id,
-          staff_name: user.name,
-          timestamp: now
-        });
-        await sbUpsert(
-          'properties',
-          {
-            ...prop,
-            listing_status: 'Rented',
-            approval_history: history,
-            updated_by: user.id,
-            updated_by_name: user.name,
-            updated_at: now
-          },
-          prop.lead_id
-        );
-      }
-    }
+    await syncPropertyAndEnquiryForDealLifecycle({
+      dealId,
+      propertyId: dealRecord.property_id,
+      enquiryId: enqId,
+      tenantName: dealRecord.tenant_name,
+      dealStatus,
+      monthlyRent,
+      securityDeposit: dealRecord.security_deposit,
+      user,
+      isNewDeal: true
+    });
 
     await recordPropertyActivity({
       lead_id: dealRecord.lead_id,
@@ -2960,8 +4259,9 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
       entity_type: 'deal',
       entity_id: dealId,
       action: 'DEAL_CREATED',
-      description: `Rental deal ${dealId} created for "${dealRecord.property_title || dealRecord.property_id}" (Tenant: ${dealRecord.tenant_name}, Rent: ₹${dealRecord.monthly_rent.toLocaleString('en-IN')}, Placement Fee: ₹${placementFee.toLocaleString('en-IN')}, Received: ₹${amountReceived.toLocaleString('en-IN')}).`,
-      new_status: paymentStatus,
+      description: `Rental deal ${dealId} (${dealStatus}) created for "${dealRecord.property_title || dealRecord.property_id}" (Tenant: ${dealRecord.tenant_name}, Rent: ₹${dealRecord.monthly_rent.toLocaleString('en-IN')}, Placement Fee: ₹${placementFee.toLocaleString('en-IN')}, Received: ₹${amountReceived.toLocaleString('en-IN')}).`,
+      new_status: dealStatus,
+      metadata: { enquiry_id: enqId, site_visit_id: visitId },
       user
     });
 
@@ -2978,14 +4278,269 @@ propertyCrmRouter.post('/deals', async (req: Request, res: Response) => {
   }
 });
 
+async function syncPropertyAndEnquiryForDealLifecycle(params: {
+  dealId: string;
+  propertyId: string;
+  enquiryId?: string;
+  tenantName: string;
+  dealStatus: string;
+  monthlyRent: number;
+  securityDeposit: number;
+  user: ServerCrmUser;
+  isNewDeal: boolean;
+  previousDealStatus?: string;
+}) {
+  const {
+    dealId,
+    propertyId,
+    enquiryId,
+    tenantName,
+    dealStatus,
+    monthlyRent,
+    securityDeposit,
+    user,
+    isNewDeal,
+    previousDealStatus
+  } = params;
+  const now = new Date().toISOString();
+
+  const propRaw = await sbSelectById('properties', propertyId);
+  if (propRaw && !propRaw.is_archived) {
+    const prop = formatPropertyAliases(propRaw);
+    const prevAvailability = prop.availability_status || 'Available';
+    const prevListingStatus = prop.listing_status;
+    const history = Array.isArray(propRaw.approval_history) ? [...propRaw.approval_history] : [];
+
+    if (dealStatus === 'Deal Pending') {
+      // Rule 1: When a deal is created/updated with status Deal Pending, the property must NOT become Rented.
+      history.unshift({
+        is_availability_change: true,
+        action: 'DEAL_PENDING',
+        availability_status: prevAvailability,
+        status: prevListingStatus,
+        listing_status_override: prevListingStatus,
+        previous_status: prevAvailability,
+        owner_confirmed: false,
+        requires_owner_confirmation: Boolean(prop.requires_owner_confirmation),
+        notes: `Rental deal ${dealId} recorded as "Deal Pending" for tenant ${tenantName}. Property availability remains "${prevAvailability}" (not marked Rented).`,
+        staff_id: user.id,
+        staff_name: user.name,
+        timestamp: now
+      });
+      await sbUpsert(
+        'properties',
+        {
+          ...propRaw,
+          approval_history: history,
+          updated_by: user.id,
+          updated_by_name: user.name,
+          updated_at: now
+        },
+        prop.lead_id
+      );
+      await recordPropertyActivity({
+        lead_id: prop.lead_id,
+        property_id: propertyId,
+        entity_type: 'availability',
+        entity_id: propertyId,
+        action: 'DEAL_PENDING_AVAILABILITY_UNCHANGED',
+        description: `Deal ${dealId} is "Deal Pending" (Tenant: ${tenantName}). Property "${prop.property_title}" availability remains "${prevAvailability}" (not marked Rented).`,
+        previous_status: prevAvailability,
+        new_status: prevAvailability,
+        metadata: { deal_id: dealId, deal_status: dealStatus },
+        user
+      });
+    } else if (dealStatus === 'Deal Confirmed' || dealStatus === 'Agreement in Progress') {
+      // Rule 2: When Deal Confirmed or Agreement in Progress, mark the property Temporarily On Hold.
+      const targetAvailability = 'Temporarily On Hold';
+      let nextListingStatus = prevListingStatus;
+      if (['Rented', 'Occupied'].includes(prevListingStatus)) {
+        const verCheck = checkPropertyVerificationComplete(prop);
+        nextListingStatus = verCheck.valid ? 'Published' : 'Approved';
+      }
+      history.unshift({
+        is_availability_change: true,
+        action: 'AVAILABILITY_TEMPORARILY_ON_HOLD',
+        availability_status: targetAvailability,
+        status: nextListingStatus,
+        listing_status_override: nextListingStatus,
+        previous_status: prevAvailability,
+        owner_confirmed: false,
+        requires_owner_confirmation: false,
+        notes: `Property marked "Temporarily On Hold" because rental deal ${dealId} with tenant ${tenantName} is "${dealStatus}".`,
+        staff_id: user.id,
+        staff_name: user.name,
+        timestamp: now
+      });
+      await sbUpsert(
+        'properties',
+        {
+          ...propRaw,
+          listing_status: nextListingStatus,
+          approval_history: history,
+          updated_by: user.id,
+          updated_by_name: user.name,
+          updated_at: now
+        },
+        prop.lead_id
+      );
+      await recordPropertyActivity({
+        lead_id: prop.lead_id,
+        property_id: propertyId,
+        entity_type: 'availability',
+        entity_id: propertyId,
+        action: 'AVAILABILITY_TEMPORARILY_ON_HOLD',
+        description: `Property "${prop.property_title}" marked "Temporarily On Hold" for Deal ${dealId} (${dealStatus}, Tenant: ${tenantName}) by ${user.name}.`,
+        previous_status: prevAvailability,
+        new_status: targetAvailability,
+        metadata: { deal_id: dealId, deal_status: dealStatus, listing_status: nextListingStatus },
+        user
+      });
+    } else if (dealStatus === 'Agreement Completed' || dealStatus === 'Tenant Moved In') {
+      // Rule 3 & 6: Only when Agreement Completed or Tenant Moved In should the property become Rented (and disappear from public website listings).
+      const targetAvailability = 'Rented';
+      const nextListingStatus = 'Rented';
+      history.unshift({
+        is_availability_change: true,
+        action: 'RENTED',
+        availability_status: targetAvailability,
+        status: nextListingStatus,
+        listing_status_override: nextListingStatus,
+        previous_status: prevAvailability,
+        owner_confirmed: false,
+        requires_owner_confirmation: false,
+        notes: `Property marked "Rented" as rental deal ${dealId} reached "${dealStatus}" with tenant ${tenantName}.`,
+        staff_id: user.id,
+        staff_name: user.name,
+        timestamp: now
+      });
+      await sbUpsert(
+        'properties',
+        {
+          ...propRaw,
+          listing_status: nextListingStatus,
+          approval_history: history,
+          updated_by: user.id,
+          updated_by_name: user.name,
+          updated_at: now
+        },
+        prop.lead_id
+      );
+      if (prop.lead_id) {
+        const lead = await sbSelectById('property_leads', prop.lead_id);
+        if (lead && lead.lead_status !== 'Not Available') {
+          await sbUpsert('property_leads', {
+            ...lead,
+            lead_status: 'Not Available',
+            updated_by: user.id,
+            updated_by_name: user.name,
+            updated_at: now
+          });
+        }
+      }
+      await recordPropertyActivity({
+        lead_id: prop.lead_id,
+        property_id: propertyId,
+        entity_type: 'availability',
+        entity_id: propertyId,
+        action: 'AVAILABILITY_RENTED',
+        description: `Property "${prop.property_title}" marked "Rented" upon Deal ${dealId} reaching "${dealStatus}" (Tenant: ${tenantName}) by ${user.name}. Removed from public website listings.`,
+        previous_status: prevAvailability,
+        new_status: targetAvailability,
+        metadata: { deal_id: dealId, deal_status: dealStatus, listing_status: nextListingStatus },
+        user
+      });
+    } else if (dealStatus === 'Deal Cancelled') {
+      // Rule 4 & 7: When a deal is cancelled, do NOT automatically mark the property Available, and do NOT accidentally reactivate properties.
+      // Require staff to confirm that the owner has reconfirmed availability.
+      const holdAvailability = ['Rented', 'Unavailable'].includes(prevAvailability)
+        ? prevAvailability
+        : 'Temporarily On Hold';
+      history.unshift({
+        is_availability_change: true,
+        action: 'DEAL_CANCELLED_HOLD',
+        availability_status: holdAvailability,
+        status: prevListingStatus,
+        listing_status_override: prevListingStatus,
+        previous_status: prevAvailability,
+        owner_confirmed: false,
+        requires_owner_confirmation: true,
+        notes: `Rental deal ${dealId} (${previousDealStatus || 'Deal'}) was cancelled. Property kept as "${holdAvailability}" — owner confirmation is required before reactivating to Available.`,
+        staff_id: user.id,
+        staff_name: user.name,
+        timestamp: now
+      });
+      await sbUpsert(
+        'properties',
+        {
+          ...propRaw,
+          listing_status: prevListingStatus,
+          approval_history: history,
+          updated_by: user.id,
+          updated_by_name: user.name,
+          updated_at: now
+        },
+        prop.lead_id
+      );
+      await recordPropertyActivity({
+        lead_id: prop.lead_id,
+        property_id: propertyId,
+        entity_type: 'availability',
+        entity_id: propertyId,
+        action: 'DEAL_CANCELLED_HOLD',
+        description: `Deal ${dealId} cancelled by ${user.name}. Property "${prop.property_title}" remains "${holdAvailability}" (not reactivated to Available; requires owner confirmation).`,
+        previous_status: prevAvailability,
+        new_status: holdAvailability,
+        metadata: {
+          deal_id: dealId,
+          deal_status: dealStatus,
+          requires_owner_confirmation: true
+        },
+        user
+      });
+    }
+  }
+
+  // Sync linked tenant enquiry status where applicable
+  if (enquiryId) {
+    const enqRaw = await sbSelectById('property_tenant_enquiries', enquiryId);
+    if (enqRaw && !enqRaw.is_archived) {
+      const enq = formatEnquiryAliases(enqRaw);
+      let nextEnqStatus = enq.enquiry_status;
+      if (['Agreement Completed', 'Tenant Moved In'].includes(dealStatus)) {
+        nextEnqStatus = 'Deal Completed';
+      } else if (['Deal Confirmed', 'Agreement in Progress'].includes(dealStatus)) {
+        nextEnqStatus = 'Converted';
+      } else if (dealStatus === 'Deal Pending' && isNewDeal && enq.enquiry_status === 'New Enquiry') {
+        nextEnqStatus = 'Negotiation';
+      }
+      await sbUpsert(
+        'property_tenant_enquiries',
+        {
+          ...enq,
+          enquiry_status: nextEnqStatus,
+          negotiation_status: dealStatus === 'Deal Cancelled' ? enq.negotiation_status : 'Agreed',
+          final_agreed_rent: monthlyRent || enq.final_agreed_rent,
+          final_agreed_deposit: securityDeposit || enq.final_agreed_deposit,
+          updated_by: user.id,
+          updated_by_name: user.name,
+          updated_at: now
+        },
+        propertyId
+      );
+    }
+  }
+}
+
 propertyCrmRouter.put('/deals/:id', async (req: Request, res: Response) => {
   try {
     const user: ServerCrmUser = (req as any).crmUser;
     const dealId = req.params.id;
-    const existing = await sbSelectById('property_deals', dealId);
-    if (!existing || existing.is_archived) {
+    const existingRaw = await sbSelectById('property_deals', dealId);
+    if (!existingRaw || existingRaw.is_archived) {
       return res.status(404).json({ success: false, error: 'Deal not found.' });
     }
+    const existing = formatDealAliases(existingRaw);
 
     const body = req.body || {};
     const placementFee =
@@ -3004,8 +4559,11 @@ propertyCrmRouter.put('/deals/:id', async (req: Request, res: Response) => {
       body.amount_received !== undefined ? Number(body.amount_received) || 0 : Number(existing.amount_received) || 0;
     const amountDue = Math.max(0, placementFee - amountReceived);
 
+    const dealStatus = body.deal_status || existing.deal_status || 'Deal Confirmed';
     let paymentStatus = body.payment_status || existing.payment_status;
-    if (paymentStatus !== 'Cancelled') {
+    if (dealStatus === 'Deal Cancelled' || body.payment_status === 'Cancelled') {
+      paymentStatus = 'Cancelled';
+    } else if (paymentStatus !== 'Cancelled') {
       if (amountReceived <= 0) paymentStatus = 'Pending';
       else if (amountReceived >= placementFee && placementFee > 0) paymentStatus = 'Paid';
       else paymentStatus = 'Partially Paid';
@@ -3015,16 +4573,26 @@ propertyCrmRouter.put('/deals/:id', async (req: Request, res: Response) => {
     const updated = {
       ...existing,
       deal_code: existing.deal_code || existing.id,
+      tenant_enquiry_id: body.tenant_enquiry_id ?? body.enquiry_id ?? existing.tenant_enquiry_id,
+      enquiry_id: body.tenant_enquiry_id ?? body.enquiry_id ?? existing.enquiry_id,
+      site_visit_id: body.site_visit_id ?? existing.site_visit_id,
       owner_name: body.owner_name ?? existing.owner_name,
+      owner_mobile: body.owner_mobile ? normalizePhone(body.owner_mobile) : existing.owner_mobile,
       tenant_name: body.tenant_name ?? existing.tenant_name,
       tenant_mobile: body.tenant_mobile ? normalizePhone(body.tenant_mobile) : existing.tenant_mobile,
+      tenant_email: body.tenant_email ?? existing.tenant_email,
       monthly_rent: monthlyRent,
       final_monthly_rent: monthlyRent,
       security_deposit:
         body.security_deposit !== undefined ? Number(body.security_deposit) || 0 : existing.security_deposit,
+      maintenance_charges:
+        body.maintenance_charges !== undefined ? Number(body.maintenance_charges) || 0 : existing.maintenance_charges,
       agreement_date: body.deal_confirmed_date ?? body.agreement_date ?? existing.agreement_date,
       deal_confirmed_date: body.deal_confirmed_date ?? body.agreement_date ?? existing.deal_confirmed_date,
       move_in_date: body.move_in_date ?? existing.move_in_date,
+      rental_duration: body.rental_duration ?? existing.rental_duration,
+      final_negotiated_terms: body.final_negotiated_terms ?? existing.final_negotiated_terms,
+      deal_status: dealStatus,
       placement_fee: placementFee,
       placement_fee_expected: placementFee,
       placement_fee_payer: body.placement_fee_payer ?? existing.placement_fee_payer,
@@ -3033,9 +4601,17 @@ propertyCrmRouter.put('/deals/:id', async (req: Request, res: Response) => {
       payment_date: body.payment_date ?? existing.payment_date,
       payment_mode: body.payment_mode ?? existing.payment_mode,
       transaction_reference: body.transaction_reference ?? existing.transaction_reference,
+      receipt_number: body.receipt_number ?? existing.receipt_number,
       payment_status: paymentStatus,
       handled_by: body.handled_by ?? existing.handled_by,
       notes: body.notes ?? existing.notes,
+      interior_interest: body.interior_interest ?? existing.interior_interest,
+      interior_service_requirement:
+        body.interior_service_requirement ?? existing.interior_service_requirement,
+      interior_followup_date: body.interior_followup_date ?? existing.interior_followup_date,
+      interior_notes: body.interior_notes ?? existing.interior_notes,
+      interior_contact_person: body.interior_contact_person ?? existing.interior_contact_person,
+      linked_interior_lead_id: body.linked_interior_lead_id ?? existing.linked_interior_lead_id,
       updated_by: user.id,
       updated_by_name: user.name,
       updated_at: now
@@ -3043,19 +4619,46 @@ propertyCrmRouter.put('/deals/:id', async (req: Request, res: Response) => {
 
     const saved = await sbUpsert('property_deals', updated, updated.property_id);
 
+    // Sync property availability and linked enquiry whenever deal status is updated
+    if (body.deal_status !== undefined || dealStatus !== existing.deal_status) {
+      await syncPropertyAndEnquiryForDealLifecycle({
+        dealId,
+        propertyId: updated.property_id,
+        enquiryId: updated.tenant_enquiry_id || undefined,
+        tenantName: updated.tenant_name,
+        dealStatus,
+        monthlyRent,
+        securityDeposit: Number(updated.security_deposit) || 0,
+        user,
+        isNewDeal: false,
+        previousDealStatus: existing.deal_status
+      });
+    }
+
     await recordPropertyActivity({
       lead_id: updated.lead_id,
       property_id: updated.property_id,
       entity_type: 'deal',
       entity_id: dealId,
       action: 'DEAL_UPDATED',
-      description: `Deal ${dealId} updated by ${user.name} (Payment Status: ${paymentStatus}, Received: ₹${amountReceived.toLocaleString('en-IN')}, Due: ₹${amountDue.toLocaleString('en-IN')}).`,
-      previous_status: existing.payment_status,
-      new_status: paymentStatus,
+      description: `Deal ${dealId} updated by ${user.name} (Deal Status: ${dealStatus}, Payment Status: ${paymentStatus}, Received: ₹${amountReceived.toLocaleString('en-IN')}, Due: ₹${amountDue.toLocaleString('en-IN')}).`,
+      previous_status: existing.deal_status,
+      new_status: dealStatus,
       user
     });
 
-    res.json({ success: true, deal: formatDealAliases(saved) });
+    const allPayments = (await sbSelectAll('property_payments'))
+      .filter((p: any) => p.deal_id === dealId)
+      .map(formatPaymentAliases)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    res.json({
+      success: true,
+      deal: {
+        ...formatDealAliases(saved),
+        payments: allPayments
+      }
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Database error updating deal' });
   }
@@ -3065,10 +4668,11 @@ propertyCrmRouter.post('/deals/:id/payments', async (req: Request, res: Response
   try {
     const user: ServerCrmUser = (req as any).crmUser;
     const dealId = req.params.id;
-    const deal = await sbSelectById('property_deals', dealId);
-    if (!deal || deal.is_archived) {
+    const dealRaw = await sbSelectById('property_deals', dealId);
+    if (!dealRaw || dealRaw.is_archived) {
       return res.status(404).json({ success: false, error: 'Deal record not found.' });
     }
+    const deal = formatDealAliases(dealRaw);
 
     const body = req.body || {};
     const amount = Number(body.amount) || 0;
@@ -3080,28 +4684,47 @@ propertyCrmRouter.post('/deals/:id/payments', async (req: Request, res: Response
     }
 
     const now = new Date().toISOString();
-    const newTotalReceived = (Number(deal.amount_received) || 0) + amount;
+    const payId = generateUniqueId('REP-PAY');
+    const receiptNum = (body.receipt_number || '').trim() || `RCPT-${payId.replace(/^REP-PAY-/, '')}`;
+
+    // Calculate total received across all active (non-cancelled) payments for this deal
+    const existingPayments = (await sbSelectAll('property_payments'))
+      .filter((p: any) => p.deal_id === dealId)
+      .map(formatPaymentAliases);
+    const activePriorSum = existingPayments
+      .filter((p: any) => p.payment_status !== 'Cancelled')
+      .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+    const baseReceived = existingPayments.length > 0 ? activePriorSum : Number(deal.amount_received) || 0;
+
+    const requestedPayStatus = body.payment_status === 'Cancelled' ? 'Cancelled' : 'Paid';
+    const newTotalReceived = requestedPayStatus === 'Cancelled' ? baseReceived : baseReceived + amount;
     const placementFee = Number(deal.placement_fee_expected ?? deal.placement_fee) || 0;
     const newAmountDue = Math.max(0, placementFee - newTotalReceived);
-    const nextStatus =
-      newTotalReceived >= placementFee && placementFee > 0 ? 'Paid' : 'Partially Paid';
+    const nextDealPayStatus =
+      newTotalReceived <= 0
+        ? 'Pending'
+        : newTotalReceived >= placementFee && placementFee > 0
+        ? 'Paid'
+        : 'Partially Paid';
 
     const paymentRecord = {
-      id: generateUniqueId('REP-PAY'),
+      id: payId,
+      receipt_number: receiptNum,
       deal_id: dealId,
       property_id: deal.property_id,
       amount,
       payment_date: body.payment_date || getIstDateString(),
       payment_mode: body.payment_mode,
       transaction_reference: (body.transaction_reference || '').trim() || undefined,
-      payment_status: nextStatus,
+      payment_status: requestedPayStatus === 'Cancelled' ? 'Cancelled' : nextDealPayStatus,
       notes: (body.notes || '').trim() || undefined,
       recorded_by: user.id,
       recorded_by_name: user.name,
       created_at: now
     };
 
-    const savedPayment = await sbUpsert('property_payments', paymentRecord, dealId);
+    const savedPaymentRaw = await sbUpsert('property_payments', paymentRecord, dealId);
+    const savedPayment = formatPaymentAliases(savedPaymentRaw);
 
     const updatedDeal = {
       ...deal,
@@ -3110,7 +4733,8 @@ propertyCrmRouter.post('/deals/:id/payments', async (req: Request, res: Response
       payment_date: paymentRecord.payment_date,
       payment_mode: paymentRecord.payment_mode,
       transaction_reference: paymentRecord.transaction_reference || deal.transaction_reference,
-      payment_status: nextStatus,
+      receipt_number: receiptNum,
+      payment_status: nextDealPayStatus,
       updated_by: user.id,
       updated_by_name: user.name,
       updated_at: now
@@ -3124,19 +4748,338 @@ propertyCrmRouter.post('/deals/:id/payments', async (req: Request, res: Response
       entity_type: 'payment',
       entity_id: savedPayment.id,
       action: 'PAYMENT_RECORDED',
-      description: `Placement fee payment of ₹${amount.toLocaleString('en-IN')} recorded via ${paymentRecord.payment_mode} for Deal ${dealId} by ${user.name}.`,
+      description: `Placement fee payment of ₹${amount.toLocaleString('en-IN')} (Receipt: ${receiptNum}) recorded via ${paymentRecord.payment_mode} for Deal ${dealId} by ${user.name}. Total Received: ₹${newTotalReceived.toLocaleString('en-IN')}, Balance Due: ₹${newAmountDue.toLocaleString('en-IN')}.`,
       previous_status: deal.payment_status,
-      new_status: nextStatus,
+      new_status: nextDealPayStatus,
       user
     });
+
+    const allDealPayments = [savedPayment, ...existingPayments];
 
     res.status(201).json({
       success: true,
       payment: savedPayment,
-      deal: formatDealAliases(savedDeal)
+      deal: {
+        ...formatDealAliases(savedDeal),
+        payments: allDealPayments
+      }
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Database error recording placement fee payment' });
+  }
+});
+
+// Phase 3 Section 8: Update or Cancel an Individual Payment & Recalculate Deal Balance
+propertyCrmRouter.put('/deals/:id/payments/:paymentId', async (req: Request, res: Response) => {
+  try {
+    const user: ServerCrmUser = (req as any).crmUser;
+    const { id: dealId, paymentId } = req.params;
+    const [dealRaw, paymentRaw] = await Promise.all([
+      sbSelectById('property_deals', dealId),
+      sbSelectById('property_payments', paymentId)
+    ]);
+    if (!dealRaw || dealRaw.is_archived) {
+      return res.status(404).json({ success: false, error: 'Deal not found.' });
+    }
+    if (!paymentRaw || paymentRaw.deal_id !== dealId) {
+      return res.status(404).json({ success: false, error: 'Payment record not found for this deal.' });
+    }
+
+    const deal = formatDealAliases(dealRaw);
+    const existingPay = formatPaymentAliases(paymentRaw);
+    const body = req.body || {};
+    const now = new Date().toISOString();
+
+    const updatedPaymentObj = {
+      ...existingPay,
+      amount: body.amount !== undefined ? Number(body.amount) || 0 : Number(existingPay.amount) || 0,
+      payment_date: body.payment_date ?? existingPay.payment_date,
+      payment_mode: body.payment_mode ?? existingPay.payment_mode,
+      transaction_reference: body.transaction_reference ?? existingPay.transaction_reference,
+      receipt_number: body.receipt_number ?? existingPay.receipt_number,
+      payment_status: body.payment_status || existingPay.payment_status,
+      notes: body.notes ?? existingPay.notes
+    };
+
+    const savedPaymentRaw = await sbUpsert('property_payments', updatedPaymentObj, dealId);
+    const savedPayment = formatPaymentAliases(savedPaymentRaw);
+
+    const allPaymentsForDeal = (await sbSelectAll('property_payments'))
+      .filter((p: any) => p.deal_id === dealId)
+      .map(formatPaymentAliases)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const activeTotalReceived = allPaymentsForDeal
+      .filter((p: any) => p.payment_status !== 'Cancelled')
+      .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+
+    const placementFee = Number(deal.placement_fee_expected ?? deal.placement_fee) || 0;
+    const newAmountDue = Math.max(0, placementFee - activeTotalReceived);
+    const nextDealPayStatus =
+      deal.payment_status === 'Cancelled' && body.payment_status === 'Cancelled' && activeTotalReceived <= 0
+        ? 'Cancelled'
+        : activeTotalReceived <= 0
+        ? 'Pending'
+        : activeTotalReceived >= placementFee && placementFee > 0
+        ? 'Paid'
+        : 'Partially Paid';
+
+    const updatedDeal = {
+      ...deal,
+      amount_received: activeTotalReceived,
+      amount_due: newAmountDue,
+      payment_status: nextDealPayStatus,
+      updated_by: user.id,
+      updated_by_name: user.name,
+      updated_at: now
+    };
+    const savedDeal = await sbUpsert('property_deals', updatedDeal, deal.property_id);
+
+    await recordPropertyActivity({
+      lead_id: deal.lead_id,
+      property_id: deal.property_id,
+      entity_type: 'payment',
+      entity_id: paymentId,
+      action: 'PAYMENT_UPDATED',
+      description: `Payment ${paymentId} (${savedPayment.receipt_number}) updated to "${savedPayment.payment_status}" by ${user.name}. Recalculated Received: ₹${activeTotalReceived.toLocaleString('en-IN')}, Balance Due: ₹${newAmountDue.toLocaleString('en-IN')}.`,
+      previous_status: existingPay.payment_status,
+      new_status: savedPayment.payment_status,
+      user
+    });
+
+    res.json({
+      success: true,
+      payment: savedPayment,
+      deal: {
+        ...formatDealAliases(savedDeal),
+        payments: allPaymentsForDeal
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Database error updating payment' });
+  }
+});
+
+// Phase 3 Section 8: Generate & Download Payment Receipt
+propertyCrmRouter.get('/deals/:id/receipt', async (req: Request, res: Response) => {
+  try {
+    const user: ServerCrmUser = (req as any).crmUser;
+    const dealId = req.params.id;
+    const paymentId = ((req.query.payment_id as string) || '').trim();
+
+    const [dealRaw, allPaymentsRaw] = await Promise.all([
+      sbSelectById('property_deals', dealId),
+      sbSelectAll('property_payments')
+    ]);
+    if (!dealRaw || dealRaw.is_archived) {
+      return res.status(404).json({ success: false, error: 'Deal not found.' });
+    }
+    const deal = formatDealAliases(dealRaw);
+    const propRaw = deal.property_id ? await sbSelectById('properties', deal.property_id) : null;
+    const prop = propRaw ? formatPropertyAliases(propRaw) : null;
+
+    const dealPayments = allPaymentsRaw
+      .filter((p: any) => p.deal_id === dealId)
+      .map(formatPaymentAliases)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const targetPayment = paymentId
+      ? dealPayments.find((p: any) => p.id === paymentId)
+      : dealPayments.find((p: any) => p.payment_status !== 'Cancelled') || dealPayments[0];
+
+    const totalFee = Number(deal.placement_fee_expected ?? deal.placement_fee) || 0;
+    const activeSum = dealPayments
+      .filter((p: any) => p.payment_status !== 'Cancelled')
+      .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+    const totalReceived = dealPayments.length > 0 ? activeSum : Number(deal.amount_received) || 0;
+    const balanceDue = Math.max(0, totalFee - totalReceived);
+
+    const receiptData = {
+      receipt_number: targetPayment?.receipt_number || deal.receipt_number || `RCPT-${deal.id.replace(/^REP-DL-/, '')}`,
+      receipt_date: targetPayment?.payment_date || deal.payment_date || getIstDateString(),
+      company_name: 'Royal Epic Properties',
+      parent_brand: 'A division of Royal Epic Interiors',
+      company_address: 'Bengaluru, Karnataka, India',
+      company_phone: '+91 98800 00000',
+      company_email: 'enquiry@royalepicinterior.com',
+      deal_id: deal.id,
+      deal_code: deal.deal_code || deal.id,
+      deal_status: deal.deal_status || 'Deal Confirmed',
+      property_id: deal.property_id,
+      property_code: prop?.property_code || deal.property_id,
+      property_title: deal.property_title || prop?.property_title || deal.property_id,
+      property_locality: prop?.locality ? `${prop.locality}, ${prop.city || 'Bengaluru'}` : 'Bengaluru',
+      owner_name: deal.owner_name,
+      tenant_name: deal.tenant_name,
+      tenant_mobile: deal.tenant_mobile || '',
+      final_monthly_rent: Number(deal.final_monthly_rent ?? deal.monthly_rent) || 0,
+      security_deposit: Number(deal.security_deposit) || 0,
+      agreement_date: deal.agreement_date || '',
+      move_in_date: deal.move_in_date || '',
+      placement_fee_payer: deal.placement_fee_payer || 'Tenant',
+      total_placement_fee: totalFee,
+      total_amount_received: totalReceived,
+      current_payment_amount: targetPayment ? Number(targetPayment.amount) || 0 : totalReceived,
+      balance_due: balanceDue,
+      payment_status: deal.payment_status,
+      payment_mode: targetPayment?.payment_mode || deal.payment_mode || 'UPI',
+      transaction_reference: targetPayment?.transaction_reference || deal.transaction_reference || 'N/A',
+      notes: targetPayment?.notes || deal.notes || '',
+      issued_by: targetPayment?.recorded_by_name || user.name,
+      latest_payment: targetPayment
+        ? {
+            id: targetPayment.id,
+            receipt_number: targetPayment.receipt_number,
+            amount: Number(targetPayment.amount) || 0,
+            payment_date: targetPayment.payment_date,
+            payment_mode: targetPayment.payment_mode,
+            transaction_reference: targetPayment.transaction_reference || 'N/A',
+            notes: targetPayment.notes || '',
+            recorded_by_name: targetPayment.recorded_by_name || user.name
+          }
+        : undefined,
+      payments: dealPayments,
+      generated_by: user.name,
+      generated_at: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      receipt: receiptData
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Error generating payment receipt' });
+  }
+});
+
+// Phase 3 Section 9: Interior Design Opportunity Conversion to Interior Leads CRM
+propertyCrmRouter.post('/deals/:id/convert-interior', async (req: Request, res: Response) => {
+  try {
+    const user: ServerCrmUser = (req as any).crmUser;
+    const dealId = req.params.id;
+    const dealRaw = await sbSelectById('property_deals', dealId);
+    if (!dealRaw || dealRaw.is_archived) {
+      return res.status(404).json({ success: false, error: 'Deal record not found.' });
+    }
+    const deal = formatDealAliases(dealRaw);
+    const body = req.body || {};
+
+    if (deal.linked_interior_lead_id && !body.forceRelink) {
+      return res.status(409).json({
+        success: false,
+        isDuplicate: true,
+        leadId: deal.linked_interior_lead_id,
+        error: `This rental deal is already linked to Interior CRM Lead ${deal.linked_interior_lead_id}.`
+      });
+    }
+
+    const propRaw = deal.property_id ? await sbSelectById('properties', deal.property_id) : null;
+    const prop = propRaw ? formatPropertyAliases(propRaw) : null;
+
+    const contactPerson = body.interior_contact_person || deal.interior_contact_person || 'Tenant';
+    const customerName =
+      (body.customer_name || '').trim() ||
+      (contactPerson === 'Owner' ? deal.owner_name : deal.tenant_name);
+    const customerPhone =
+      (body.phone || '').trim() ||
+      (contactPerson === 'Owner'
+        ? deal.owner_mobile || prop?.owner_primary_mobile || ''
+        : deal.tenant_mobile || '');
+    const customerEmail =
+      (body.email || '').trim() ||
+      (contactPerson === 'Owner' ? prop?.owner_email || '' : deal.tenant_email || '');
+
+    const serviceRequirement =
+      body.interior_service_requirement ||
+      deal.interior_service_requirement ||
+      'Home Interior';
+    const followupDate =
+      body.interior_followup_date || deal.interior_followup_date || undefined;
+    const interiorNotes =
+      (body.interior_notes !== undefined ? body.interior_notes : deal.interior_notes || '').trim();
+
+    if (!body.confirmed) {
+      return res.status(400).json({
+        success: false,
+        requiresConfirmation: true,
+        error: 'Please confirm before creating a new enquiry in the Interior Leads CRM.'
+      });
+    }
+
+    const conversionResult = await createOrCheckInteriorCrmLeadFromPropertyDeal({
+      customer_name: customerName,
+      phone: customerPhone,
+      email: customerEmail,
+      interested_service: serviceRequirement,
+      city: prop?.locality ? `${prop.locality}, Bengaluru` : 'Bengaluru',
+      project_address: prop?.full_address || prop?.locality || undefined,
+      budget: body.budget || 'To be discussed',
+      next_followup_date: followupDate,
+      notes: `Royal Epic Properties Deal Conversion (${deal.id} — ${
+        deal.property_title || deal.property_id
+      }). Contact Role: ${contactPerson}. Service Needed: ${serviceRequirement}.${
+        interiorNotes ? ' Notes: ' + interiorNotes : ''
+      }`,
+      property_deal_id: deal.id,
+      property_id: deal.property_id,
+      user,
+      linkExistingIfDuplicate: Boolean(body.linkExistingIfDuplicate)
+    });
+
+    if (!conversionResult.success) {
+      return res.status(conversionResult.isDuplicate ? 409 : 400).json(conversionResult);
+    }
+
+    const now = new Date().toISOString();
+    const updatedDeal = {
+      ...deal,
+      interior_interest: body.interior_interest || 'Yes',
+      interior_service_requirement: serviceRequirement,
+      interior_followup_date: followupDate,
+      interior_notes: interiorNotes,
+      interior_contact_person: contactPerson,
+      linked_interior_lead_id: conversionResult.leadId,
+      updated_by: user.id,
+      updated_by_name: user.name,
+      updated_at: now
+    };
+    const savedDeal = await sbUpsert('property_deals', updatedDeal, deal.property_id);
+
+    await recordPropertyActivity({
+      lead_id: deal.lead_id,
+      property_id: deal.property_id,
+      entity_type: 'deal',
+      entity_id: deal.id,
+      action: 'INTERIOR_LEAD_CONVERTED',
+      description: `${
+        conversionResult.linkedExisting ? 'Linked existing' : 'Created new'
+      } Interior Leads CRM enquiry ${conversionResult.leadId} for ${customerName} (${contactPerson} — ${serviceRequirement}) from Property Deal ${deal.id} by ${user.name}.`,
+      new_status: conversionResult.leadId,
+      metadata: {
+        interior_lead_id: conversionResult.leadId,
+        service_requirement: serviceRequirement,
+        contact_person: contactPerson
+      },
+      user
+    });
+
+    const allPayments = (await sbSelectAll('property_payments'))
+      .filter((p: any) => p.deal_id === dealId)
+      .map(formatPaymentAliases)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    res.status(201).json({
+      success: true,
+      linkedExisting: Boolean(conversionResult.linkedExisting),
+      interiorLeadId: conversionResult.leadId,
+      interiorLead: conversionResult.lead,
+      deal: {
+        ...formatDealAliases(savedDeal),
+        payments: allPayments
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Error converting to Interior CRM enquiry' });
   }
 });
 
@@ -3428,6 +5371,20 @@ publicPropertiesRouter.post('/enquiries', async (req: Request, res: Response) =>
       });
     }
 
+    // Phase 3 Rule: Temporarily On Hold properties should not accept new public enquiries
+    if (
+      matchedProperty.availability_status === 'Temporarily On Hold' ||
+      matchedProperty.accepting_enquiries === false
+    ) {
+      return res.status(400).json({
+        success: false,
+        code: 'PROPERTY_ON_HOLD',
+        propertyOnHold: true,
+        error:
+          'This property is temporarily on hold and is not accepting new public enquiries right now. Please explore other available properties or call Royal Epic Properties.'
+      });
+    }
+
     const normMobile = normalizePhone(tenDigitMobile);
 
     // Check for duplicate submission within last 2 minutes
@@ -3547,6 +5504,38 @@ publicPropertiesRouter.post('/enquiries', async (req: Request, res: Response) =>
     };
     await sbUpsert('property_activities', activityRecord, matchedProperty.id).catch(() => {});
 
+    // Trigger asynchronous Hostinger SMTP email notification to enquiry@royalepicinterior.com
+    const formattedRent = Number(matchedProperty.expected_monthly_rent || 0) > 0
+      ? `₹${Number(matchedProperty.expected_monthly_rent).toLocaleString('en-IN')} / month`
+      : 'Price on Request';
+    const scopeSummaryLines = [
+      `Enquiry ID: ${saved.id}`,
+      `Property ID: ${matchedProperty.id}`,
+      `Property Title: ${matchedProperty.property_title}`,
+      `Category & Type: ${matchedProperty.property_category || 'Residential'} — ${matchedProperty.property_type || ''}`,
+      `Locality: ${matchedProperty.locality || 'Bengaluru'}, ${matchedProperty.city || 'Bengaluru'}`,
+      preferredContactTime ? `Preferred Contact Time: ${preferredContactTime}` : '',
+      preferredVisitDate ? `Preferred Site Visit Date: ${preferredVisitDate}` : '',
+      preferredVisitTime ? `Preferred Site Visit Time: ${preferredVisitTime}` : '',
+      numberOfOccupants ? `Occupants / Tenant Profile: ${numberOfOccupants}` : '',
+      additionalRequirements ? `Message / Requirements: ${additionalRequirements}` : ''
+    ].filter(Boolean);
+
+    sendLeadNotificationEmail({
+      id: saved.id,
+      source: 'Royal Epic Properties - Website Tenant Enquiry',
+      full_name: fullName,
+      phone: normMobile,
+      email: rawEmail || 'Not Provided',
+      city: `${matchedProperty.locality || 'Bengaluru'}, Bengaluru`,
+      service_type: `Property Rental Enquiry: ${matchedProperty.property_title} (${matchedProperty.id})`,
+      estimated_budget: formattedRent,
+      project_scope: scopeSummaryLines.join(' | '),
+      created_at: now
+    }).catch((mailErr) => {
+      console.error('[Public Properties API] Email notification dispatch error:', mailErr);
+    });
+
     res.status(201).json({
       success: true,
       enquiry_id: saved.id,
@@ -3568,7 +5557,7 @@ publicPropertiesRouter.post('/enquiries', async (req: Request, res: Response) =>
     console.error('[Public Properties API] Error submitting tenant enquiry:', err?.message || err);
     res.status(500).json({
       success: false,
-      error: 'Unable to submit your enquiry right now. Please try again or call +91 99166 33338.'
+      error: 'Unable to submit your enquiry right now. Please try again or call +91 70261 19311.'
     });
   }
 });

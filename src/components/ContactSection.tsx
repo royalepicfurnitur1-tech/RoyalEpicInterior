@@ -122,7 +122,7 @@ export const ContactSection: React.FC = () => {
                   <Phone className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-stone-900 block">Customer Care Line</span>
-                    <a href="tel:+919916633338" className="hover:text-amber-700 font-mono block text-sm font-bold text-amber-800">+91 99166 33338</a>
+                    <a href="tel:+917026119311" className="hover:text-amber-700 font-mono block text-sm font-bold text-amber-800">+91 70261 19311</a>
                   </div>
                 </div>
 
@@ -148,13 +148,13 @@ export const ContactSection: React.FC = () => {
               {/* Direct Instant Actions */}
               <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-stone-100">
                 <a
-                  href="tel:+919916633338"
+                  href="tel:+917026119311"
                   className="py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-900 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Phone className="w-3.5 h-3.5 text-amber-700" /> Direct Call
                 </a>
                 <a
-                  href="https://wa.me/919916633338?text=Hi%20Royal%20Epic,%20I%20want%20to%20discuss%20an%20interior%20project"
+                  href="https://wa.me/917026119311?text=Hi%20Royal%20Epic,%20I%20want%20to%20discuss%20an%20interior%20project"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"

@@ -378,13 +378,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: 'demo_customer_uid',
       email: 'customer.demo@royalepic.com',
       created_at: new Date().toISOString(),
-      user_metadata: { name: 'Demo Customer', phone: '+91 99166 33338' }
+      user_metadata: { name: 'Demo Customer', phone: '+91 70261 19311' }
     };
     const demoProfile: UserProfile = {
       uid: demoUser.id,
       email: demoUser.email,
       name: 'Demo Customer',
-      phone: '+91 99166 33338',
+      phone: '+91 70261 19311',
       role: 'customer',
       createdAt: demoUser.created_at
     };
@@ -404,7 +404,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       uid: demoAdminUser.id,
       email: email,
       name: 'Royal Epic Administrator',
-      phone: '+91 99166 33338',
+      phone: '+91 70261 19311',
       role: 'admin',
       createdAt: demoAdminUser.created_at
     };
@@ -424,7 +424,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       uid: demoDevUser.id,
       email: email,
       name: 'Royal Epic Lead Developer',
-      phone: '+91 99166 33338',
+      phone: '+91 70261 19311',
       role: 'developer',
       createdAt: demoDevUser.created_at
     };

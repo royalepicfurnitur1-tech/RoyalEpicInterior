@@ -41,7 +41,7 @@ const DEFAULT_SEO_PAGES: SeoPageData[] = [
       "image": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1200",
       "@id": "https://royalepicfurniture.com",
       "url": "https://royalepicfurniture.com",
-      "telephone": "+91-99166-33338",
+      "telephone": "+91-70261-19311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -169,7 +169,7 @@ const DEFAULT_SEO_PAGES: SeoPageData[] = [
       "mainEntity": {
         "@type": "LocalBusiness",
         "name": "Royal Epic Interior & Furniture Pvt Ltd",
-        "telephone": "+91-99166-33338",
+        "telephone": "+91-70261-19311",
         "email": "royalepicfurnitur1@gmail.com"
       }
     }, null, 2),

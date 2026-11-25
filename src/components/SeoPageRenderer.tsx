@@ -246,11 +246,11 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
               </button>
 
               <a
-                href="tel:+919916633338"
+                href="tel:+917026119311"
                 className="px-3 py-2 text-neutral-300 hover:text-gold transition-colors text-xs sm:text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
               >
                 <Phone className="w-3.5 h-3.5 text-gold shrink-0" />
-                <span className="tabular-nums">+91 99166 33338</span>
+                <span className="tabular-nums">+91 70261 19311</span>
               </a>
             </div>
           </div>
@@ -350,8 +350,8 @@ export const SeoPageRenderer: React.FC<SeoPageRendererProps> = ({
               </button>
               <p className="text-[11px] text-neutral-400 text-center pt-0.5">
                 Thanisandra Hub ·{' '}
-                <a href="tel:+919916633338" className="text-gold hover:underline tabular-nums">
-                  +91 99166 33338
+                <a href="tel:+917026119311" className="text-gold hover:underline tabular-nums">
+                  +91 70261 19311
                 </a>
               </p>
             </div>

@@ -154,7 +154,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     bannerOfferText: '🎉 Special Festive Season Offer: Free 3D VR Walkthrough & 10% Discount on Modular Kitchens!',
     bannerOfferActive: true,
     contactAddress: 'No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045',
-    contactPhone: '+91 99000 00000',
+    contactPhone: '+91 70261 19311',
     contactEmail: 'info@royalepicfurniture.com'
   });
   const [isSavingCms, setIsSavingCms] = useState(false);

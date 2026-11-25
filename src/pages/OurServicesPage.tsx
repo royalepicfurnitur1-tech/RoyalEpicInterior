@@ -97,7 +97,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
           '@id': 'https://royalepicinterior.com/#organization',
           name: 'Royal Epic Commercial & Home Interiors',
           url: 'https://royalepicinterior.com/our-services',
-          telephone: '+91 99166 33338',
+          telephone: '+91 70261 19311',
           email: 'enquiry@royalepicinterior.com',
           address: {
             '@type': 'PostalAddress',
@@ -128,7 +128,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
           provider: {
             '@type': 'HomeAndConstructionBusiness',
             name: 'Royal Epic Interior & Furniture',
-            telephone: '+91 99166 33338',
+            telephone: '+91 70261 19311',
             url: 'https://royalepicinterior.com'
           },
           areaServed: {
@@ -471,7 +471,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
 
             {/* WhatsApp CTA */}
             <a
-              href="https://wa.me/919916633338?text=Hello%20Royal%20Epic%2C%20I%20would%20like%20to%20inquire%20about%20interior%20services%20in%20Bangalore."
+              href="https://wa.me/917026119311?text=Hello%20Royal%20Epic%2C%20I%20would%20like%20to%20inquire%20about%20interior%20services%20in%20Bangalore."
               target="_blank"
               rel="noopener noreferrer"
               data-conversion="whatsapp"
@@ -483,7 +483,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
 
             {/* Phone Call CTA */}
             <a
-              href="tel:+919916633338"
+              href="tel:+917026119311"
               data-conversion="phone"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 border border-neutral-700 text-neutral-100 font-semibold text-sm sm:text-base transition-all duration-200 hover:scale-[1.02]"
             >
@@ -500,7 +500,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
             </span>
             <span className="text-neutral-600">•</span>
             <span className="flex items-center gap-1.5 font-mono text-amber-300">
-              <Phone className="w-3.5 h-3.5 text-amber-500" /> +91 99166 33338
+              <Phone className="w-3.5 h-3.5 text-amber-500" /> +91 70261 19311
             </span>
           </div>
 
@@ -1718,7 +1718,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
               <div className="space-y-3 pt-4">
                 
                 <a
-                  href="https://wa.me/919916633338?text=Hello%20Royal%20Epic%2C%20I%20would%20like%20to%20consult%20on%20an%20interior%20project."
+                  href="https://wa.me/917026119311?text=Hello%20Royal%20Epic%2C%20I%20would%20like%20to%20consult%20on%20an%20interior%20project."
                   target="_blank"
                   rel="noopener noreferrer"
                   data-conversion="whatsapp"
@@ -1732,13 +1732,13 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
                 </a>
 
                 <a
-                  href="tel:+919916633338"
+                  href="tel:+917026119311"
                   data-conversion="phone"
                   className="w-full flex items-center justify-between p-4 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-amber-500/50 text-neutral-200 font-semibold text-sm transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-amber-400" />
-                    <span>Call +91 99166 33338</span>
+                    <span>Call +91 70261 19311</span>
                   </div>
                   <ArrowRight className="w-4 h-4" />
                 </a>
@@ -1961,7 +1961,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
       {/* ============================================================== */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-neutral-950/95 backdrop-blur-lg border-t border-neutral-800 px-4 py-3 flex items-center gap-3 shadow-2xl">
         <a
-          href="https://wa.me/919916633338?text=Hello%20Royal%20Epic%2C%20I%20would%20like%20to%20inquire%20about%20interior%20services."
+          href="https://wa.me/917026119311?text=Hello%20Royal%20Epic%2C%20I%20would%20like%20to%20inquire%20about%20interior%20services."
           target="_blank"
           rel="noopener noreferrer"
           data-conversion="whatsapp"
@@ -1971,7 +1971,7 @@ export const OurServicesPage: React.FC<OurServicesPageProps> = ({
           <span>WhatsApp</span>
         </a>
         <a
-          href="tel:+919916633338"
+          href="tel:+917026119311"
           data-conversion="phone"
           className="flex-1 py-3 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-md"
         >

@@ -181,7 +181,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const handleDownloadBrochure = () => {
     const blob = new Blob(
-      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338`],
+      [`ROYAL EPIC INTERIOR & FURNITURE\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 70261 19311`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
@@ -351,7 +351,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         <Scan className="w-3 h-3 text-gold" /> Re-scan Floor
                       </button>
                       <a
-                        href={`https://wa.me/919916633338?text=Hi%20Royal%20Epic,%20I%20want%20an%20AR%20Site%20Consultation%20for%20${encodeURIComponent(product.name)}`}
+                        href={`https://wa.me/917026119311?text=Hi%20Royal%20Epic,%20I%20want%20an%20AR%20Site%20Consultation%20for%20${encodeURIComponent(product.name)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-2.5 py-1 bg-gold hover:bg-amber-400 text-black rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-md"
@@ -617,7 +617,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <Download className="w-3.5 h-3.5 text-neutral-950" /> Download Brochure
                 </button>
                 <a
-                  href={`https://wa.me/919916633338?text=Hi%20Royal%20Epic,%20I%20am%20interested%20in%20${encodeURIComponent(product.name)}%20(SKU:%20${encodeURIComponent(currentSku)})`}
+                  href={`https://wa.me/917026119311?text=Hi%20Royal%20Epic,%20I%20am%20interested%20in%20${encodeURIComponent(product.name)}%20(SKU:%20${encodeURIComponent(currentSku)})`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-2.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-bold uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer"

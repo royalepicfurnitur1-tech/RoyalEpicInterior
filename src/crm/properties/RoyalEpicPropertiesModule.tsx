@@ -7,35 +7,53 @@ import {
   PropertyTenantEnquiry,
   PropertySiteVisit,
   PropertyDeal,
+  PropertyPaymentRecord,
+  PropertyActivityLog,
   PropertyDashboardData,
   PropertyCategory,
   PropertyLeadSource,
   PropertyLeadStatus,
   PropertyListingStatus,
+  PropertyAvailabilityStatus,
   TenantEnquiryStatus,
   SiteVisitStatus,
   DealPaymentStatus,
+  DealLifecycleStatus,
+  NegotiationStatus,
+  PropertyCrmStaffMember,
+  PropertyPaymentReceiptData,
   PROPERTY_LEAD_SOURCES,
   PROPERTY_LEAD_STATUSES,
   PROPERTY_LISTING_STATUSES,
+  PROPERTY_AVAILABILITY_STATUSES,
   RESIDENTIAL_PROPERTY_TYPES,
   COMMERCIAL_PROPERTY_TYPES,
   ALL_PROPERTY_TYPES,
+  FURNISHING_STATUSES,
   TENANT_ENQUIRY_STATUSES,
   SITE_VISIT_STATUSES,
   DEAL_PAYMENT_STATUSES,
-  PAYMENT_MODES
+  DEAL_LIFECYCLE_STATUSES,
+  NEGOTIATION_STATUSES,
+  PAYMENT_MODES,
+  INTERIOR_INTEREST_OPTIONS,
+  INTERIOR_SERVICE_REQUIREMENTS
 } from './propertyTypes';
 import {
   fetchPropertyDashboard,
+  fetchPropertyCrmStaff,
   fetchPropertyLeads,
   createPropertyLead,
   fetchPropertyFollowups,
   fetchPropertyListings,
   reviewPropertyListing,
+  updatePropertyAvailability,
   fetchTenantEnquiries,
+  fetchTenantEnquiryDetail,
   createTenantEnquiry,
   updateTenantEnquiry,
+  logTenantEnquiryCall,
+  saveTenantEnquiryNegotiation,
   fetchPropertySiteVisits,
   createPropertySiteVisit,
   updatePropertySiteVisit,
@@ -43,9 +61,20 @@ import {
   createPropertyDeal,
   updatePropertyDeal,
   recordDealPayment,
+  updateDealPaymentStatus,
+  fetchDealReceipt,
+  convertDealToInteriorCrmLead,
   uploadPropertyMedia
 } from './propertyService';
 import { PropertyLeadDetailModal } from './PropertyLeadDetailModal';
+import {
+  PropertyAvailabilityModal,
+  TenantCallModal,
+  RentNegotiationModal,
+  EnquiryHistoryDetailModal,
+  PaymentReceiptModal,
+  InteriorConversionModal
+} from './PropertyRentalOperationsModals';
 import {
   Building2,
   LayoutDashboard,
@@ -67,7 +96,8 @@ import {
   FileText,
   Calendar,
   ArrowRight,
-  Clock
+  Clock,
+  Sparkles
 } from 'lucide-react';
 
 interface RoyalEpicPropertiesModuleProps {
@@ -85,10 +115,14 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
+  // CRM Staff List for assignment dropdowns
+  const [crmStaffList, setCrmStaffList] = useState<PropertyCrmStaffMember[]>([]);
+
   // Dashboard & Reports data
   const [dashboardData, setDashboardData] = useState<PropertyDashboardData | null>(null);
   const [reportStartDate, setReportStartDate] = useState('');
   const [reportEndDate, setReportEndDate] = useState('');
+  const [reportStaffFilter, setReportStaffFilter] = useState('All');
 
   // Leads state
   const [leads, setLeads] = useState<PropertyLead[]>([]);
@@ -144,23 +178,78 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
   });
   const [followupTab, setFollowupTab] = useState<'today' | 'overdue' | 'upcoming' | 'required' | 'calls'>('today');
 
-  // Listings state
+  // Listings state & Phase 3 Availability Modal
   const [listings, setListings] = useState<PropertyRecord[]>([]);
   const [listingStatusFilter, setListingStatusFilter] = useState('All');
+  const [listingAvailabilityFilter, setListingAvailabilityFilter] = useState('All');
   const [listingSearch, setListingSearch] = useState('');
   const [reviewModalProp, setReviewModalProp] = useState<PropertyRecord | null>(null);
   const [reviewTargetStatus, setReviewTargetStatus] = useState<PropertyListingStatus>('Approved');
   const [reviewNotes, setReviewNotes] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Tenant Enquiries state
+  const [availabilityModalProp, setAvailabilityModalProp] = useState<PropertyRecord | null>(null);
+  const [availabilityTargetStatus, setAvailabilityTargetStatus] =
+    useState<PropertyAvailabilityStatus>('Available');
+  const [availabilityNotes, setAvailabilityNotes] = useState('');
+  const [availabilityOwnerConfirmed, setAvailabilityOwnerConfirmed] = useState(false);
+  const [submittingAvailability, setSubmittingAvailability] = useState(false);
+
+  // Tenant Enquiries state & Phase 3 Call / Negotiation / History Modals
   const [enquiries, setEnquiries] = useState<PropertyTenantEnquiry[]>([]);
   const [enquiryStatusFilter, setEnquiryStatusFilter] = useState('All');
+  const [enquiryStaffFilter, setEnquiryStaffFilter] = useState('All');
   const [enquirySearch, setEnquirySearch] = useState('');
   const [enquiryModalOpen, setEnquiryModalOpen] = useState(false);
   const [editingEnquiry, setEditingEnquiry] = useState<PropertyTenantEnquiry | null>(null);
   const [enquiryForm, setEnquiryForm] = useState<Partial<PropertyTenantEnquiry>>({});
   const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
+
+  const [callModalEnquiry, setCallModalEnquiry] = useState<PropertyTenantEnquiry | null>(null);
+  const [tenantCallForm, setTenantCallForm] = useState<{
+    call_outcome: string;
+    call_notes: string;
+    next_followup_date: string;
+    enquiry_status: TenantEnquiryStatus;
+  }>({
+    call_outcome: 'Connected - Interested',
+    call_notes: '',
+    next_followup_date: '',
+    enquiry_status: 'Contacted'
+  });
+  const [submittingTenantCall, setSubmittingTenantCall] = useState(false);
+
+  const [negModalEnquiry, setNegModalEnquiry] = useState<PropertyTenantEnquiry | null>(null);
+  const [negForm, setNegForm] = useState<{
+    original_expected_rent: string;
+    tenant_offered_rent: string;
+    owner_expected_rent: string;
+    final_agreed_rent: string;
+    original_deposit: string;
+    final_agreed_deposit: string;
+    maintenance_charges: string;
+    negotiation_notes: string;
+    negotiation_status: NegotiationStatus;
+  }>({
+    original_expected_rent: '',
+    tenant_offered_rent: '',
+    owner_expected_rent: '',
+    final_agreed_rent: '',
+    original_deposit: '',
+    final_agreed_deposit: '',
+    maintenance_charges: '',
+    negotiation_notes: '',
+    negotiation_status: 'Negotiation in Progress'
+  });
+  const [submittingNeg, setSubmittingNeg] = useState(false);
+
+  const [enquiryHistoryDetail, setEnquiryHistoryDetail] = useState<{
+    enquiry: PropertyTenantEnquiry;
+    property: PropertyRecord | null;
+    siteVisits: PropertySiteVisit[];
+    deals: PropertyDeal[];
+    activities: PropertyActivityLog[];
+  } | null>(null);
 
   // Site Visits state
   const [siteVisits, setSiteVisits] = useState<PropertySiteVisit[]>([]);
@@ -171,8 +260,9 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
   const [submittingVisit, setSubmittingVisit] = useState(false);
 
   // Deals & Payments state
-  const [deals, setDeals] = useState<PropertyDeal[]>([]);
+  const [deals, setDeals] = useState<(PropertyDeal & { payments?: PropertyPaymentRecord[] })[]>([]);
   const [dealStatusFilter, setDealStatusFilter] = useState('All');
+  const [dealLifecycleFilter, setDealLifecycleFilter] = useState('All');
   const [dealModalOpen, setDealModalOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<PropertyDeal | null>(null);
   const [dealForm, setDealForm] = useState<Partial<PropertyDeal>>({});
@@ -184,15 +274,37 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
     payment_date: new Date().toISOString().slice(0, 10),
     payment_mode: 'UPI',
     transaction_reference: '',
+    receipt_number: '',
+    payment_status: 'Completed' as 'Completed' | 'Pending' | 'Cancelled',
     notes: ''
   });
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
+  const [activeReceipt, setActiveReceipt] = useState<PropertyPaymentReceiptData | null>(null);
+
+  // Interior Service Conversion Modal state
+  const [interiorModalDeal, setInteriorModalDeal] = useState<PropertyDeal | null>(null);
+  const [interiorForm, setInteriorForm] = useState({
+    interested_in_interior: 'Yes',
+    interior_service_requirement: 'Home Interior',
+    interior_followup_date: new Date().toISOString().slice(0, 10),
+    interior_notes: '',
+    assigned_staff: currentUserName,
+    confirm_create: true
+  });
+  const [submittingInterior, setSubmittingInterior] = useState(false);
+
   const showSuccess = (msg: string) => {
     setSuccessBanner(msg);
     setErrorBanner(null);
-    setTimeout(() => setSuccessBanner(null), 4500);
+    setTimeout(() => setSuccessBanner(null), 5000);
   };
+
+  useEffect(() => {
+    fetchPropertyCrmStaff()
+      .then(res => setCrmStaffList(res.staff || []))
+      .catch(() => {});
+  }, []);
 
   const loadSectionData = async () => {
     setLoading(true);
@@ -201,7 +313,8 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       if (activeSection === 'dashboard' || activeSection === 'reports') {
         const dash = await fetchPropertyDashboard(
           activeSection === 'reports' ? reportStartDate : undefined,
-          activeSection === 'reports' ? reportEndDate : undefined
+          activeSection === 'reports' ? reportEndDate : undefined,
+          activeSection === 'reports' ? reportStaffFilter : undefined
         );
         setDashboardData(dash);
       }
@@ -227,6 +340,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       ) {
         const lst = await fetchPropertyListings({
           listing_status: activeSection === 'listings' ? listingStatusFilter : 'All',
+          availability_status: activeSection === 'listings' ? listingAvailabilityFilter : 'All',
           search: activeSection === 'listings' ? listingSearch : ''
         });
         setListings(lst.properties || []);
@@ -234,19 +348,21 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       if (activeSection === 'enquiries' || activeSection === 'site-visits' || activeSection === 'deals') {
         const enq = await fetchTenantEnquiries({
           enquiry_status: activeSection === 'enquiries' ? enquiryStatusFilter : 'All',
+          assigned_staff: activeSection === 'enquiries' ? enquiryStaffFilter : 'All',
           search: activeSection === 'enquiries' ? enquirySearch : ''
         });
         setEnquiries(enq.enquiries || []);
       }
-      if (activeSection === 'site-visits') {
+      if (activeSection === 'site-visits' || activeSection === 'deals') {
         const sv = await fetchPropertySiteVisits({
-          visit_status: visitStatusFilter
+          visit_status: activeSection === 'site-visits' ? visitStatusFilter : 'All'
         });
         setSiteVisits(sv.visits || []);
       }
       if (activeSection === 'deals') {
         const dl = await fetchPropertyDeals({
-          payment_status: dealStatusFilter
+          payment_status: dealStatusFilter,
+          deal_status: dealLifecycleFilter
         });
         setDeals(dl.deals || []);
       }
@@ -264,9 +380,12 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
     leadStatusFilter,
     leadTypeFilter,
     listingStatusFilter,
+    listingAvailabilityFilter,
     enquiryStatusFilter,
+    enquiryStaffFilter,
     visitStatusFilter,
-    dealStatusFilter
+    dealStatusFilter,
+    dealLifecycleFilter
   ]);
 
   const handleBoardPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,6 +477,31 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
     }
   };
 
+  const handleUpdateAvailabilitySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!availabilityModalProp || submittingAvailability) return;
+    setSubmittingAvailability(true);
+    setErrorBanner(null);
+    try {
+      const res = await updatePropertyAvailability(availabilityModalProp.id, {
+        availability_status: availabilityTargetStatus,
+        notes: availabilityNotes,
+        owner_confirmed: availabilityOwnerConfirmed
+      });
+      showSuccess(
+        `Property ${res.property.property_code} availability updated to "${res.property.availability_status}".`
+      );
+      setAvailabilityModalProp(null);
+      setAvailabilityNotes('');
+      setAvailabilityOwnerConfirmed(false);
+      await loadSectionData();
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to update property availability.');
+    } finally {
+      setSubmittingAvailability(false);
+    }
+  };
+
   const handleSaveEnquiry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submittingEnquiry) return;
@@ -381,6 +525,90 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
     }
   };
 
+  const handleLogTenantCallSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!callModalEnquiry || submittingTenantCall) return;
+    setSubmittingTenantCall(true);
+    setErrorBanner(null);
+    try {
+      const res = await logTenantEnquiryCall(callModalEnquiry.id, {
+        call_outcome: tenantCallForm.call_outcome,
+        call_notes: tenantCallForm.call_notes,
+        next_followup_date: tenantCallForm.next_followup_date || null,
+        enquiry_status: tenantCallForm.enquiry_status,
+        staff_name: currentUserName
+      });
+      showSuccess(`Tenant call logged for ${res.enquiry.enquiry_code}.`);
+      setCallModalEnquiry(null);
+      await loadSectionData();
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to log tenant call.');
+    } finally {
+      setSubmittingTenantCall(false);
+    }
+  };
+
+  const handleSaveNegotiationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!negModalEnquiry || submittingNeg) return;
+    setSubmittingNeg(true);
+    setErrorBanner(null);
+    try {
+      const res = await saveTenantEnquiryNegotiation(negModalEnquiry.id, {
+        original_expected_rent: negForm.original_expected_rent
+          ? Number(negForm.original_expected_rent)
+          : null,
+        tenant_offered_rent: negForm.tenant_offered_rent
+          ? Number(negForm.tenant_offered_rent)
+          : null,
+        owner_expected_rent: negForm.owner_expected_rent
+          ? Number(negForm.owner_expected_rent)
+          : null,
+        final_agreed_rent: negForm.final_agreed_rent ? Number(negForm.final_agreed_rent) : null,
+        original_deposit: negForm.original_deposit ? Number(negForm.original_deposit) : null,
+        final_agreed_deposit: negForm.final_agreed_deposit
+          ? Number(negForm.final_agreed_deposit)
+          : null,
+        maintenance_charges: negForm.maintenance_charges
+          ? Number(negForm.maintenance_charges)
+          : null,
+        negotiation_notes: negForm.negotiation_notes,
+        negotiation_status: negForm.negotiation_status
+      });
+      showSuccess(`Negotiation updated for ${res.enquiry.enquiry_code} (${res.enquiry.negotiation_status}).`);
+      setNegModalEnquiry(null);
+      await loadSectionData();
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to save negotiation details.');
+    } finally {
+      setSubmittingNeg(false);
+    }
+  };
+
+  const handleOpenEnquiryHistory = async (enquiryId: string) => {
+    setErrorBanner(null);
+    try {
+      const detail = await fetchTenantEnquiryDetail(enquiryId);
+      setEnquiryHistoryDetail(detail);
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to load enquiry history.');
+    }
+  };
+
+  const handleOpenAssociatedProperty = (propertyIdOrCode: string | null | undefined) => {
+    if (!propertyIdOrCode) return;
+    const found = listings.find(
+      p => p.id === propertyIdOrCode || p.property_code === propertyIdOrCode
+    );
+    if (found && found.lead_id) {
+      setWorkspaceLeadId(found.lead_id);
+      setWorkspaceInitialTab('property');
+    } else {
+      onChangeSection('listings');
+      setListingSearch(propertyIdOrCode);
+    }
+  };
+
   const handleSaveSiteVisit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submittingVisit) return;
@@ -392,7 +620,9 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
         showSuccess(`Site Visit ${res.visit.visit_code} updated.`);
       } else {
         const res = await createPropertySiteVisit(visitForm);
-        showSuccess(`Site Visit ${res.visit.visit_code} scheduled.`);
+        showSuccess(
+          `Site Visit ${res.visit.visit_code} (Visit #${res.visit.visit_number || 1}) scheduled.`
+        );
       }
       setVisitModalOpen(false);
       setEditingVisit(null);
@@ -404,6 +634,19 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
     }
   };
 
+  const handleQuickVisitStatusUpdate = async (
+    visit: PropertySiteVisit,
+    newStatus: SiteVisitStatus
+  ) => {
+    try {
+      const res = await updatePropertySiteVisit(visit.id, { visit_status: newStatus });
+      showSuccess(`Visit ${res.visit.visit_code} marked as "${newStatus}".`);
+      await loadSectionData();
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to update visit status.');
+    }
+  };
+
   const handleSaveDeal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submittingDeal) return;
@@ -412,10 +655,10 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
     try {
       if (editingDeal) {
         const res = await updatePropertyDeal(editingDeal.id, dealForm);
-        showSuccess(`Deal ${res.deal.deal_code} updated.`);
+        showSuccess(`Deal ${res.deal.deal_code} updated (${res.deal.deal_status}).`);
       } else {
         const res = await createPropertyDeal(dealForm);
-        showSuccess(`Deal ${res.deal.deal_code} created.`);
+        showSuccess(`Deal ${res.deal.deal_code} created (${res.deal.deal_status}).`);
       }
       setDealModalOpen(false);
       setEditingDeal(null);
@@ -438,10 +681,12 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
         payment_date: paymentForm.payment_date,
         payment_mode: paymentForm.payment_mode,
         transaction_reference: paymentForm.transaction_reference,
+        receipt_number: paymentForm.receipt_number || undefined,
+        payment_status: paymentForm.payment_status,
         notes: paymentForm.notes
       });
       showSuccess(
-        `Payment of ₹${Number(paymentForm.amount).toLocaleString('en-IN')} recorded. Deal status: ${res.deal.payment_status}.`
+        `Payment of ₹${Number(paymentForm.amount).toLocaleString('en-IN')} (${res.payment.receipt_number}) recorded. Balance Due: ₹${Number(res.deal.amount_due || 0).toLocaleString('en-IN')}.`
       );
       setPaymentModalDeal(null);
       setPaymentForm({
@@ -449,6 +694,8 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
         payment_date: new Date().toISOString().slice(0, 10),
         payment_mode: 'UPI',
         transaction_reference: '',
+        receipt_number: '',
+        payment_status: 'Completed',
         notes: ''
       });
       await loadSectionData();
@@ -456,6 +703,32 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       setErrorBanner(err.message || 'Failed to record payment.');
     } finally {
       setSubmittingPayment(false);
+    }
+  };
+
+  const handleOpenDealReceipt = async (dealId: string, paymentId?: string) => {
+    try {
+      const res = await fetchDealReceipt(dealId, paymentId);
+      setActiveReceipt(res.receipt);
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to generate receipt.');
+    }
+  };
+
+  const handleInteriorConversionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!interiorModalDeal || submittingInterior) return;
+    setSubmittingInterior(true);
+    setErrorBanner(null);
+    try {
+      const res = await convertDealToInteriorCrmLead(interiorModalDeal.id, interiorForm);
+      showSuccess(res.message);
+      setInteriorModalDeal(null);
+      await loadSectionData();
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to process Interior Design Opportunity.');
+    } finally {
+      setSubmittingInterior(false);
     }
   };
 
@@ -547,11 +820,11 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   Royal Epic Properties
                 </h2>
                 <span className="px-2 py-0.5 rounded bg-white/15 text-amber-200 text-[10px] font-semibold uppercase tracking-wider">
-                  Phase 1 CRM Module
+                  Phase 1–3 Rental Operations CRM
                 </span>
               </div>
               <p className="text-xs text-amber-100/85">
-                A vertical of Royal Epic Interiors • Property Lead Verification, Listings, Tenant Visits & Placement Deals
+                A vertical of Royal Epic Interiors • Property Lead Verification, Listings, Tenant Enquiries, Site Visits, Negotiations & Placement Deals
               </p>
             </div>
           </div>
@@ -620,48 +893,125 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       {/* ===================================================================== */}
       {activeSection === 'dashboard' && dashboardData && (
         <div className="space-y-5">
-          {/* 12 Real-time KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
-            {[
-              { label: 'Total Property Leads', value: dashboardData.metrics.totalPropertyLeads, section: 'leads' },
-              { label: 'New Leads', value: dashboardData.metrics.newLeads, section: 'leads' },
-              { label: 'Calls Completed', value: dashboardData.metrics.callsCompleted, section: 'followups' },
-              { label: 'Follow-ups Pending', value: dashboardData.metrics.followUpsPending, section: 'followups' },
-              { label: 'Owner Details Pending', value: dashboardData.metrics.ownerDetailsPending, section: 'leads' },
-              { label: 'Verification Pending', value: dashboardData.metrics.verificationPending, section: 'listings' },
-              { label: 'Approved Properties', value: dashboardData.metrics.approvedProperties, section: 'listings' },
-              { label: 'Published Properties', value: dashboardData.metrics.publishedProperties, section: 'listings' },
-              { label: 'Tenant Enquiries', value: dashboardData.metrics.tenantEnquiries, section: 'enquiries' },
-              { label: 'Site Visits Scheduled', value: dashboardData.metrics.siteVisitsScheduled, section: 'site-visits' },
-              { label: 'Deals Completed', value: dashboardData.metrics.dealsCompleted, section: 'deals' },
-              {
-                label: 'Placement Fees Collected',
-                value: `₹${dashboardData.metrics.totalPlacementFeesCollected.toLocaleString('en-IN')}`,
-                section: 'deals',
-                highlight: true
-              }
-            ].map((kpi, idx) => (
-              <div
-                key={idx}
-                onClick={() => onChangeSection(kpi.section as PropertyModuleSection)}
-                className={`p-4 rounded-xl border transition cursor-pointer ${
-                  kpi.highlight
-                    ? 'bg-[#3D2E18] text-white border-[#3D2E18]'
-                    : 'bg-white hover:bg-[#FAF8F5] text-[#3D2E18] border-[#E5DEC9]'
-                }`}
-              >
+          {/* Phase 3 Rental Operations Command Center KPIs (13 Metrics) */}
+          <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-[#EFEAD8] pb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#3D2E18]">
+                Phase 3 Rental Operations Live Command Center
+              </h3>
+              <span className="text-[11px] text-[#6E5A3E]">
+                Click any metric card to open its operations view
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {[
+                {
+                  label: 'New Tenant Enquiries',
+                  value: dashboardData.metrics.newTenantEnquiries ?? 0,
+                  section: 'enquiries'
+                },
+                {
+                  label: 'Unassigned Enquiries',
+                  value: dashboardData.metrics.unassignedEnquiries ?? 0,
+                  section: 'enquiries'
+                },
+                {
+                  label: 'Follow-ups Due Today',
+                  value: dashboardData.metrics.followUpsDueToday ?? 0,
+                  section: 'enquiries'
+                },
+                {
+                  label: 'Overdue Follow-ups',
+                  value: dashboardData.metrics.overdueFollowUps ?? 0,
+                  section: 'enquiries'
+                },
+                {
+                  label: 'Site Visits Today',
+                  value: dashboardData.metrics.siteVisitsToday ?? 0,
+                  section: 'site-visits'
+                },
+                {
+                  label: 'Upcoming Site Visits',
+                  value: dashboardData.metrics.upcomingSiteVisits ?? 0,
+                  section: 'site-visits'
+                },
+                {
+                  label: 'Negotiations in Progress',
+                  value: dashboardData.metrics.negotiationsInProgress ?? 0,
+                  section: 'enquiries'
+                },
+                {
+                  label: 'Deals Confirmed',
+                  value: dashboardData.metrics.dealsConfirmed ?? 0,
+                  section: 'deals'
+                },
+                {
+                  label: 'Deals Completed',
+                  value: dashboardData.metrics.dealsCompleted ?? 0,
+                  section: 'deals'
+                },
+                {
+                  label: 'Properties On Hold',
+                  value: dashboardData.metrics.propertiesOnHold ?? 0,
+                  section: 'listings'
+                },
+                {
+                  label: 'Properties Rented',
+                  value: dashboardData.metrics.propertiesRented ?? 0,
+                  section: 'listings'
+                },
+                {
+                  label: 'Placement Fees Collected',
+                  value: `₹${(
+                    dashboardData.metrics.placementFeesCollected ??
+                    dashboardData.metrics.totalPlacementFeesCollected ??
+                    0
+                  ).toLocaleString('en-IN')}`,
+                  section: 'deals',
+                  highlight: true
+                },
+                {
+                  label: 'Placement Fees Pending',
+                  value: `₹${(
+                    dashboardData.metrics.placementFeesPending ??
+                    dashboardData.reports.pendingPlacementFees ??
+                    0
+                  ).toLocaleString('en-IN')}`,
+                  section: 'deals'
+                },
+                {
+                  label: 'Total Property Leads',
+                  value: dashboardData.metrics.totalPropertyLeads,
+                  section: 'leads'
+                },
+                {
+                  label: 'Published Properties',
+                  value: dashboardData.metrics.publishedProperties,
+                  section: 'listings'
+                }
+              ].map((kpi, idx) => (
                 <div
-                  className={`text-[11px] font-semibold uppercase tracking-wider ${
-                    kpi.highlight ? 'text-amber-200' : 'text-[#6E5A3E]'
+                  key={idx}
+                  onClick={() => onChangeSection(kpi.section as PropertyModuleSection)}
+                  className={`p-3.5 rounded-xl border transition cursor-pointer ${
+                    kpi.highlight
+                      ? 'bg-[#3D2E18] text-white border-[#3D2E18]'
+                      : 'bg-[#FAF8F5] hover:bg-[#F3EFE6] text-[#3D2E18] border-[#E5DEC9]'
                   }`}
                 >
-                  {kpi.label}
+                  <div
+                    className={`text-[10px] font-semibold uppercase tracking-wider ${
+                      kpi.highlight ? 'text-amber-200' : 'text-[#6E5A3E]'
+                    }`}
+                  >
+                    {kpi.label}
+                  </div>
+                  <div className="text-lg sm:text-xl font-bold font-mono tabular-nums mt-1">
+                    {kpi.value}
+                  </div>
                 </div>
-                <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums mt-1.5">
-                  {kpi.value}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* 6 Charts & Summaries Grid */}
@@ -1469,8 +1819,8 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       {activeSection === 'listings' && (
         <div className="space-y-4">
           <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
-              <div className="relative flex-1 max-w-md">
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-1 flex-wrap">
+              <div className="relative flex-1 min-w-[220px] max-w-md">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
@@ -1492,11 +1842,22 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   <option key={st} value={st}>{st}</option>
                 ))}
               </select>
+
+              <select
+                value={listingAvailabilityFilter}
+                onChange={e => setListingAvailabilityFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
+              >
+                <option value="All">All Availability States</option>
+                {PROPERTY_AVAILABILITY_STATUSES.map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
             </div>
 
             <div className="text-xs text-[#6E5A3E] flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-[#8C6B38]" />
-              <span>Approval requires complete verification & owner advertising permission</span>
+              <span>Rented & Unavailable auto-hide from website; On Hold blocks public enquiries</span>
             </div>
           </div>
 
@@ -1505,20 +1866,21 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
               <table className="w-full text-xs text-left">
                 <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
                   <tr>
-                    <th className="py-3 px-4">Property Code</th>
-                    <th className="py-3 px-4">Property Title & Locality</th>
-                    <th className="py-3 px-4">Category / Type</th>
-                    <th className="py-3 px-4 text-right">Monthly Rent</th>
-                    <th className="py-3 px-4">Owner</th>
-                    <th className="py-3 px-4">Verification Gate</th>
-                    <th className="py-3 px-4">Listing Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    <th className="py-3 px-3.5">Property Code</th>
+                    <th className="py-3 px-3.5">Property Title & Locality</th>
+                    <th className="py-3 px-3.5">Category / Type</th>
+                    <th className="py-3 px-3.5 text-right">Monthly Rent</th>
+                    <th className="py-3 px-3.5">Owner</th>
+                    <th className="py-3 px-3.5">Verification Gate</th>
+                    <th className="py-3 px-3.5">Availability Status</th>
+                    <th className="py-3 px-3.5">Listing Status</th>
+                    <th className="py-3 px-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EFEAD8]">
                   {listings.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-[#6E5A3E]">
+                      <td colSpan={9} className="py-12 text-center text-[#6E5A3E]">
                         No complete property records created yet. Open any Property Lead and save "Complete Property Details" to create a listing record.
                       </td>
                     </tr>
@@ -1530,32 +1892,39 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                         prop.property_availability_confirmed === 'Yes' &&
                         prop.permission_to_advertise === 'Yes';
 
+                      const availStatus = prop.availability_status || 'Available';
+                      const isPublicLive =
+                        (prop.listing_status === 'Published' || prop.listing_status === 'Approved') &&
+                        verified &&
+                        availStatus !== 'Rented' &&
+                        availStatus !== 'Unavailable';
+
                       return (
                         <tr key={prop.id} className="hover:bg-[#FAF8F5]">
-                          <td className="py-3 px-4 font-mono font-bold text-[#5C4728]">
+                          <td className="py-3 px-3.5 font-mono font-bold text-[#5C4728]">
                             {prop.property_code}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-3.5">
                             <div className="font-semibold text-[#3D2E18]">{prop.property_title}</div>
                             <div className="text-[11px] text-[#6E5A3E]">
                               {prop.locality}, {prop.city}
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-3.5">
                             {prop.property_category} • {prop.property_type}
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-semibold text-[#3D2E18]">
+                          <td className="py-3 px-3.5 text-right font-mono font-semibold text-[#3D2E18]">
                             {prop.expected_monthly_rent
                               ? `₹${Number(prop.expected_monthly_rent).toLocaleString('en-IN')}`
                               : '—'}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-3.5">
                             <div className="font-medium text-[#3D2E18]">{prop.owner_full_name}</div>
                             <div className="font-mono text-[11px] text-slate-500">
                               {prop.primary_mobile}
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-3.5">
                             <span
                               className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
                                 verified
@@ -1566,7 +1935,27 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                               {verified ? 'Verified & Permitted' : 'Verification Pending'}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-3.5">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                availStatus === 'Available'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : availStatus === 'Temporarily On Hold'
+                                  ? 'bg-amber-100 text-amber-900'
+                                  : availStatus === 'Rented' || availStatus === 'Unavailable'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {availStatus}
+                            </span>
+                            {availStatus === 'Temporarily On Hold' && (
+                              <div className="text-[10px] text-amber-800 font-medium mt-0.5">
+                                Public enquiries paused
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3.5">
                             <span
                               className={`px-2.5 py-0.5 rounded text-[11px] font-semibold ${
                                 prop.listing_status === 'Published'
@@ -1584,13 +1973,28 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                             >
                               {prop.listing_status}
                             </span>
-                            {prop.listing_status === 'Published' && verified && (
+                            {isPublicLive && (
                               <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
                                 ● Live on /properties
                               </div>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-right whitespace-nowrap space-x-1.5">
+                          <td className="py-3 px-3.5 text-right whitespace-nowrap space-x-1.5">
+                            <button
+                              onClick={() => {
+                                setAvailabilityModalProp(prop);
+                                setAvailabilityTargetStatus(
+                                  (prop.availability_status as PropertyAvailabilityStatus) ||
+                                    'Available'
+                                );
+                                setAvailabilityNotes('');
+                                setAvailabilityOwnerConfirmed(false);
+                              }}
+                              className="px-2.5 py-1 rounded bg-[#3D2E18] hover:bg-[#5C4728] text-white text-[11px] font-semibold cursor-pointer"
+                              title="Update Property Availability Status"
+                            >
+                              Availability
+                            </button>
                             {verified && prop.listing_status !== 'Published' && (
                               <button
                                 onClick={async () => {
@@ -1654,7 +2058,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                               }}
                               className="px-2.5 py-1 rounded bg-[#8C6B38] hover:bg-[#5C4728] text-white text-[11px] font-semibold cursor-pointer"
                             >
-                              Review / Status
+                              Review
                             </button>
                           </td>
                         </tr>
@@ -1669,30 +2073,48 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       )}
 
       {/* ===================================================================== */}
-      {/* SECTION 6: TENANT ENQUIRIES */}
+      {/* SECTION 6: TENANT ENQUIRIES (Phase 3 Rental Operations Upgrade) */}
       {/* ===================================================================== */}
       {activeSection === 'enquiries' && (
         <div className="space-y-4">
           <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 flex-wrap">
               <input
                 type="text"
                 value={enquirySearch}
                 onChange={e => setEnquirySearch(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && loadSectionData()}
-                placeholder="Search Tenant Name, Mobile, Enquiry ID, Location..."
+                placeholder="Search Enquiry ID, Tenant Name, Mobile, Email, Property ID, Location..."
                 className="w-full max-w-sm px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
               />
               <select
                 value={enquiryStatusFilter}
                 onChange={e => setEnquiryStatusFilter(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                className="px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
               >
                 <option value="All">All Enquiry Statuses</option>
                 {TENANT_ENQUIRY_STATUSES.map(st => (
                   <option key={st} value={st}>{st}</option>
                 ))}
               </select>
+              <select
+                value={enquiryStaffFilter}
+                onChange={e => setEnquiryStaffFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
+              >
+                <option value="All">All Assigned Staff</option>
+                {crmStaffList.map(st => (
+                  <option key={st.id} value={st.fullName}>
+                    {st.fullName}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={loadSectionData}
+                className="px-3 py-2 rounded-lg bg-[#F3EFE6] hover:bg-[#E5DEC9] text-[#3D2E18] text-xs font-semibold cursor-pointer"
+              >
+                Search
+              </button>
             </div>
 
             <button
@@ -1700,17 +2122,30 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                 setEditingEnquiry(null);
                 setEnquiryForm({
                   enquiry_date: new Date().toISOString().slice(0, 10),
+                  enquiry_source: 'Direct Call',
                   tenant_name: '',
                   tenant_mobile: '',
                   tenant_email: '',
                   property_id: listings[0]?.id || '',
-                  preferred_location: '',
+                  property_code: listings[0]?.property_code || '',
+                  property_title: listings[0]?.property_title || '',
+                  preferred_location: listings[0]?.locality || '',
+                  property_category: 'Residential',
                   property_type_needed: '2 BHK',
+                  bhk_requirement: '2 BHK',
+                  minimum_budget: null,
+                  maximum_budget: null,
                   budget_range: '',
+                  furnishing_preference: 'Semi-Furnished',
                   move_in_date: '',
-                  family_or_company_profile: '',
+                  parking_requirement: '1 Covered Car Parking',
+                  family_or_company_profile: 'Family',
+                  number_of_occupants: 3,
+                  additional_requirements: '',
                   assigned_telecaller: currentUserName,
+                  assigned_staff: currentUserName,
                   enquiry_status: 'New Enquiry',
+                  next_followup_date: new Date().toISOString().slice(0, 10),
                   notes: ''
                 });
                 setEnquiryModalOpen(true);
@@ -1723,109 +2158,252 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
           </div>
 
           <div className="bg-white border border-[#E5DEC9] rounded-xl overflow-hidden">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
-                <tr>
-                  <th className="py-3 px-4">Enquiry ID</th>
-                  <th className="py-3 px-4">Date & Source</th>
-                  <th className="py-3 px-4">Tenant Name & Mobile</th>
-                  <th className="py-3 px-4">Linked Property</th>
-                  <th className="py-3 px-4">Preferred Location & Type</th>
-                  <th className="py-3 px-4">Budget / Visit Pref</th>
-                  <th className="py-3 px-4">Telecaller</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EFEAD8]">
-                {enquiries.length === 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-[#6E5A3E]">
-                      No tenant enquiries recorded yet.
-                    </td>
+                    <th className="py-3 px-3">Enquiry ID</th>
+                    <th className="py-3 px-3">Tenant Name, Mobile & Email</th>
+                    <th className="py-3 px-3">Interested Property & Property ID</th>
+                    <th className="py-3 px-3">Preferred Location & Reqs</th>
+                    <th className="py-3 px-3">Budget</th>
+                    <th className="py-3 px-3">Source & Date</th>
+                    <th className="py-3 px-3">Assigned Staff</th>
+                    <th className="py-3 px-3">Status & Negotiation</th>
+                    <th className="py-3 px-3">Next Follow-up</th>
+                    <th className="py-3 px-3 text-right">Actions</th>
                   </tr>
-                ) : (
-                  enquiries.map(enq => (
-                    <tr key={enq.id} className="hover:bg-[#FAF8F5]">
-                      <td className="py-3 px-4 font-mono font-bold text-[#5C4728]">
-                        {enq.enquiry_code}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-mono">{enq.enquiry_date}</div>
-                        <span
-                          className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                            enq.enquiry_source === 'Website'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-[#F3EFE6] text-[#5C4728]'
-                          }`}
-                        >
-                          {enq.enquiry_source || 'Direct Call'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-[#3D2E18]">{enq.tenant_name}</div>
-                        <div className="font-mono text-[11px] text-slate-500">{enq.tenant_mobile}</div>
-                        {enq.tenant_email && (
-                          <div className="text-[11px] text-slate-500">{enq.tenant_email}</div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-[#5C4728]">
-                        <div className="font-semibold text-[#3D2E18]">
-                          {enq.property_title || 'General Requirement'}
-                        </div>
-                        {enq.property_id && (
-                          <div className="font-mono text-[10px] text-[#8C6B38]">{enq.property_id}</div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div>{enq.preferred_location} • {enq.property_type_needed}</div>
-                        {enq.family_or_company_profile && (
-                          <div className="text-[11px] text-[#6E5A3E]">
-                            Profile: {enq.family_or_company_profile}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-mono">{enq.budget_range || '—'}</div>
-                        {enq.move_in_date && (
-                          <div className="text-[10px] text-[#8C6B38] font-medium">
-                            Visit/Move-in: {enq.move_in_date}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">{enq.assigned_telecaller}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-semibold text-[11px]">
-                          {enq.enquiry_status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => {
-                            setEditingEnquiry(enq);
-                            setEnquiryForm({ ...enq });
-                            setEnquiryModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 rounded bg-[#3D2E18] text-white text-[11px] font-semibold cursor-pointer"
-                        >
-                          Edit / Status
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-[#EFEAD8]">
+                  {enquiries.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center text-[#6E5A3E]">
+                        No tenant enquiries recorded yet. Website enquiries and manual enquiries appear here automatically.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    enquiries.map(enq => {
+                      const linkedProp = listings.find(
+                        p => p.id === enq.property_id || p.property_code === enq.property_code
+                      );
+                      const displayPropertyCode =
+                        enq.property_code || linkedProp?.property_code || enq.property_id || '—';
+                      const displayBudget =
+                        enq.budget_range ||
+                        (enq.minimum_budget || enq.maximum_budget
+                          ? `₹${Number(enq.minimum_budget || 0).toLocaleString('en-IN')} - ₹${Number(
+                              enq.maximum_budget || 0
+                            ).toLocaleString('en-IN')}`
+                          : '—');
+
+                      return (
+                        <tr key={enq.id} className="hover:bg-[#FAF8F5]">
+                          <td className="py-3 px-3 font-mono font-bold text-[#5C4728]">
+                            {enq.enquiry_code}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-semibold text-[#3D2E18]">{enq.tenant_name}</div>
+                            <div className="font-mono text-[11px] text-slate-600">
+                              {enq.tenant_mobile}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {enq.tenant_email || 'No email'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-semibold text-[#3D2E18]">
+                              {enq.property_title || linkedProp?.property_title || 'General Requirement'}
+                            </div>
+                            <div className="font-mono text-[11px] text-[#8C6B38] font-semibold">
+                              ID: {displayPropertyCode}
+                            </div>
+                            {(enq.property_id || linkedProp) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenAssociatedProperty(enq.property_id || enq.property_code)
+                                }
+                                className="mt-0.5 text-[10px] font-bold text-[#3D2E18] underline hover:text-[#8C6B38] cursor-pointer"
+                              >
+                                Open Property →
+                              </button>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-medium text-[#3D2E18]">
+                              {enq.preferred_location || linkedProp?.locality || '—'}
+                            </div>
+                            <div className="text-[11px] text-[#6E5A3E]">
+                              {enq.property_category || 'Residential'} •{' '}
+                              {enq.bhk_requirement || enq.property_type_needed}
+                              {enq.furnishing_preference ? ` • ${enq.furnishing_preference}` : ''}
+                            </div>
+                            {enq.family_or_company_profile && (
+                              <div className="text-[10px] text-[#5C4728]">
+                                Profile: {enq.family_or_company_profile}
+                                {enq.number_of_occupants ? ` (${enq.number_of_occupants} pax)` : ''}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-mono font-semibold text-[#3D2E18]">
+                              {displayBudget}
+                            </div>
+                            {enq.final_agreed_rent && (
+                              <div className="font-mono text-[10px] font-bold text-emerald-700">
+                                Agreed: ₹{Number(enq.final_agreed_rent).toLocaleString('en-IN')}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span
+                              className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                enq.enquiry_source === 'Website'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-[#F3EFE6] text-[#5C4728]'
+                              }`}
+                            >
+                              {enq.enquiry_source || 'Direct Call'}
+                            </span>
+                            <div className="font-mono text-[11px] text-slate-500 mt-0.5">
+                              {enq.enquiry_date}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <select
+                              value={enq.assigned_staff || enq.assigned_telecaller || ''}
+                              onChange={async e => {
+                                const newStaff = e.target.value;
+                                try {
+                                  await updateTenantEnquiry(enq.id, {
+                                    assigned_staff: newStaff,
+                                    assigned_telecaller: newStaff
+                                  });
+                                  showSuccess(
+                                    `Enquiry ${enq.enquiry_code} assigned to ${newStaff || 'Unassigned'}.`
+                                  );
+                                  await loadSectionData();
+                                } catch (err: any) {
+                                  setErrorBanner(err.message || 'Failed to assign staff.');
+                                }
+                              }}
+                              className="px-2 py-1 rounded border border-[#D8CEB8] bg-white text-[11px] font-semibold text-[#3D2E18]"
+                            >
+                              <option value="">Unassigned</option>
+                              <option value={currentUserName}>{currentUserName} (Me)</option>
+                              {crmStaffList
+                                .filter(s => s.fullName !== currentUserName)
+                                .map(s => (
+                                  <option key={s.id} value={s.fullName}>
+                                    {s.fullName}
+                                  </option>
+                                ))}
+                            </select>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-semibold text-[11px] block w-fit">
+                              {enq.enquiry_status}
+                            </span>
+                            {enq.negotiation_status && enq.negotiation_status !== 'Not Started' && (
+                              <span className="mt-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 font-semibold text-[10px] block w-fit">
+                                Neg: {enq.negotiation_status}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 font-mono text-[11px] font-semibold text-[#8C6B38]">
+                            {enq.next_followup_date ? enq.next_followup_date.slice(0, 10) : '—'}
+                          </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap space-x-1">
+                            <button
+                              onClick={() => {
+                                setCallModalEnquiry(enq);
+                                setTenantCallForm({
+                                  call_outcome: 'Connected - Interested',
+                                  call_notes: '',
+                                  next_followup_date:
+                                    enq.next_followup_date?.slice(0, 10) ||
+                                    new Date().toISOString().slice(0, 10),
+                                  enquiry_status:
+                                    enq.enquiry_status === 'New Enquiry'
+                                      ? 'Contacted'
+                                      : enq.enquiry_status
+                                });
+                              }}
+                              className="px-2 py-1 rounded bg-[#8C6B38] hover:bg-[#5C4728] text-white text-[11px] font-semibold cursor-pointer"
+                              title="Call Tenant & Record Notes"
+                            >
+                              Call
+                            </button>
+                            <button
+                              onClick={() => {
+                                setNegModalEnquiry(enq);
+                                setNegForm({
+                                  original_expected_rent: String(
+                                    enq.original_expected_rent ??
+                                      linkedProp?.expected_monthly_rent ??
+                                      ''
+                                  ),
+                                  tenant_offered_rent: String(enq.tenant_offered_rent ?? ''),
+                                  owner_expected_rent: String(
+                                    enq.owner_expected_rent ??
+                                      linkedProp?.expected_monthly_rent ??
+                                      ''
+                                  ),
+                                  final_agreed_rent: String(enq.final_agreed_rent ?? ''),
+                                  original_deposit: String(
+                                    enq.original_deposit ?? linkedProp?.security_deposit ?? ''
+                                  ),
+                                  final_agreed_deposit: String(enq.final_agreed_deposit ?? ''),
+                                  maintenance_charges: String(
+                                    enq.maintenance_charges ?? linkedProp?.maintenance_charges ?? ''
+                                  ),
+                                  negotiation_notes: enq.negotiation_notes || '',
+                                  negotiation_status:
+                                    (enq.negotiation_status as NegotiationStatus) ||
+                                    'Negotiation in Progress'
+                                });
+                              }}
+                              className="px-2 py-1 rounded bg-[#F3EFE6] hover:bg-[#E5DEC9] text-[#3D2E18] text-[11px] font-semibold cursor-pointer"
+                              title="Rent & Deposit Negotiation"
+                            >
+                              Negotiate
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingEnquiry(enq);
+                                setEnquiryForm({ ...enq });
+                                setEnquiryModalOpen(true);
+                              }}
+                              className="px-2 py-1 rounded bg-[#3D2E18] text-white text-[11px] font-semibold cursor-pointer"
+                              title="Edit Enquiry & Tenant Requirements"
+                            >
+                              Edit / Reqs
+                            </button>
+                            <button
+                              onClick={() => handleOpenEnquiryHistory(enq.id)}
+                              className="px-2 py-1 rounded border border-[#D8CEB8] hover:bg-[#FAF8F5] text-[#5C4728] text-[11px] font-semibold cursor-pointer"
+                              title="View Complete Enquiry History"
+                            >
+                              History
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {/* ===================================================================== */}
-      {/* SECTION 7: SITE VISITS */}
+      {/* SECTION 7: SITE VISITS (Phase 3 Multi-Visit, Confirm, Reschedule, Feedback) */}
       {/* ===================================================================== */}
       {activeSection === 'site-visits' && (
         <div className="space-y-4">
-          <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 flex items-center justify-between gap-3">
+          <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
             <select
               value={visitStatusFilter}
               onChange={e => setVisitStatusFilter(e.target.value)}
@@ -1839,18 +2417,25 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
 
             <button
               onClick={() => {
+                const firstProp = listings[0];
+                const firstEnq = enquiries[0];
                 setEditingVisit(null);
                 setVisitForm({
-                  property_id: listings[0]?.id || '',
-                  tenant_enquiry_id: enquiries[0]?.id || '',
-                  tenant_name: enquiries[0]?.tenant_name || '',
-                  tenant_mobile: enquiries[0]?.tenant_mobile || '',
+                  property_id: firstProp?.id || '',
+                  property_code: firstProp?.property_code || '',
+                  property_title: firstProp?.property_title || '',
+                  owner_name: firstProp?.owner_full_name || '',
+                  owner_mobile: firstProp?.primary_mobile || '',
+                  tenant_enquiry_id: firstEnq?.id || '',
+                  tenant_name: firstEnq?.tenant_name || '',
+                  tenant_mobile: firstEnq?.tenant_mobile || '',
                   visit_date: new Date().toISOString().slice(0, 10),
                   visit_time: '11:00 AM',
                   assigned_staff: currentUserName,
                   visit_status: 'Scheduled',
                   visit_feedback: '',
                   owner_feedback: '',
+                  followup_notes: '',
                   next_action: ''
                 });
                 setVisitModalOpen(true);
@@ -1863,107 +2448,243 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
           </div>
 
           <div className="bg-white border border-[#E5DEC9] rounded-xl overflow-hidden">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
-                <tr>
-                  <th className="py-3 px-4">Visit ID</th>
-                  <th className="py-3 px-4">Property</th>
-                  <th className="py-3 px-4">Tenant</th>
-                  <th className="py-3 px-4">Date & Time</th>
-                  <th className="py-3 px-4">Staff</th>
-                  <th className="py-3 px-4">Visit Status</th>
-                  <th className="py-3 px-4">Tenant / Owner Feedback</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EFEAD8]">
-                {siteVisits.length === 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-[#6E5A3E]">
-                      No site visits scheduled yet.
-                    </td>
+                    <th className="py-3 px-3.5">Site Visit ID</th>
+                    <th className="py-3 px-3.5">Property</th>
+                    <th className="py-3 px-3.5">Tenant</th>
+                    <th className="py-3 px-3.5">Owner</th>
+                    <th className="py-3 px-3.5">Date & Time</th>
+                    <th className="py-3 px-3.5">Assigned Staff</th>
+                    <th className="py-3 px-3.5">Visit Status</th>
+                    <th className="py-3 px-3.5">Tenant / Owner Feedback & Notes</th>
+                    <th className="py-3 px-3.5 text-right">Actions</th>
                   </tr>
-                ) : (
-                  siteVisits.map(v => (
-                    <tr key={v.id} className="hover:bg-[#FAF8F5]">
-                      <td className="py-3 px-4 font-mono font-bold text-[#5C4728]">
-                        {v.visit_code}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-[#3D2E18]">
-                        {v.property_title || v.property_id}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-[#3D2E18]">{v.tenant_name}</div>
-                        <div className="font-mono text-[11px] text-slate-500">{v.tenant_mobile}</div>
-                      </td>
-                      <td className="py-3 px-4 font-mono">
-                        {v.visit_date} • {v.visit_time}
-                      </td>
-                      <td className="py-3 px-4">{v.assigned_staff}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-[#F3EFE6] text-[#3D2E18] font-semibold">
-                          {v.visit_status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 max-w-xs truncate">
-                        {v.visit_feedback || v.owner_feedback || '—'}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => {
-                            setEditingVisit(v);
-                            setVisitForm({ ...v });
-                            setVisitModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 rounded bg-[#3D2E18] text-white text-[11px] font-semibold cursor-pointer"
-                        >
-                          Update Visit
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-[#EFEAD8]">
+                  {siteVisits.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-center text-[#6E5A3E]">
+                        No site visits scheduled yet.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    siteVisits.map(v => {
+                      const prop = listings.find(
+                        p => p.id === v.property_id || p.property_code === v.property_code
+                      );
+                      const ownerDisplay = v.owner_name || prop?.owner_full_name || '—';
+                      const ownerMobileDisplay = v.owner_mobile || prop?.primary_mobile || '';
+
+                      return (
+                        <tr key={v.id} className="hover:bg-[#FAF8F5]">
+                          <td className="py-3 px-3.5">
+                            <div className="font-mono font-bold text-[#5C4728]">{v.visit_code}</div>
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-[#F3EFE6] text-[#3D2E18] font-mono text-[10px] font-semibold">
+                              Visit #{v.visit_number || 1}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3.5">
+                            <div className="font-semibold text-[#3D2E18]">
+                              {v.property_title || prop?.property_title || v.property_id}
+                            </div>
+                            <div className="font-mono text-[10px] text-[#8C6B38]">
+                              {v.property_code || prop?.property_code || v.property_id}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3.5">
+                            <div className="font-medium text-[#3D2E18]">{v.tenant_name}</div>
+                            <div className="font-mono text-[11px] text-slate-500">
+                              {v.tenant_mobile}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3.5">
+                            <div className="font-medium text-[#3D2E18]">{ownerDisplay}</div>
+                            {ownerMobileDisplay && (
+                              <div className="font-mono text-[11px] text-slate-500">
+                                {ownerMobileDisplay}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3.5 font-mono">
+                            <div className="font-semibold text-[#3D2E18]">{v.visit_date}</div>
+                            <div className="text-[11px] text-[#6E5A3E]">{v.visit_time}</div>
+                          </td>
+                          <td className="py-3 px-3.5 font-medium text-[#3D2E18]">
+                            {v.assigned_staff}
+                          </td>
+                          <td className="py-3 px-3.5">
+                            <span
+                              className={`px-2 py-0.5 rounded font-semibold text-[11px] ${
+                                v.visit_status === 'Completed' || v.visit_status === 'Confirmed'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : v.visit_status === 'Cancelled' || v.visit_status === 'No Show'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : 'bg-amber-100 text-amber-900'
+                              }`}
+                            >
+                              {v.visit_status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3.5 max-w-xs text-[11px]">
+                            {v.visit_feedback && (
+                              <div>
+                                <strong>Tenant:</strong> {v.visit_feedback}
+                              </div>
+                            )}
+                            {v.owner_feedback && (
+                              <div>
+                                <strong>Owner:</strong> {v.owner_feedback}
+                              </div>
+                            )}
+                            {(v.followup_notes || v.next_action) && (
+                              <div className="text-[#6E5A3E]">
+                                <strong>Follow-up:</strong> {v.followup_notes || v.next_action}
+                              </div>
+                            )}
+                            {!v.visit_feedback &&
+                              !v.owner_feedback &&
+                              !v.followup_notes &&
+                              !v.next_action &&
+                              '—'}
+                          </td>
+                          <td className="py-3 px-3.5 text-right whitespace-nowrap space-x-1">
+                            {v.visit_status === 'Scheduled' && (
+                              <button
+                                onClick={() => handleQuickVisitStatusUpdate(v, 'Confirmed')}
+                                className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold cursor-pointer"
+                                title="Confirm Site Visit"
+                              >
+                                Confirm
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setEditingVisit(v);
+                                setVisitForm({
+                                  ...v,
+                                  owner_name: ownerDisplay !== '—' ? ownerDisplay : '',
+                                  owner_mobile: ownerMobileDisplay
+                                });
+                                setVisitModalOpen(true);
+                              }}
+                              className="px-2 py-1 rounded bg-[#3D2E18] text-white text-[11px] font-semibold cursor-pointer"
+                              title="Reschedule / Record Feedback / Update Status"
+                            >
+                              Update / Feedback
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingVisit(null);
+                                setVisitForm({
+                                  property_id: v.property_id,
+                                  property_code: v.property_code || prop?.property_code || '',
+                                  property_title: v.property_title || prop?.property_title || '',
+                                  owner_name: ownerDisplay !== '—' ? ownerDisplay : '',
+                                  owner_mobile: ownerMobileDisplay,
+                                  tenant_enquiry_id: v.tenant_enquiry_id,
+                                  tenant_name: v.tenant_name,
+                                  tenant_mobile: v.tenant_mobile,
+                                  visit_date: new Date().toISOString().slice(0, 10),
+                                  visit_time: '11:30 AM',
+                                  assigned_staff: currentUserName,
+                                  visit_status: 'Scheduled',
+                                  visit_feedback: '',
+                                  owner_feedback: '',
+                                  followup_notes: `Follow-up visit after ${v.visit_code}`
+                                });
+                                setVisitModalOpen(true);
+                              }}
+                              className="px-2 py-1 rounded bg-[#F3EFE6] hover:bg-[#E5DEC9] text-[#3D2E18] text-[11px] font-semibold cursor-pointer"
+                              title="Schedule Another Visit for Same Property & Tenant"
+                            >
+                              + Repeat Visit
+                            </button>
+                            {v.visit_status !== 'Cancelled' && (
+                              <button
+                                onClick={() => handleQuickVisitStatusUpdate(v, 'Cancelled')}
+                                className="px-2 py-1 rounded border border-rose-200 text-rose-700 hover:bg-rose-50 text-[11px] font-semibold cursor-pointer"
+                                title="Cancel Visit"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {/* ===================================================================== */}
-      {/* SECTION 8: DEALS & PLACEMENT FEE PAYMENTS */}
+      {/* SECTION 8: DEALS, PLACEMENT FEES, RECEIPTS & INTERIOR CONVERSION */}
       {/* ===================================================================== */}
       {activeSection === 'deals' && (
         <div className="space-y-4">
-          <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 flex items-center justify-between gap-3">
-            <select
-              value={dealStatusFilter}
-              onChange={e => setDealStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
-            >
-              <option value="All">All Payment Statuses</option>
-              {DEAL_PAYMENT_STATUSES.map(st => (
-                <option key={st} value={st}>{st}</option>
-              ))}
-            </select>
+          <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={dealLifecycleFilter}
+                onChange={e => setDealLifecycleFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
+              >
+                <option value="All">All Deal Statuses</option>
+                {DEAL_LIFECYCLE_STATUSES.map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+
+              <select
+                value={dealStatusFilter}
+                onChange={e => setDealStatusFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
+              >
+                <option value="All">All Payment Statuses</option>
+                {DEAL_PAYMENT_STATUSES.map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </div>
 
             <button
               onClick={() => {
                 const firstProp = listings[0];
+                const firstEnq = enquiries[0];
+                const firstVisit = siteVisits[0];
                 setEditingDeal(null);
                 setDealForm({
                   property_id: firstProp?.id || '',
+                  property_code: firstProp?.property_code || '',
+                  property_title: firstProp?.property_title || '',
+                  tenant_enquiry_id: firstEnq?.id || null,
+                  site_visit_id: firstVisit?.id || null,
                   owner_name: firstProp?.owner_full_name || '',
-                  tenant_name: enquiries[0]?.tenant_name || '',
-                  final_monthly_rent: firstProp?.expected_monthly_rent || 25000,
-                  security_deposit: firstProp?.security_deposit || 100000,
+                  tenant_name: firstEnq?.tenant_name || '',
+                  tenant_mobile: firstEnq?.tenant_mobile || '',
+                  final_monthly_rent:
+                    firstEnq?.final_agreed_rent || firstProp?.expected_monthly_rent || 25000,
+                  security_deposit:
+                    firstEnq?.final_agreed_deposit || firstProp?.security_deposit || 100000,
                   deal_confirmed_date: new Date().toISOString().slice(0, 10),
                   agreement_date: new Date().toISOString().slice(0, 10),
                   move_in_date: new Date().toISOString().slice(0, 10),
-                  placement_fee_expected: firstProp?.expected_monthly_rent || 25000,
+                  rental_duration: '11 Months',
+                  final_negotiated_terms: firstEnq?.negotiation_notes || '',
+                  placement_fee_expected:
+                    firstEnq?.final_agreed_rent || firstProp?.expected_monthly_rent || 25000,
+                  placement_fee_payer: 'Tenant',
                   amount_received: 0,
                   payment_mode: 'UPI',
                   payment_date: new Date().toISOString().slice(0, 10),
                   transaction_reference: '',
+                  deal_status: 'Deal Confirmed',
                   handled_by: currentUserName,
                   notes: ''
                 });
@@ -1972,103 +2693,234 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#3D2E18] text-white text-xs font-semibold cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>Create Completed Deal</span>
+              <span>Create Rental Deal</span>
             </button>
           </div>
 
           <div className="bg-white border border-[#E5DEC9] rounded-xl overflow-hidden">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
-                <tr>
-                  <th className="py-3 px-4">Deal ID</th>
-                  <th className="py-3 px-4">Property</th>
-                  <th className="py-3 px-4">Owner / Tenant</th>
-                  <th className="py-3 px-4 text-right">Final Rent</th>
-                  <th className="py-3 px-4 text-right">Fee Expected</th>
-                  <th className="py-3 px-4 text-right">Received</th>
-                  <th className="py-3 px-4 text-right">Balance Due</th>
-                  <th className="py-3 px-4">Payment Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EFEAD8]">
-                {deals.length === 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-[#F3EFE6] text-[#5C4728] uppercase text-[11px] font-bold border-b border-[#E5DEC9]">
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-[#6E5A3E]">
-                      No rental deals recorded yet.
-                    </td>
+                    <th className="py-3 px-3.5">Deal ID & Lifecycle</th>
+                    <th className="py-3 px-3.5">Property</th>
+                    <th className="py-3 px-3.5">Owner & Tenant</th>
+                    <th className="py-3 px-3.5 text-right">Final Rent & Deposit</th>
+                    <th className="py-3 px-3.5 text-right">Placement Fee</th>
+                    <th className="py-3 px-3.5 text-right">Received</th>
+                    <th className="py-3 px-3.5 text-right">Balance Due</th>
+                    <th className="py-3 px-3.5">Payment Status & Ledger</th>
+                    <th className="py-3 px-3.5">Interior Opportunity</th>
+                    <th className="py-3 px-3.5 text-right">Actions</th>
                   </tr>
-                ) : (
-                  deals.map(d => (
-                    <tr key={d.id} className="hover:bg-[#FAF8F5]">
-                      <td className="py-3 px-4 font-mono font-bold text-[#5C4728]">
-                        {d.deal_code}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-[#3D2E18]">
-                        {d.property_title || d.property_id}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div>Owner: <strong>{d.owner_name}</strong></div>
-                        <div>Tenant: <strong>{d.tenant_name}</strong></div>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono">
-                        ₹{Number(d.final_monthly_rent || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-semibold">
-                        ₹{Number(d.placement_fee_expected || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
-                        ₹{Number(d.amount_received || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-rose-700">
-                        ₹{Number(d.amount_due || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                            d.payment_status === 'Paid'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : d.payment_status === 'Partially Paid'
-                              ? 'bg-amber-100 text-amber-900'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}
-                        >
-                          {d.payment_status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap space-x-1.5">
-                        <button
-                          onClick={() => setPaymentModalDeal(d)}
-                          className="px-2.5 py-1 rounded bg-[#8C6B38] text-white text-[11px] font-semibold cursor-pointer"
-                        >
-                          + Payment
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingDeal(d);
-                            setDealForm({ ...d });
-                            setDealModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 rounded bg-[#3D2E18] text-white text-[11px] font-semibold cursor-pointer"
-                        >
-                          Edit
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-[#EFEAD8]">
+                  {deals.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center text-[#6E5A3E]">
+                        No rental deals recorded yet.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    deals.map(d => (
+                      <tr key={d.id} className="hover:bg-[#FAF8F5]">
+                        <td className="py-3 px-3.5">
+                          <div className="font-mono font-bold text-[#5C4728]">{d.deal_code}</div>
+                          <span
+                            className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              d.deal_status === 'Deal Cancelled'
+                                ? 'bg-rose-100 text-rose-800'
+                                : d.deal_status === 'Agreement Completed' ||
+                                  d.deal_status === 'Tenant Moved In'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-[#F3EFE6] text-[#3D2E18]'
+                            }`}
+                          >
+                            {d.deal_status || 'Deal Confirmed'}
+                          </span>
+                          {d.rental_duration && (
+                            <div className="text-[10px] text-[#6E5A3E] mt-0.5">
+                              Duration: {d.rental_duration}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-3.5">
+                          <div className="font-semibold text-[#3D2E18]">
+                            {d.property_title || d.property_id}
+                          </div>
+                          <div className="font-mono text-[10px] text-[#8C6B38]">
+                            {d.property_code || d.property_id}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3.5">
+                          <div>
+                            Owner: <strong>{d.owner_name}</strong>
+                          </div>
+                          <div>
+                            Tenant: <strong>{d.tenant_name}</strong>
+                            {d.tenant_mobile ? ` (${d.tenant_mobile})` : ''}
+                          </div>
+                          <div className="text-[10px] text-[#6E5A3E]">
+                            Fee Payer: {d.placement_fee_payer || 'Tenant'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3.5 text-right font-mono">
+                          <div className="font-semibold text-[#3D2E18]">
+                            ₹{Number(d.final_monthly_rent || 0).toLocaleString('en-IN')}/mo
+                          </div>
+                          <div className="text-[10px] text-[#6E5A3E]">
+                            Dep: ₹{Number(d.security_deposit || 0).toLocaleString('en-IN')}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3.5 text-right font-mono font-semibold">
+                          ₹{Number(d.placement_fee_expected || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-700">
+                          ₹{Number(d.amount_received || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3 px-3.5 text-right font-mono font-bold text-rose-700">
+                          ₹{Number(d.amount_due || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3 px-3.5">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                              d.payment_status === 'Paid'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : d.payment_status === 'Partially Paid'
+                                ? 'bg-amber-100 text-amber-900'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}
+                          >
+                            {d.payment_status}
+                          </span>
+                          {Array.isArray(d.payments) && d.payments.length > 0 && (
+                            <div className="mt-1.5 space-y-1">
+                              {d.payments.map(pmt => (
+                                <div
+                                  key={pmt.id}
+                                  className="flex items-center justify-between gap-1 text-[10px] bg-[#FAF8F5] px-1.5 py-0.5 rounded border border-[#EFEAD8]"
+                                >
+                                  <span
+                                    className={
+                                      pmt.payment_status === 'Cancelled'
+                                        ? 'line-through text-slate-400'
+                                        : 'font-mono'
+                                    }
+                                  >
+                                    ₹{Number(pmt.amount || 0).toLocaleString('en-IN')} ({pmt.payment_mode})
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenDealReceipt(d.id, pmt.id)}
+                                      className="text-[#8C6B38] hover:underline font-semibold cursor-pointer"
+                                      title="View Receipt for this payment"
+                                    >
+                                      Rcpt
+                                    </button>
+                                    {pmt.payment_status !== 'Cancelled' && (
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            await updateDealPaymentStatus(d.id, pmt.id, {
+                                              payment_status: 'Cancelled',
+                                              notes: 'Cancelled by staff'
+                                            });
+                                            showSuccess('Payment cancelled and deal balance recalculated.');
+                                            await loadSectionData();
+                                          } catch (err: any) {
+                                            setErrorBanner(
+                                              err.message || 'Failed to cancel payment.'
+                                            );
+                                          }
+                                        }}
+                                        className="text-rose-600 hover:underline cursor-pointer"
+                                        title="Cancel this payment"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-3.5">
+                          {d.interior_crm_lead_id ? (
+                            <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-semibold block w-fit">
+                              Linked ({d.interior_crm_lead_id.slice(0, 10)})
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[#6E5A3E]">
+                              {d.interested_in_interior && d.interested_in_interior !== 'No'
+                                ? `${d.interested_in_interior} (${d.interior_service_requirement || 'Interior'})`
+                                : 'Not Converted'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3.5 text-right whitespace-nowrap space-x-1">
+                          <button
+                            onClick={() => setPaymentModalDeal(d)}
+                            className="px-2 py-1 rounded bg-[#8C6B38] hover:bg-[#5C4728] text-white text-[11px] font-semibold cursor-pointer"
+                          >
+                            + Payment
+                          </button>
+                          <button
+                            onClick={() => handleOpenDealReceipt(d.id)}
+                            className="px-2 py-1 rounded bg-[#F3EFE6] hover:bg-[#E5DEC9] text-[#3D2E18] text-[11px] font-semibold cursor-pointer"
+                            title="Generate & Download Payment Receipt"
+                          >
+                            Receipt
+                          </button>
+                          <button
+                            onClick={() => {
+                              setInteriorModalDeal(d);
+                              setInteriorForm({
+                                interested_in_interior: d.interested_in_interior || 'Yes',
+                                interior_service_requirement:
+                                  d.interior_service_requirement || 'Home Interior',
+                                interior_followup_date:
+                                  d.interior_followup_date ||
+                                  new Date().toISOString().slice(0, 10),
+                                interior_notes: d.interior_notes || '',
+                                assigned_staff: d.handled_by || currentUserName,
+                                confirm_create: !d.interior_crm_lead_id
+                              });
+                            }}
+                            className="px-2 py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-950 text-[11px] font-semibold cursor-pointer"
+                            title="Interior Design Opportunity & Interior CRM Conversion"
+                          >
+                            Interior Opp
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingDeal(d);
+                              setDealForm({ ...d });
+                              setDealModalOpen(true);
+                            }}
+                            className="px-2 py-1 rounded bg-[#3D2E18] text-white text-[11px] font-semibold cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {/* ===================================================================== */}
-      {/* SECTION 9: PROPERTY REPORTS */}
+      {/* SECTION 9: PROPERTY REPORTS (With Date & Staff Filters) */}
       {/* ===================================================================== */}
       {activeSection === 'reports' && dashboardData && (
         <div className="space-y-5">
-          {/* Date Filters & CSV Export */}
+          {/* Date & Staff Filters & CSV Export */}
           <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-wrap">
               <div>
@@ -2093,11 +2945,28 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   className="px-3 py-1.5 rounded-lg border border-[#D8CEB8] text-xs"
                 />
               </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-[#6E5A3E] mb-0.5">
+                  Staff Member Filter
+                </label>
+                <select
+                  value={reportStaffFilter}
+                  onChange={e => setReportStaffFilter(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
+                >
+                  <option value="All">All Staff Members</option>
+                  {crmStaffList.map(st => (
+                    <option key={st.id} value={st.fullName}>
+                      {st.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button
                 onClick={loadSectionData}
                 className="mt-4 px-4 py-1.5 rounded-lg bg-[#3D2E18] text-white text-xs font-semibold cursor-pointer"
               >
-                Apply Date Filter
+                Apply Filters
               </button>
             </div>
 
@@ -2114,18 +2983,18 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             <div className="bg-white border border-[#E5DEC9] rounded-xl p-4">
               <div className="text-[11px] font-semibold uppercase text-[#6E5A3E]">
-                Total Leads Received
+                Total Leads / Enquiries
               </div>
               <div className="text-2xl font-bold font-mono text-[#3D2E18] mt-1">
-                {dashboardData.metrics.totalPropertyLeads}
+                {dashboardData.metrics.totalPropertyLeads} / {dashboardData.metrics.tenantEnquiries}
               </div>
             </div>
             <div className="bg-white border border-[#E5DEC9] rounded-xl p-4">
               <div className="text-[11px] font-semibold uppercase text-[#6E5A3E]">
-                Approved / Rejected
+                Deals Confirmed / Completed
               </div>
               <div className="text-2xl font-bold font-mono text-[#3D2E18] mt-1">
-                {dashboardData.metrics.approvedProperties} / {dashboardData.reports.rejectedProperties}
+                {dashboardData.metrics.dealsConfirmed ?? 0} / {dashboardData.metrics.dealsCompleted}
               </div>
             </div>
             <div className="bg-white border border-[#E5DEC9] rounded-xl p-4">
@@ -2143,6 +3012,47 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
               <div className="text-2xl font-bold font-mono text-rose-700 mt-1">
                 ₹{dashboardData.reports.pendingPlacementFees.toLocaleString('en-IN')}
               </div>
+            </div>
+          </div>
+
+          {/* Staff-wise Rental Operations Performance Table */}
+          <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#5C4728] border-b border-[#EFEAD8] pb-2">
+              Staff-wise Rental Operations & Placement Fee Report
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="border-b border-[#EFEAD8] text-[#6E5A3E]">
+                    <th className="py-2">Staff Member</th>
+                    <th className="py-2 text-right">Property Leads</th>
+                    <th className="py-2 text-right">Owner Calls</th>
+                    <th className="py-2 text-right">Approved Properties</th>
+                    <th className="py-2 text-right">Tenant Enquiries</th>
+                    <th className="py-2 text-right">Site Visits</th>
+                    <th className="py-2 text-right">Deals Closed</th>
+                    <th className="py-2 text-right">Placement Fees Collected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardData.reports.leadsByTelecaller.map(r => (
+                    <tr key={r.telecaller} className="border-b border-[#FAF8F5]">
+                      <td className="py-2 font-semibold text-[#3D2E18]">{r.telecaller}</td>
+                      <td className="py-2 text-right font-mono">{r.assignedLeads}</td>
+                      <td className="py-2 text-right font-mono">{r.callsLogged}</td>
+                      <td className="py-2 text-right font-mono">{r.approvedProperties}</td>
+                      <td className="py-2 text-right font-mono">{r.enquiriesAssigned ?? 0}</td>
+                      <td className="py-2 text-right font-mono">{r.siteVisitsHandled ?? 0}</td>
+                      <td className="py-2 text-right font-mono font-semibold">
+                        {r.dealsClosed ?? 0}
+                      </td>
+                      <td className="py-2 text-right font-mono font-bold text-emerald-700">
+                        ₹{Number(r.feesCollected || 0).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -2174,28 +3084,26 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
               </table>
             </div>
 
-            {/* Leads & Calls by Telecaller */}
+            {/* Monthly Deals & Fees */}
             <div className="bg-white border border-[#E5DEC9] rounded-xl p-4 space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#5C4728] border-b border-[#EFEAD8] pb-2">
-                Leads & Calls by Telecaller
+                Monthly Completed Deals & Placement Fees
               </h3>
               <table className="w-full text-xs text-left">
                 <thead>
                   <tr className="border-b border-[#EFEAD8] text-[#6E5A3E]">
-                    <th className="py-2">Telecaller</th>
-                    <th className="py-2 text-right">Assigned Leads</th>
-                    <th className="py-2 text-right">Calls Completed</th>
-                    <th className="py-2 text-right">Approved</th>
+                    <th className="py-2">Month</th>
+                    <th className="py-2 text-right">Deals Closed</th>
+                    <th className="py-2 text-right">Placement Fees Collected</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboardData.reports.leadsByTelecaller.map(r => (
-                    <tr key={r.telecaller} className="border-b border-[#FAF8F5]">
-                      <td className="py-2 font-semibold text-[#3D2E18]">{r.telecaller}</td>
-                      <td className="py-2 text-right font-mono">{r.assignedLeads}</td>
-                      <td className="py-2 text-right font-mono">{r.callsLogged}</td>
+                  {dashboardData.charts.monthlyDealsAndFees.map(m => (
+                    <tr key={m.month} className="border-b border-[#FAF8F5]">
+                      <td className="py-2 font-mono font-semibold text-[#3D2E18]">{m.month}</td>
+                      <td className="py-2 text-right font-mono">{m.dealsCount}</td>
                       <td className="py-2 text-right font-mono font-bold text-emerald-700">
-                        {r.approvedProperties}
+                        ₹{m.feesCollected.toLocaleString('en-IN')}
                       </td>
                     </tr>
                   ))}
@@ -2315,21 +3223,28 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
         </div>
       )}
 
-      {/* Tenant Enquiry Create/Edit Modal */}
+      {/* Tenant Enquiry & Full Tenant Requirements Modal (Sections 2 & 3) */}
       {enquiryModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4">
           <form
             onSubmit={handleSaveEnquiry}
-            className="bg-white border border-[#E5DEC9] rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-white border border-[#E5DEC9] rounded-2xl max-w-3xl w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-[#EFEAD8] pb-3">
-              <h3 className="text-sm font-bold text-[#3D2E18]">
-                {editingEnquiry ? `Edit Tenant Enquiry (${editingEnquiry.enquiry_code})` : 'Add Tenant Enquiry'}
-              </h3>
+              <div>
+                <h3 className="text-sm font-bold text-[#3D2E18]">
+                  {editingEnquiry
+                    ? `Edit Tenant Enquiry & Requirements (${editingEnquiry.enquiry_code})`
+                    : 'Add Tenant Enquiry & Requirements'}
+                </h3>
+                <p className="text-xs text-[#6E5A3E]">
+                  Capture tenant contact details, assigned staff, follow-up schedule, and complete property requirements
+                </p>
+              </div>
               <button type="button" onClick={() => setEnquiryModalOpen(false)}>✕</button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               <div>
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
                   Tenant Name *
@@ -2368,9 +3283,9 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                 />
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Property Interested In
+                  Interested Property (Property ID)
                 </label>
                 <select
                   value={enquiryForm.property_id || ''}
@@ -2379,7 +3294,10 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                     setEnquiryForm({
                       ...enquiryForm,
                       property_id: e.target.value || null,
-                      property_title: p?.property_title || ''
+                      property_code: p?.property_code || '',
+                      property_title: p?.property_title || '',
+                      preferred_location:
+                        enquiryForm.preferred_location || p?.locality || ''
                     });
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
@@ -2387,7 +3305,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   <option value="">General Requirement (Any Matching Property)</option>
                   {listings.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.property_code} — {p.property_title}
+                      {p.property_code} — {p.property_title} ({p.locality})
                     </option>
                   ))}
                 </select>
@@ -2395,68 +3313,39 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
 
               <div>
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Preferred Location
+                  Enquiry Source
                 </label>
                 <input
                   type="text"
-                  value={enquiryForm.preferred_location || ''}
-                  onChange={e => setEnquiryForm({ ...enquiryForm, preferred_location: e.target.value })}
+                  value={enquiryForm.enquiry_source || 'Direct Call'}
+                  onChange={e => setEnquiryForm({ ...enquiryForm, enquiry_source: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Property Type Needed
-                </label>
-                <select
-                  value={enquiryForm.property_type_needed || '2 BHK'}
-                  onChange={e => setEnquiryForm({ ...enquiryForm, property_type_needed: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
-                >
-                  {ALL_PROPERTY_TYPES.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Budget Range
+                  Assigned Staff
                 </label>
                 <input
                   type="text"
-                  value={enquiryForm.budget_range || ''}
-                  onChange={e => setEnquiryForm({ ...enquiryForm, budget_range: e.target.value })}
-                  placeholder="e.g., ₹25,000 - ₹35,000"
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Move-in Date
-                </label>
-                <input
-                  type="date"
-                  value={enquiryForm.move_in_date ? enquiryForm.move_in_date.slice(0, 10) : ''}
-                  onChange={e => setEnquiryForm({ ...enquiryForm, move_in_date: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Family / Bachelor / Company Profile
-                </label>
-                <input
-                  type="text"
-                  value={enquiryForm.family_or_company_profile || ''}
+                  list="enquiry-staff-options"
+                  value={enquiryForm.assigned_staff || enquiryForm.assigned_telecaller || ''}
                   onChange={e =>
-                    setEnquiryForm({ ...enquiryForm, family_or_company_profile: e.target.value })
+                    setEnquiryForm({
+                      ...enquiryForm,
+                      assigned_staff: e.target.value,
+                      assigned_telecaller: e.target.value
+                    })
                   }
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
                 />
+                <datalist id="enquiry-staff-options">
+                  <option value={currentUserName} />
+                  {crmStaffList.map(s => (
+                    <option key={s.id} value={s.fullName} />
+                  ))}
+                </datalist>
               </div>
 
               <div>
@@ -2478,11 +3367,248 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Next Follow-up Date
+                </label>
+                <input
+                  type="date"
+                  value={
+                    enquiryForm.next_followup_date
+                      ? enquiryForm.next_followup_date.slice(0, 10)
+                      : ''
+                  }
+                  onChange={e =>
+                    setEnquiryForm({ ...enquiryForm, next_followup_date: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Section 3: Tenant Requirements Box */}
+            <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DEC9] space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-[#5C4728]">
+                Section 3 • Detailed Tenant Requirements
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Preferred Location
+                  </label>
+                  <input
+                    type="text"
+                    value={enquiryForm.preferred_location || ''}
+                    onChange={e =>
+                      setEnquiryForm({ ...enquiryForm, preferred_location: e.target.value })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Property Category
+                  </label>
+                  <select
+                    value={enquiryForm.property_category || 'Residential'}
+                    onChange={e =>
+                      setEnquiryForm({
+                        ...enquiryForm,
+                        property_category: e.target.value as PropertyCategory
+                      })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  >
+                    <option value="Residential">Residential</option>
+                    <option value="Commercial">Commercial</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Property Type
+                  </label>
+                  <select
+                    value={enquiryForm.property_type_needed || '2 BHK'}
+                    onChange={e =>
+                      setEnquiryForm({
+                        ...enquiryForm,
+                        property_type_needed: e.target.value,
+                        bhk_requirement: enquiryForm.bhk_requirement || e.target.value
+                      })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  >
+                    {ALL_PROPERTY_TYPES.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    BHK Requirement
+                  </label>
+                  <input
+                    type="text"
+                    value={enquiryForm.bhk_requirement || enquiryForm.property_type_needed || ''}
+                    onChange={e =>
+                      setEnquiryForm({ ...enquiryForm, bhk_requirement: e.target.value })
+                    }
+                    placeholder="e.g., 2 BHK / 3 BHK"
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Minimum Budget (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={enquiryForm.minimum_budget ?? ''}
+                    onChange={e =>
+                      setEnquiryForm({
+                        ...enquiryForm,
+                        minimum_budget: e.target.value ? Number(e.target.value) : null
+                      })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Maximum Budget (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={enquiryForm.maximum_budget ?? ''}
+                    onChange={e =>
+                      setEnquiryForm({
+                        ...enquiryForm,
+                        maximum_budget: e.target.value ? Number(e.target.value) : null
+                      })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Budget Range Display
+                  </label>
+                  <input
+                    type="text"
+                    value={enquiryForm.budget_range || ''}
+                    onChange={e => setEnquiryForm({ ...enquiryForm, budget_range: e.target.value })}
+                    placeholder="e.g., ₹25,000 - ₹35,000"
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Furnishing Preference
+                  </label>
+                  <select
+                    value={enquiryForm.furnishing_preference || 'Semi-Furnished'}
+                    onChange={e =>
+                      setEnquiryForm({ ...enquiryForm, furnishing_preference: e.target.value })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  >
+                    <option value="Any">Any Furnishing</option>
+                    {FURNISHING_STATUSES.map(f => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Preferred Move-in Date
+                  </label>
+                  <input
+                    type="date"
+                    value={enquiryForm.move_in_date ? enquiryForm.move_in_date.slice(0, 10) : ''}
+                    onChange={e => setEnquiryForm({ ...enquiryForm, move_in_date: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Parking Requirement
+                  </label>
+                  <input
+                    type="text"
+                    value={enquiryForm.parking_requirement || ''}
+                    onChange={e =>
+                      setEnquiryForm({ ...enquiryForm, parking_requirement: e.target.value })
+                    }
+                    placeholder="e.g., 1 Covered Car + 2 Wheeler"
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Family / Bachelor / Company Profile
+                  </label>
+                  <input
+                    type="text"
+                    value={enquiryForm.family_or_company_profile || ''}
+                    onChange={e =>
+                      setEnquiryForm({
+                        ...enquiryForm,
+                        family_or_company_profile: e.target.value
+                      })
+                    }
+                    placeholder="Family / Working Bachelors / Corporate"
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                    Number of Occupants
+                  </label>
+                  <input
+                    type="number"
+                    value={enquiryForm.number_of_occupants ?? ''}
+                    onChange={e =>
+                      setEnquiryForm({
+                        ...enquiryForm,
+                        number_of_occupants: e.target.value ? Number(e.target.value) : null
+                      })
+                    }
+                    className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[#3D2E18] mb-1">
+                  Additional Requirements
+                </label>
+                <textarea
+                  rows={2}
+                  value={enquiryForm.additional_requirements || ''}
+                  onChange={e =>
+                    setEnquiryForm({ ...enquiryForm, additional_requirements: e.target.value })
+                  }
+                  placeholder="Pet friendly, east facing, higher floor, power backup, etc."
+                  className="w-full px-2.5 py-1.5 rounded border border-[#D8CEB8] bg-white text-xs"
+                />
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                Notes
+                General Enquiry Notes
               </label>
               <textarea
                 rows={2}
@@ -2505,24 +3631,31 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                 disabled={submittingEnquiry}
                 className="px-5 py-2 rounded-lg bg-[#3D2E18] text-white text-xs font-semibold cursor-pointer"
               >
-                {submittingEnquiry ? 'Saving...' : 'Save Tenant Enquiry'}
+                {submittingEnquiry ? 'Saving...' : 'Save Enquiry & Requirements'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Site Visit Schedule / Edit Modal */}
+      {/* Site Visit Schedule / Edit Modal (Section 5) */}
       {visitModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4">
           <form
             onSubmit={handleSaveSiteVisit}
-            className="bg-white border border-[#E5DEC9] rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl"
+            className="bg-white border border-[#E5DEC9] rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-[#EFEAD8] pb-3">
-              <h3 className="text-sm font-bold text-[#3D2E18]">
-                {editingVisit ? `Update Site Visit (${editingVisit.visit_code})` : 'Schedule Property Site Visit'}
-              </h3>
+              <div>
+                <h3 className="text-sm font-bold text-[#3D2E18]">
+                  {editingVisit
+                    ? `Update Site Visit (${editingVisit.visit_code} • Visit #${editingVisit.visit_number || 1})`
+                    : 'Schedule Property Site Visit'}
+                </h3>
+                <p className="text-xs text-[#6E5A3E]">
+                  Supports scheduling, rescheduling, confirming, and recording tenant & owner feedback
+                </p>
+              </div>
               <button type="button" onClick={() => setVisitModalOpen(false)}>✕</button>
             </div>
 
@@ -2539,7 +3672,10 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                     setVisitForm({
                       ...visitForm,
                       property_id: e.target.value,
-                      property_title: p?.property_title || ''
+                      property_code: p?.property_code || '',
+                      property_title: p?.property_title || '',
+                      owner_name: p?.owner_full_name || visitForm.owner_name || '',
+                      owner_mobile: p?.primary_mobile || visitForm.owner_mobile || ''
                     });
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
@@ -2606,6 +3742,37 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
 
               <div>
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Property Owner Name
+                </label>
+                <input
+                  type="text"
+                  value={visitForm.owner_name || ''}
+                  onChange={e => setVisitForm({ ...visitForm, owner_name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Assigned Staff
+                </label>
+                <input
+                  type="text"
+                  list="visit-staff-options"
+                  value={visitForm.assigned_staff || ''}
+                  onChange={e => setVisitForm({ ...visitForm, assigned_staff: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                />
+                <datalist id="visit-staff-options">
+                  <option value={currentUserName} />
+                  {crmStaffList.map(s => (
+                    <option key={s.id} value={s.fullName} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
                   Visit Date *
                 </label>
                 <input
@@ -2630,19 +3797,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Assigned Staff
-                </label>
-                <input
-                  type="text"
-                  value={visitForm.assigned_staff || ''}
-                  onChange={e => setVisitForm({ ...visitForm, assigned_staff: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
-                />
-              </div>
-
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
                   Visit Status
                 </label>
@@ -2669,6 +3824,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   type="text"
                   value={visitForm.visit_feedback || ''}
                   onChange={e => setVisitForm({ ...visitForm, visit_feedback: e.target.value })}
+                  placeholder="Liked property, wants rent negotiation..."
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
                 />
               </div>
@@ -2681,9 +3837,29 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   type="text"
                   value={visitForm.owner_feedback || ''}
                   onChange={e => setVisitForm({ ...visitForm, owner_feedback: e.target.value })}
+                  placeholder="Approved tenant profile..."
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                Follow-up Notes After Visit
+              </label>
+              <textarea
+                rows={2}
+                value={visitForm.followup_notes || visitForm.next_action || ''}
+                onChange={e =>
+                  setVisitForm({
+                    ...visitForm,
+                    followup_notes: e.target.value,
+                    next_action: e.target.value
+                  })
+                }
+                placeholder="Record post-visit follow-up action items..."
+                className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+              />
             </div>
 
             <div className="flex justify-end gap-2">
@@ -2706,7 +3882,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
         </div>
       )}
 
-      {/* Create / Edit Deal Modal */}
+      {/* Create / Edit Rental Deal Modal (Section 7) */}
       {dealModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4">
           <form
@@ -2714,9 +3890,16 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
             className="bg-white border border-[#E5DEC9] rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-[#EFEAD8] pb-3">
-              <h3 className="text-sm font-bold text-[#3D2E18]">
-                {editingDeal ? `Edit Rental Deal (${editingDeal.deal_code})` : 'Create Completed Rental Deal'}
-              </h3>
+              <div>
+                <h3 className="text-sm font-bold text-[#3D2E18]">
+                  {editingDeal
+                    ? `Edit Rental Deal (${editingDeal.deal_code})`
+                    : 'Create Rental Deal'}
+                </h3>
+                <p className="text-xs text-[#6E5A3E]">
+                  Linked to Property, Tenant Enquiry, Tenant, Owner, and Site Visit
+                </p>
+              </div>
               <button type="button" onClick={() => setDealModalOpen(false)}>✕</button>
             </div>
 
@@ -2733,6 +3916,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                     setDealForm({
                       ...dealForm,
                       property_id: e.target.value,
+                      property_code: p?.property_code || '',
                       property_title: p?.property_title || '',
                       owner_name: p?.owner_full_name || dealForm.owner_name || ''
                     });
@@ -2746,6 +3930,85 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Linked Tenant Enquiry
+                </label>
+                <select
+                  value={dealForm.tenant_enquiry_id || ''}
+                  onChange={e => {
+                    const enq = enquiries.find(x => x.id === e.target.value);
+                    setDealForm({
+                      ...dealForm,
+                      tenant_enquiry_id: e.target.value || null,
+                      tenant_name: enq?.tenant_name || dealForm.tenant_name || '',
+                      tenant_mobile: enq?.tenant_mobile || dealForm.tenant_mobile || '',
+                      final_monthly_rent:
+                        enq?.final_agreed_rent || dealForm.final_monthly_rent || 25000,
+                      security_deposit:
+                        enq?.final_agreed_deposit || dealForm.security_deposit || 100000
+                    });
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                >
+                  <option value="">Select Tenant Enquiry (Optional)</option>
+                  {enquiries.map(enq => (
+                    <option key={enq.id} value={enq.id}>
+                      {enq.enquiry_code} — {enq.tenant_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Linked Site Visit
+                </label>
+                <select
+                  value={dealForm.site_visit_id || ''}
+                  onChange={e =>
+                    setDealForm({ ...dealForm, site_visit_id: e.target.value || null })
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                >
+                  <option value="">Select Site Visit (Where Applicable)</option>
+                  {siteVisits.map(sv => (
+                    <option key={sv.id} value={sv.id}>
+                      {sv.visit_code} — {sv.tenant_name} ({sv.visit_date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Deal Lifecycle Status *
+                </label>
+                <select
+                  value={dealForm.deal_status || 'Deal Confirmed'}
+                  onChange={e =>
+                    setDealForm({
+                      ...dealForm,
+                      deal_status: e.target.value as DealLifecycleStatus
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-semibold"
+                >
+                  {DEAL_LIFECYCLE_STATUSES.map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-[#6E5A3E] mt-1">
+                  {dealForm.deal_status === 'Deal Pending'
+                    ? 'Property availability remains unchanged (does not mark property as Rented).'
+                    : dealForm.deal_status === 'Deal Confirmed' || dealForm.deal_status === 'Agreement in Progress'
+                    ? 'Automatically marks property as Temporarily On Hold.'
+                    : dealForm.deal_status === 'Agreement Completed' || dealForm.deal_status === 'Tenant Moved In'
+                    ? 'Marks property as Rented and removes it from public website listings.'
+                    : 'Does not automatically mark property Available; owner confirmation is required to reactivate.'}
+                </p>
               </div>
 
               <div>
@@ -2790,6 +4053,57 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
 
               <div>
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Security Deposit (₹)
+                </label>
+                <input
+                  type="number"
+                  value={dealForm.security_deposit ?? ''}
+                  onChange={e =>
+                    setDealForm({ ...dealForm, security_deposit: Number(e.target.value) })
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Agreement Date
+                </label>
+                <input
+                  type="date"
+                  value={dealForm.agreement_date ? dealForm.agreement_date.slice(0, 10) : ''}
+                  onChange={e => setDealForm({ ...dealForm, agreement_date: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Move-in Date
+                </label>
+                <input
+                  type="date"
+                  value={dealForm.move_in_date ? dealForm.move_in_date.slice(0, 10) : ''}
+                  onChange={e => setDealForm({ ...dealForm, move_in_date: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Rental Duration
+                </label>
+                <input
+                  type="text"
+                  value={dealForm.rental_duration || '11 Months'}
+                  onChange={e => setDealForm({ ...dealForm, rental_duration: e.target.value })}
+                  placeholder="e.g., 11 Months"
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
                   Placement Fee Expected (₹)
                 </label>
                 <input
@@ -2799,6 +4113,18 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                     setDealForm({ ...dealForm, placement_fee_expected: Number(e.target.value) })
                   }
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Placement Fee Payer
+                </label>
+                <input
+                  type="text"
+                  value={dealForm.placement_fee_payer || 'Tenant'}
+                  onChange={e => setDealForm({ ...dealForm, placement_fee_payer: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
                 />
               </div>
 
@@ -2820,18 +4146,6 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
 
               <div>
                 <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                  Deal Confirmed Date
-                </label>
-                <input
-                  type="date"
-                  value={dealForm.deal_confirmed_date ? dealForm.deal_confirmed_date.slice(0, 10) : ''}
-                  onChange={e => setDealForm({ ...dealForm, deal_confirmed_date: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
                   Handled By
                 </label>
                 <input
@@ -2841,6 +4155,33 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                Final Negotiated Terms
+              </label>
+              <input
+                type="text"
+                value={dealForm.final_negotiated_terms || ''}
+                onChange={e =>
+                  setDealForm({ ...dealForm, final_negotiated_terms: e.target.value })
+                }
+                placeholder="Includes maintenance, painting before move-in, 5% annual escalation..."
+                className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                Deal Notes
+              </label>
+              <textarea
+                rows={2}
+                value={dealForm.notes || ''}
+                onChange={e => setDealForm({ ...dealForm, notes: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
+              />
             </div>
 
             <div className="flex justify-end gap-2">
@@ -2856,14 +4197,14 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                 disabled={submittingDeal}
                 className="px-5 py-2 rounded-lg bg-[#3D2E18] text-white text-xs font-semibold cursor-pointer"
               >
-                {submittingDeal ? 'Saving...' : 'Save Deal'}
+                {submittingDeal ? 'Saving...' : 'Save Rental Deal'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Record Placement Fee Payment Modal */}
+      {/* Record Placement Fee Payment Modal (Section 8) */}
       {paymentModalDeal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4">
           <form
@@ -2876,6 +4217,8 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                   Record Placement Fee Payment ({paymentModalDeal.deal_code})
                 </h3>
                 <p className="text-xs text-[#6E5A3E]">
+                  Total Fee: ₹
+                  {Number(paymentModalDeal.placement_fee_expected || 0).toLocaleString('en-IN')} •
                   Balance Due: ₹{Number(paymentModalDeal.amount_due || 0).toLocaleString('en-IN')}
                 </p>
               </div>
@@ -2925,17 +4268,45 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Transaction Reference / UTR
+                </label>
+                <input
+                  type="text"
+                  value={paymentForm.transaction_reference}
+                  onChange={e =>
+                    setPaymentForm({ ...paymentForm, transaction_reference: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
+                  Receipt Number (Auto if blank)
+                </label>
+                <input
+                  type="text"
+                  value={paymentForm.receipt_number}
+                  onChange={e => setPaymentForm({ ...paymentForm, receipt_number: e.target.value })}
+                  placeholder="Auto REP-RCP-..."
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-mono"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-[#3D2E18] mb-1">
-                Transaction Reference / UTR
+                Payment Notes
               </label>
               <input
                 type="text"
-                value={paymentForm.transaction_reference}
-                onChange={e =>
-                  setPaymentForm({ ...paymentForm, transaction_reference: e.target.value })
-                }
-                className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs font-mono"
+                value={paymentForm.notes}
+                onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                placeholder="Advance / Full settlement remarks..."
+                className="w-full px-3 py-2 rounded-lg border border-[#D8CEB8] text-xs"
               />
             </div>
 
@@ -2958,6 +4329,62 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
           </form>
         </div>
       )}
+
+      {/* Phase 3 Rental Operations Modals */}
+      <PropertyAvailabilityModal
+        property={availabilityModalProp}
+        targetStatus={availabilityTargetStatus}
+        setTargetStatus={setAvailabilityTargetStatus}
+        notes={availabilityNotes}
+        setNotes={setAvailabilityNotes}
+        ownerConfirmed={availabilityOwnerConfirmed}
+        setOwnerConfirmed={setAvailabilityOwnerConfirmed}
+        submitting={submittingAvailability}
+        onClose={() => setAvailabilityModalProp(null)}
+        onSubmit={handleUpdateAvailabilitySubmit}
+      />
+
+      <TenantCallModal
+        enquiry={callModalEnquiry}
+        callForm={tenantCallForm}
+        setCallForm={setTenantCallForm}
+        submitting={submittingTenantCall}
+        onClose={() => setCallModalEnquiry(null)}
+        onSubmit={handleLogTenantCallSubmit}
+      />
+
+      <RentNegotiationModal
+        enquiry={negModalEnquiry}
+        negForm={negForm}
+        setNegForm={setNegForm}
+        submitting={submittingNeg}
+        onClose={() => setNegModalEnquiry(null)}
+        onSubmit={handleSaveNegotiationSubmit}
+      />
+
+      <EnquiryHistoryDetailModal
+        detail={enquiryHistoryDetail}
+        onClose={() => setEnquiryHistoryDetail(null)}
+        onOpenProperty={prop => {
+          setEnquiryHistoryDetail(null);
+          handleOpenAssociatedProperty(prop.id);
+        }}
+      />
+
+      <PaymentReceiptModal
+        receipt={activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+      />
+
+      <InteriorConversionModal
+        deal={interiorModalDeal}
+        form={interiorForm}
+        setForm={setInteriorForm}
+        staffList={crmStaffList}
+        submitting={submittingInterior}
+        onClose={() => setInteriorModalDeal(null)}
+        onSubmit={handleInteriorConversionSubmit}
+      />
     </div>
   );
 };

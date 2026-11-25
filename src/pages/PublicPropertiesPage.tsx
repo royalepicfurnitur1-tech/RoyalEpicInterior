@@ -19,8 +19,15 @@ import {
   MessageCircle,
   Filter,
   ChevronRight,
+  Compass,
+  FileCheck2,
 } from 'lucide-react';
 import { PublicPropertyListing } from '../crm/properties/propertyTypes';
+
+const luxuryLivingRoomHero = new URL(
+  '../assets/images/luxury_living_room_hero_1795585853260.jpg',
+  import.meta.url
+).href;
 
 interface PublicPropertiesPageProps {
   onSelectProperty: (slug: string) => void;
@@ -319,84 +326,94 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
             </span>
             <span>•</span>
             <a
-              href="tel:+919916633338"
+              href="tel:+917026119311"
               className="text-amber-800 font-semibold hover:underline inline-flex items-center gap-1"
             >
-              <Phone className="w-3 h-3" /> +91 99166 33338
+              <Phone className="w-3 h-3" /> +91 70261 19311
             </a>
           </div>
         </div>
       </div>
 
-      {/* Hero Section */}
-      <section className="relative bg-[#141210] text-white border-b border-amber-500/20 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.14),transparent_60%)] pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 relative z-10">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[11px] font-semibold uppercase tracking-[0.2em] mb-4">
-              <Sparkles className="w-3.5 h-3.5" />
-              A New Vertical by Royal Epic Interiors
+      {/* Hero Section – Elegant Residential Interior (Option 2) */}
+      <section className="relative bg-gradient-to-b from-[#F7F4EE] via-[#FAF8F5] to-[#FAF8F5] border-b border-[#E8E2D5] overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-[radial-gradient(circle_at_top_right,rgba(197,160,89,0.10),transparent_70%)] pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 md:pt-14 md:pb-20 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* Left Side (~45% width on desktop: 5 of 12 cols) */}
+            <div className="lg:col-span-5">
+              <div className="inline-flex items-center gap-2 text-[#9A7835] text-xs font-semibold uppercase tracking-[0.22em] mb-3.5">
+                <span className="w-6 h-[1px] bg-[#C5A059]" />
+                <span>RENTAL PROPERTIES IN BENGALURU</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-serif font-bold tracking-tight text-[#1A1D24] leading-[1.12] mb-5">
+                Discover Your
+                <span className="block text-[#B8924A] mt-1">Next Home</span>
+              </h1>
+
+              <p className="text-stone-600 text-base sm:text-[17px] leading-relaxed mb-7">
+                Explore verified residential and commercial rental properties across Bengaluru. Find
+                apartments, homes, villas, offices and retail spaces with expert assistance from the
+                Royal Epic Properties team.
+              </p>
+
+              {/* Three Simple Trust Indicators with Clean Line Icons */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3 gap-3 pt-5 border-t border-[#E6DFD1]">
+                <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-medium text-[#2A2D34]">
+                  <div className="w-8 h-8 rounded-lg bg-[#F2ECE1] border border-[#E2D7C3] flex items-center justify-center shrink-0 text-[#9A7835]">
+                    <ShieldCheck className="w-4 h-4 stroke-[1.75]" />
+                  </div>
+                  <span>Verified Properties</span>
+                </div>
+
+                <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-medium text-[#2A2D34]">
+                  <div className="w-8 h-8 rounded-lg bg-[#F2ECE1] border border-[#E2D7C3] flex items-center justify-center shrink-0 text-[#9A7835]">
+                    <Compass className="w-4 h-4 stroke-[1.75]" />
+                  </div>
+                  <span>Assisted Site Visits</span>
+                </div>
+
+                <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-medium text-[#2A2D34]">
+                  <div className="w-8 h-8 rounded-lg bg-[#F2ECE1] border border-[#E2D7C3] flex items-center justify-center shrink-0 text-[#9A7835]">
+                    <FileCheck2 className="w-4 h-4 stroke-[1.75]" />
+                  </div>
+                  <span>Transparent Process</span>
+                </div>
+              </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold tracking-tight text-white leading-tight mb-4">
-              Royal Epic Properties –{' '}
-              <span className="text-amber-400 font-normal italic">
-                Find Your Next Space in Bengaluru
-              </span>
-            </h1>
-            <p className="text-stone-300 text-base sm:text-lg leading-relaxed mb-6">
-              Explore curated, identity-verified residential apartments, villas, commercial offices,
-              and retail showrooms available for rent across Bengaluru. Managed end-to-end by the
-              Royal Epic team with assisted site visits and transparent documentation.
-            </p>
-            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-stone-300">
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-2 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Owner &amp; Ownership Verified</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-2 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Assisted Site Visits in Bengaluru</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-2 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Curated Residential &amp; Commercial Spaces</span>
+
+            {/* Right Side (~55% width on desktop: 7 of 12 cols) */}
+            <div className="lg:col-span-7">
+              <div className="relative rounded-2xl overflow-hidden bg-[#EAE3D5] border border-[#E2D9C8] shadow-[0_20px_50px_rgba(26,29,36,0.08)] aspect-[16/10]">
+                <img
+                  src={luxuryLivingRoomHero}
+                  alt="Spacious contemporary luxury residential living room in Bengaluru by Royal Epic Properties"
+                  loading="eager"
+                  decoding="async"
+                  className="w-full h-full object-cover object-center"
+                />
+                <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-2xl pointer-events-none" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Search & Filter Command Bar */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
-        <div className="bg-white rounded-2xl shadow-lg border border-stone-200/90 p-5 sm:p-6">
+      {/* Property Search Banner */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
+        <div className="bg-white rounded-2xl shadow-[0_12px_36px_rgba(26,29,36,0.06)] border border-[#E6E0D4] p-5 sm:p-6">
           {/* Primary Filter Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
-            {/* Search Keyword / Locality */}
-            <div className="lg:col-span-2">
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                Search Locality or Title
-              </label>
-              <div className="relative">
-                <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="e.g. Thanisandra, Hebbal, 3 BHK, Office..."
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-600 focus:bg-white transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Locality Select */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3.5 items-end">
+            {/* Location */}
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                Locality
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
+                Location
               </label>
               <select
                 value={selectedLocality}
                 onChange={(e) => setSelectedLocality(e.target.value)}
-                className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600 focus:bg-white"
+                className="w-full px-3 py-2.5 bg-[#FAF8F5] border border-stone-200/90 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A] focus:bg-white transition-colors"
               >
                 <option value="All">All Bengaluru Localities</option>
                 {localityOptions.map((loc) => (
@@ -409,13 +426,13 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
 
             {/* Property Category */}
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
                 Property Category
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600 focus:bg-white"
+                className="w-full px-3 py-2.5 bg-[#FAF8F5] border border-stone-200/90 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A] focus:bg-white transition-colors"
               >
                 <option value="All">All Categories</option>
                 <option value="Residential">Residential</option>
@@ -423,15 +440,34 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
               </select>
             </div>
 
+            {/* Property Type */}
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
+                Property Type
+              </label>
+              <select
+                value={selectedPropertyType}
+                onChange={(e) => setSelectedPropertyType(e.target.value)}
+                className="w-full px-3 py-2.5 bg-[#FAF8F5] border border-stone-200/90 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A] focus:bg-white transition-colors"
+              >
+                <option value="All">All Property Types</option>
+                {propertyTypeOptions.map((pt) => (
+                  <option key={pt} value={pt}>
+                    {pt}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* BHK Configuration */}
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
                 BHK Configuration
               </label>
               <select
                 value={selectedBhk}
                 onChange={(e) => setSelectedBhk(e.target.value)}
-                className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600 focus:bg-white"
+                className="w-full px-3 py-2.5 bg-[#FAF8F5] border border-stone-200/90 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A] focus:bg-white transition-colors"
               >
                 <option value="All">Any BHK / Layout</option>
                 {bhkOptions.map((bhk) => (
@@ -442,34 +478,67 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
               </select>
             </div>
 
-            {/* Sort By */}
+            {/* Minimum Rent */}
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                Sort By
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
+                Minimum Rent (₹)
               </label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600 focus:bg-white"
+              <input
+                type="number"
+                min={0}
+                step={1000}
+                value={minRent}
+                onChange={(e) => setMinRent(e.target.value)}
+                placeholder="Min ₹"
+                className="w-full px-3 py-2.5 bg-[#FAF8F5] border border-stone-200/90 rounded-xl text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#B8924A] focus:bg-white transition-colors"
+              />
+            </div>
+
+            {/* Maximum Rent */}
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
+                Maximum Rent (₹)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={1000}
+                value={maxRent}
+                onChange={(e) => setMaxRent(e.target.value)}
+                placeholder="Max ₹"
+                className="w-full px-3 py-2.5 bg-[#FAF8F5] border border-stone-200/90 rounded-xl text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#B8924A] focus:bg-white transition-colors"
+              />
+            </div>
+
+            {/* Primary Search Button */}
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  const listingsEl = document.getElementById('properties-listing-grid');
+                  if (listingsEl) {
+                    listingsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A1D24] hover:bg-[#9A7835] text-white text-sm font-semibold transition-colors shadow-sm"
               >
-                <option value="recent">Recently Added</option>
-                <option value="rent_asc">Rent: Low to High</option>
-                <option value="rent_desc">Rent: High to Low</option>
-              </select>
+                <Search className="w-4 h-4" />
+                <span>Search Properties</span>
+              </button>
             </div>
           </div>
 
-          {/* Toggle & Secondary Filter Row */}
+          {/* Toggle & Secondary Filter Controls */}
           <div className="mt-4 pt-3.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setShowAdvancedFilters((prev) => !prev)}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-stone-700 hover:text-amber-700 transition-colors"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-stone-700 hover:text-[#9A7835] transition-colors"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-amber-700" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#9A7835]" />
               {showAdvancedFilters
-                ? 'Hide Advanced Filters'
-                : 'More Filters (Property Type, Rent Range, Furnishing, Parking, Availability)'}
+                ? 'Hide More Filters'
+                : 'More Filters (Keyword, Furnishing, Parking, Availability, Sort)'}
             </button>
 
             <div className="flex items-center gap-3">
@@ -477,7 +546,7 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                 <button
                   type="button"
                   onClick={resetAllFilters}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#9A7835] bg-[#FAF6EE] hover:bg-[#F3EBDC] border border-[#E5D7BE] transition-colors"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   Reset Filters
@@ -492,56 +561,22 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
 
           {/* Expanded Secondary Filters */}
           {showAdvancedFilters && (
-            <div className="mt-4 pt-4 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
-              {/* Property Type */}
-              <div>
+            <div className="mt-4 pt-4 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+              {/* Keyword Search */}
+              <div className="lg:col-span-1">
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                  Property Type
+                  Search Keyword or ID
                 </label>
-                <select
-                  value={selectedPropertyType}
-                  onChange={(e) => setSelectedPropertyType(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600"
-                >
-                  <option value="All">All Property Types</option>
-                  {propertyTypeOptions.map((pt) => (
-                    <option key={pt} value={pt}>
-                      {pt}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Min Monthly Rent */}
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                  Min Monthly Rent (₹)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={minRent}
-                  onChange={(e) => setMinRent(e.target.value)}
-                  placeholder="e.g. 15000"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600"
-                />
-              </div>
-
-              {/* Max Monthly Rent */}
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
-                  Max Monthly Rent (₹)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={maxRent}
-                  onChange={(e) => setMaxRent(e.target.value)}
-                  placeholder="e.g. 75000"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600"
-                />
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Title, locality, ID..."
+                    className="w-full pl-8 pr-3 py-2 bg-[#FAF8F5] border border-stone-200 rounded-xl text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#B8924A] focus:bg-white"
+                  />
+                </div>
               </div>
 
               {/* Furnishing Status */}
@@ -552,7 +587,7 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                 <select
                   value={selectedFurnishing}
                   onChange={(e) => setSelectedFurnishing(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600"
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A]"
                 >
                   <option value="All">Any Furnishing</option>
                   {furnishingOptions.map((f) => (
@@ -571,7 +606,7 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                 <select
                   value={selectedParking}
                   onChange={(e) => setSelectedParking(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600"
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A]"
                 >
                   <option value="All">Any Parking</option>
                   <option value="Available">Parking Available</option>
@@ -588,11 +623,27 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                 <select
                   value={selectedAvailability}
                   onChange={(e) => setSelectedAvailability(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-amber-600"
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A]"
                 >
                   <option value="All">All Available</option>
                   <option value="Immediate">Ready to Move Immediately</option>
                   <option value="Verified Available">Verified Available</option>
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-stone-200 rounded-xl text-sm text-stone-800 focus:outline-none focus:border-[#B8924A]"
+                >
+                  <option value="recent">Recently Added</option>
+                  <option value="rent_asc">Rent: Low to High</option>
+                  <option value="rent_desc">Rent: High to Low</option>
                 </select>
               </div>
             </div>
@@ -600,8 +651,38 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
         </div>
       </section>
 
+      {/* Promotional Trust Banner */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-7">
+        <div className="bg-[#F5F0E6] border border-[#E5DEC9] rounded-2xl px-6 py-5 sm:px-8 sm:py-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div className="max-w-2xl">
+            <h2 className="text-lg sm:text-xl font-serif font-bold text-[#1A1D24] mb-1">
+              Find the Right Space with Confidence
+            </h2>
+            <p className="text-stone-600 text-xs sm:text-sm leading-relaxed">
+              From verified property listings to assisted site visits, Royal Epic Properties makes
+              your rental search in Bengaluru easier and more transparent.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 sm:gap-5 shrink-0">
+            <div className="inline-flex items-center gap-2 text-xs sm:text-[13px] font-semibold text-[#2A2D34] bg-white/80 border border-[#E5DEC9] px-3.5 py-2 rounded-xl">
+              <CheckCircle2 className="w-4 h-4 text-[#B8924A] shrink-0" />
+              <span>Verified Rental Properties</span>
+            </div>
+            <div className="inline-flex items-center gap-2 text-xs sm:text-[13px] font-semibold text-[#2A2D34] bg-white/80 border border-[#E5DEC9] px-3.5 py-2 rounded-xl">
+              <MapPin className="w-4 h-4 text-[#B8924A] shrink-0" />
+              <span>Assistance Across Bengaluru</span>
+            </div>
+            <div className="inline-flex items-center gap-2 text-xs sm:text-[13px] font-semibold text-[#2A2D34] bg-white/80 border border-[#E5DEC9] px-3.5 py-2 rounded-xl">
+              <ShieldCheck className="w-4 h-4 text-[#B8924A] shrink-0" />
+              <span>Support from Enquiry to Move-in</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Main Listings Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-12">
+      <section id="properties-listing-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-12">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((n) => (
@@ -657,14 +738,14 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                 </button>
               )}
               <a
-                href="tel:+919916633338"
+                href="tel:+917026119311"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 text-white text-sm font-semibold hover:bg-stone-800 transition-colors"
               >
                 <Phone className="w-4 h-4" />
-                Call Royal Epic (+91 99166 33338)
+                Call Royal Epic (+91 70261 19311)
               </a>
               <a
-                href="https://wa.me/919916633338?text=Hi%20Royal%20Epic%20Properties%2C%20I%20am%20looking%20for%20a%20rental%20property%20in%20Bengaluru."
+                href="https://wa.me/917026119311?text=Hi%20Royal%20Epic%20Properties%2C%20I%20am%20looking%20for%20a%20rental%20property%20in%20Bengaluru."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-semibold hover:bg-stone-50 transition-colors"
@@ -857,14 +938,14 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <a
-              href="tel:+919916633338"
+              href="tel:+917026119311"
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-colors shadow-sm"
             >
               <Phone className="w-4 h-4" />
-              Call +91 99166 33338
+              Call +91 70261 19311
             </a>
             <a
-              href="https://wa.me/919916633338?text=Hi%20Royal%20Epic%20Properties%2C%20I%20would%20like%20assistance%20finding%20a%20rental%20property%20in%20Bengaluru."
+              href="https://wa.me/917026119311?text=Hi%20Royal%20Epic%20Properties%2C%20I%20would%20like%20assistance%20finding%20a%20rental%20property%20in%20Bengaluru."
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-sm font-semibold transition-colors"

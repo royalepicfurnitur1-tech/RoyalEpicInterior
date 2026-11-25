@@ -323,7 +323,7 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
         {
           heading: '6. Your Rights & Contact Information',
           paragraphs: [
-            'You have the right to review, update, or request the deletion of your personal contact records at any time. For privacy inquiries, please contact our Data Protection Officer at enquiry@royalepicinterior.com or call +91 99166 33338.'
+            'You have the right to review, update, or request the deletion of your personal contact records at any time. For privacy inquiries, please contact our Data Protection Officer at enquiry@royalepicinterior.com or call +91 70261 19311.'
           ]
         }
       ]
@@ -417,7 +417,7 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
           heading: '5. Order Tracking & Transit Insurance',
           paragraphs: [
             'Once your order leaves our Rachenahalli factory, you will receive an SMS and email notification with your tracking number and logistics link. You can track your shipment live at any time at https://royalepicinterior.com/track-order.',
-            'Every shipment is 100% insured against transit damage. If damage occurs, contact our support team at +91 99166 33338 within 48 hours for immediate replacement.'
+            'Every shipment is 100% insured against transit damage. If damage occurs, contact our support team at +91 70261 19311 within 48 hours for immediate replacement.'
           ]
         }
       ]
@@ -439,7 +439,7 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
             'Quality is the hallmark of our factory. If you receive an item that is damaged during transit, defective in workmanship, or incorrect compared to your order confirmation:'
           ],
           bullets: [
-            'Notify us within 48 hours of delivery by calling +91 99166 33338 or emailing enquiry@royalepicinterior.com with clear photos of the issue.',
+            'Notify us within 48 hours of delivery by calling +91 70261 19311 or emailing enquiry@royalepicinterior.com with clear photos of the issue.',
             'We will arrange a priority free pickup and dispatch a brand-new factory replacement at zero additional expense to you.',
             'If a replacement is not available or desired, you will receive a 100% full refund including any delivery charges paid.'
           ]
@@ -458,7 +458,7 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
             'Initiating a return is simple and straightforward:'
           ],
           bullets: [
-            'Step 1: Contact our support team via email (enquiry@royalepicinterior.com) or WhatsApp/Phone (+91 99166 33338) with your Order ID and reason for return.',
+            'Step 1: Contact our support team via email (enquiry@royalepicinterior.com) or WhatsApp/Phone (+91 70261 19311) with your Order ID and reason for return.',
             'Step 2: Our logistics team will schedule a doorstep inspection and pickup from your delivery address.',
             'Step 3: Once inspected at our factory warehouse, your refund will be processed immediately.'
           ]
@@ -536,7 +536,7 @@ export function injectPolicyIntoHtml(templateHtml: string, policyType: 'privacy'
             <h3 style="font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">Official Business Information</h3>
             <p style="margin: 0;"><strong>Company:</strong> Royal Epic Commercial &amp; Home Interiors</p>
             <p style="margin: 0;"><strong>Factory &amp; Studio Address:</strong> No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</p>
-            <p style="margin: 0;"><strong>Official Phone:</strong> +91 99166 33338 / +91 96063 56839</p>
+            <p style="margin: 0;"><strong>Official Phone:</strong> +91 70261 19311</p>
             <p style="margin: 0;"><strong>Email Support:</strong> enquiry@royalepicinterior.com</p>
           </div>
 
@@ -627,7 +627,7 @@ export function injectHomepageIntoHtml(templateHtml: string, products: any[]): s
                 Get Callback &bull; Free Consultation
               </a>
               <a href="/contact-us" style="background: #1f1b18; color: #ffffff; border: 1px solid #443c34; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
-                Consult an Architect (+91 99166 33338)
+                Consult an Architect (+91 70261 19311)
               </a>
             </div>
           </div>
@@ -662,7 +662,7 @@ export function injectHomepageIntoHtml(templateHtml: string, products: any[]): s
             <div>
               <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 12px 0;">Royal Epic Commercial &amp; Home Interiors</h4>
               <p style="line-height: 1.6; margin: 0 0 8px 0;">Factory &amp; Studio: No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</p>
-              <p style="margin: 0 0 4px 0;">Phone: <strong style="color: #ffffff;">+91 99166 33338</strong> / +91 96063 56839</p>
+              <p style="margin: 0 0 4px 0;">Phone: <strong style="color: #ffffff;">+91 70261 19311</strong></p>
               <p style="margin: 0;">Email: <strong style="color: #ffffff;">enquiry@royalepicinterior.com</strong></p>
             </div>
             <div>
@@ -784,7 +784,7 @@ export function injectCatalogIntoHtml(templateHtml: string, products: any[]): st
 
           <!-- Footer Information -->
           <div style="padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 13px; color: #4b5563; line-height: 1.8;">
-            <p style="margin: 0;"><strong>Custom Requirements?</strong> Need bespoke dimensions, rare Italian marble, or customized upholstery? Visit our studio at Rachenahalli, Thanisandra, Bengaluru or call <strong>+91 99166 33338</strong> for architectural consultations.</p>
+            <p style="margin: 0;"><strong>Custom Requirements?</strong> Need bespoke dimensions, rare Italian marble, or customized upholstery? Visit our studio at Rachenahalli, Thanisandra, Bengaluru or call <strong>+91 70261 19311</strong> for architectural consultations.</p>
           </div>
         </div>
       </main>
@@ -943,7 +943,7 @@ export function injectSeoPageIntoHtml(
             <h1 style="font-size: 36px; font-weight: 800; line-height: 1.2; margin: 0 0 16px 0; color: #ffffff;">${cleanH1}</h1>
             <p style="font-size: 16px; line-height: 1.6; color: #d4d4d4; max-width: 800px; margin: 0 0 24px 0;">${cleanSubtitle}</p>
             <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-              <a href="tel:+919916633338" style="padding: 12px 24px; background: #b45309; color: #ffffff; font-weight: 700; text-decoration: none; border-radius: 8px; font-size: 14px;">Call Senior Designer (+91 99166 33338)</a>
+              <a href="tel:+917026119311" style="padding: 12px 24px; background: #b45309; color: #ffffff; font-weight: 700; text-decoration: none; border-radius: 8px; font-size: 14px;">Call Senior Designer (+91 70261 19311)</a>
               <a href="/get-free-quote" style="padding: 12px 24px; background: #262626; color: #ffffff; font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 14px; border: 1px solid #404040;">Get Free BOQ Quote</a>
             </div>
           </div>
@@ -964,7 +964,7 @@ export function injectSeoPageIntoHtml(
           <div style="margin-top: 48px; padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 13px; color: #4b5563; line-height: 1.8;">
             <p style="margin: 0;"><strong>Company:</strong> Royal Epic Commercial &amp; Home Interiors</p>
             <p style="margin: 0;"><strong>Factory &amp; Studio:</strong> No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045</p>
-            <p style="margin: 0;"><strong>Direct Contacts:</strong> +91 99166 33338 / +91 96063 56839 • enquiry@royalepicinterior.com</p>
+            <p style="margin: 0;"><strong>Direct Contacts:</strong> +91 70261 19311 • enquiry@royalepicinterior.com</p>
           </div>
         </div>
       </main>
@@ -1050,7 +1050,7 @@ export function injectPropertiesListIntoHtml(
         '@type': 'RealEstateAgent',
         name: 'Royal Epic Properties (A Division of Royal Epic Interiors)',
         url: canonicalUrl,
-        telephone: '+91-9916633338',
+        telephone: '+91-7026119311',
         areaServed: {
           '@type': 'City',
           name: 'Bengaluru',

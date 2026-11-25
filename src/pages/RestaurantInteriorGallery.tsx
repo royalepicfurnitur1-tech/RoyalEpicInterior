@@ -56,7 +56,7 @@ export const RestaurantInteriorGallery: React.FC<RestaurantInteriorGalleryProps>
         '@type': 'Organization',
         name: 'Royal Epic Interior & Furniture',
         url: 'https://royalepicinterior.com',
-        telephone: '+919916633338'
+        telephone: '+917026119311'
       },
       breadcrumb: {
         '@type': 'BreadcrumbList',
@@ -351,10 +351,10 @@ export const RestaurantInteriorGallery: React.FC<RestaurantInteriorGalleryProps>
               </button>
 
               <a
-                href="tel:+919916633338"
+                href="tel:+917026119311"
                 className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
               >
-                <Phone className="w-4 h-4 text-amber-400" /> Call +91 99166 33338
+                <Phone className="w-4 h-4 text-amber-400" /> Call +91 70261 19311
               </a>
             </div>
           </div>

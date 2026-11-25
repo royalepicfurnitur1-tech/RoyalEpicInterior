@@ -50,7 +50,7 @@ const COMMON_ORGANIZATION_SCHEMA = {
   "image": "https://royalepicinterior.com/logo.png",
   "@id": "https://royalepicinterior.com/#organization",
   "url": "https://royalepicinterior.com",
-  "telephone": "+91-9916633338",
+  "telephone": "+91-7026119311",
   "priceRange": "₹₹₹",
   "address": {
     "@type": "PostalAddress",
@@ -136,7 +136,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "image": "https://royalepicfurniture.com/logo.png",
       "@id": "https://royalepicfurniture.com/#organization",
       "url": "https://royalepicfurniture.com",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -310,7 +310,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -454,7 +454,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
   "/contact-us": {
     "slug": "/contact-us",
     "title": "Contact Us | Royal Epic Interior & Furniture Thanisandra Bengaluru",
-    "metaDescription": "Get in touch with Royal Epic Interior & Furniture. Call +91 99166 33338 or visit our Thanisandra factory experience center for a free consultation.",
+    "metaDescription": "Get in touch with Royal Epic Interior & Furniture. Call +91 70261 19311 or visit our Thanisandra factory experience center for a free consultation.",
     "h1": "Contact Our Senior Interior Architects in Bengaluru",
     "subtitle": "Schedule a Site Visit or Visit Our Experience Center in Thanisandra",
     "category": "main",
@@ -473,7 +473,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "@context": "https://schema.org",
       "@type": "ContactPage",
       "name": "Contact Us | Royal Epic Interior & Furniture Thanisandra Bengaluru",
-      "description": "Get in touch with Royal Epic Interior & Furniture. Call +91 99166 33338 or visit our Thanisandra factory experience center for a free consultation.",
+      "description": "Get in touch with Royal Epic Interior & Furniture. Call +91 70261 19311 or visit our Thanisandra factory experience center for a free consultation.",
       "url": "https://royalepicfurniture.com/contact-us",
       "mainEntity": {
         "@context": "https://schema.org",
@@ -482,7 +482,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -521,7 +521,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     "faqs": [
       {
         "question": "How can I book a free site measurement visit?",
-        "answer": "Call us at +91 99166 33338 or fill out our online quote form to select a convenient date for laser measurement."
+        "answer": "Call us at +91 70261 19311 or fill out our online quote form to select a convenient date for laser measurement."
       }
     ],
     "contentSections": [
@@ -530,7 +530,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "description": "Experience materials, soft-close hardware, acrylic finishes, and 3D VR walk-throughs in person.",
         "highlights": [
           "Address: No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045",
-          "Phone: +91 99166 33338",
+          "Phone: +91 70261 19311",
           "Email: royalepicfurnitur1@gmail.com"
         ]
       }
@@ -617,7 +617,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
     ],
     "openGraph": {
       "title": "Contact Us | Royal Epic Interior & Furniture Thanisandra Bengaluru",
-      "description": "Get in touch with Royal Epic Interior & Furniture. Call +91 99166 33338 or visit our Thanisandra factory experience center for a free consultation.",
+      "description": "Get in touch with Royal Epic Interior & Furniture. Call +91 70261 19311 or visit our Thanisandra factory experience center for a free consultation.",
       "image": "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1600&q=80",
       "type": "website"
     }
@@ -653,7 +653,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -824,7 +824,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -990,7 +990,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicinterior.com/logo.png",
         "@id": "https://royalepicinterior.com/#organization",
         "url": "https://royalepicinterior.com",
-        "telephone": "+91 99166 33338",
+        "telephone": "+91 70261 19311",
         "email": "enquiry@royalepicinterior.com",
         "priceRange": "₹₹ - ₹₹₹₹",
         "address": {
@@ -1157,7 +1157,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -1319,7 +1319,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -1623,7 +1623,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -1790,7 +1790,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -1970,7 +1970,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -2150,7 +2150,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -2345,7 +2345,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -2525,7 +2525,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -2705,7 +2705,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -2900,7 +2900,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -3095,7 +3095,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -3290,7 +3290,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -3485,7 +3485,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -3680,7 +3680,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -3885,7 +3885,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -4090,7 +4090,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -4290,7 +4290,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -4490,7 +4490,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -4685,7 +4685,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -4880,7 +4880,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -5075,7 +5075,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -5262,7 +5262,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Top interior designers in Whitefield Bangalore. Turnkey 2BHK, 3BHK flats and luxury villa interior execution near ITPL with 15 year warranty.",
       "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-whitefield",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -5284,7 +5284,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -5454,7 +5454,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Best interior designers in JP Nagar, South Bangalore. Premium home & office interiors, modular kitchens, and custom woodwork near Sarakki signal.",
       "image": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-jp-nagar",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -5476,7 +5476,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -5646,7 +5646,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Top interior designers in HSR Layout Bangalore. Custom homes, duplex villas, tech startup offices, and modular kitchens in HSR Layout Sector 1 to 7.",
       "image": "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-hsr-layout",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -5668,7 +5668,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -5838,7 +5838,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Best budget to luxury interior designers in Electronic City Phase 1 & 2. Turnkey 2BHK/3BHK interiors, modular kitchens, and wardrobes.",
       "image": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-electronic-city",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -5860,7 +5860,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -6030,7 +6030,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Experienced interior designers in Yelahanka & Kogilu Road. Turnkey villa interiors, modular kitchens, and false ceilings near North Bangalore airport road.",
       "image": "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-yelahanka",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -6052,7 +6052,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -6222,7 +6222,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Top interior design company in Hebbal Bangalore. Premium turnkey interiors for high-end lakeview apartments and penthouses near Manyata Tech Park.",
       "image": "https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-hebbal",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -6244,7 +6244,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -6414,7 +6414,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Best interior designers in Koramangala. High-end residential villas, fine dining cafes, commercial boutiques, and corporate offices.",
       "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-koramangala",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -6436,7 +6436,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -6606,7 +6606,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Reliable interior design contractors in Marathahalli Bangalore. Turnkey 2BHK/3BHK flats, modular kitchens, and wardrobes near ORR IT corridor.",
       "image": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-marathahalli",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -6628,7 +6628,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -6798,7 +6798,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Top luxury interior designers in Indiranagar 100ft Road & 12th Main. High-end bungalows, luxury apartments, and commercial spa fit-outs.",
       "image": "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-indiranagar",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -6820,7 +6820,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -6990,7 +6990,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
       "description": "Top interior designers in Thanisandra & Rachenahalli. Visit Royal Epic 10,000 sq.ft wood factory near Bharatiya City & Manyata Tech Park.",
       "image": "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1600&q=80",
       "url": "https://royalepicfurniture.com/interior-designer-thanisandra",
-      "telephone": "+91-9916633338",
+      "telephone": "+91-7026119311",
       "priceRange": "₹₹₹",
       "address": {
         "@type": "PostalAddress",
@@ -7012,7 +7012,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -7198,7 +7198,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -7375,7 +7375,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -7552,7 +7552,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -7729,7 +7729,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -7906,7 +7906,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -8083,7 +8083,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -8265,7 +8265,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -8442,7 +8442,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -8619,7 +8619,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicfurniture.com/logo.png",
         "@id": "https://royalepicfurniture.com/#organization",
         "url": "https://royalepicfurniture.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -8792,7 +8792,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicinterior.com/logo.png",
         "@id": "https://royalepicinterior.com/#organization",
         "url": "https://royalepicinterior.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",
@@ -9017,7 +9017,7 @@ export const SEO_PAGES: Record<string, SeoPageData> = {
         "image": "https://royalepicinterior.com/logo.png",
         "@id": "https://royalepicinterior.com/#organization",
         "url": "https://royalepicinterior.com",
-        "telephone": "+91-9916633338",
+        "telephone": "+91-7026119311",
         "priceRange": "₹₹₹",
         "address": {
           "@type": "PostalAddress",

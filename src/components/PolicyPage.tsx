@@ -77,7 +77,7 @@ const POLICIES: Record<PolicyType, PolicyContent> = {
       {
         heading: '6. Your Rights & Contact Information',
         paragraphs: [
-          'You have the right to review, update, or request the deletion of your personal contact records at any time. For privacy inquiries, please contact our Data Protection Officer at enquiry@royalepicinterior.com or call +91 99166 33338.'
+          'You have the right to review, update, or request the deletion of your personal contact records at any time. For privacy inquiries, please contact our Data Protection Officer at enquiry@royalepicinterior.com or call +91 70261 19311.'
         ]
       }
     ]
@@ -180,7 +180,7 @@ const POLICIES: Record<PolicyType, PolicyContent> = {
       {
         heading: '6. Transit Insurance & Delivery Inspection',
         paragraphs: [
-          'Every shipment is 100% insured against transit damage. We request that customers inspect outer packaging upon delivery. In the rare event of transit damage, take photos and note the damage on the delivery acknowledgment slip, or contact our customer support immediately at +91 99166 33338 within 48 hours for immediate replacement.'
+          'Every shipment is 100% insured against transit damage. We request that customers inspect outer packaging upon delivery. In the rare event of transit damage, take photos and note the damage on the delivery acknowledgment slip, or contact our customer support immediately at +91 70261 19311 within 48 hours for immediate replacement.'
         ]
       }
     ]
@@ -204,7 +204,7 @@ const POLICIES: Record<PolicyType, PolicyContent> = {
           'Quality is the hallmark of our factory. If you receive an item that is damaged during transit, defective in workmanship, or incorrect compared to your order confirmation:'
         ],
         bullets: [
-          'Notify us within 48 hours of delivery by calling +91 99166 33338 or emailing enquiry@royalepicinterior.com with clear photos of the issue.',
+          'Notify us within 48 hours of delivery by calling +91 70261 19311 or emailing enquiry@royalepicinterior.com with clear photos of the issue.',
           'We will arrange a priority free pickup and dispatch a brand-new factory replacement at zero additional expense to you.',
           'If a replacement is not available or desired, you will receive a 100% full refund including any delivery charges paid.'
         ]
@@ -223,7 +223,7 @@ const POLICIES: Record<PolicyType, PolicyContent> = {
           'Initiating a return is simple and straightforward:'
         ],
         bullets: [
-          'Step 1: Contact our support team via email (enquiry@royalepicinterior.com) or WhatsApp/Phone (+91 99166 33338) with your Order ID and reason for return.',
+          'Step 1: Contact our support team via email (enquiry@royalepicinterior.com) or WhatsApp/Phone (+91 70261 19311) with your Order ID and reason for return.',
           'Step 2: Our logistics team will schedule a doorstep inspection and pickup from your delivery address.',
           'Step 3: Once inspected at our factory warehouse, your refund will be processed immediately.'
         ]
@@ -339,7 +339,7 @@ export const PolicyPage: React.FC<PolicyPageProps> = ({ policyType, onNavigate }
               <Phone className="w-4 h-4 text-gold shrink-0" />
               <div>
                 <span className="text-neutral-500 block text-[10px] font-mono">Direct Helpline</span>
-                <a href="tel:+919916633338" className="text-white font-bold hover:text-gold">+91 99166 33338</a>
+                <a href="tel:+917026119311" className="text-white font-bold hover:text-gold">+91 70261 19311</a>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-neutral-900 border border-white/5">

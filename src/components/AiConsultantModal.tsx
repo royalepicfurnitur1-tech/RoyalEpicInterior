@@ -678,7 +678,7 @@ export const AiConsultantModal: React.FC<AiConsultantModalProps> = ({
       }
     } catch (err: any) {
       console.error("Error submitting lead:", err);
-      alert("Unable to save booking. Direct call available at +91 99166 33338.");
+      alert("Unable to save booking. Direct call available at +91 70261 19311.");
     } finally {
       setIsSubmittingLead(false);
     }
@@ -1000,7 +1000,7 @@ export const AiConsultantModal: React.FC<AiConsultantModalProps> = ({
                     <input
                       type="tel"
                       required
-                      placeholder="+91 99166 33338"
+                      placeholder="+91 70261 19311"
                       value={leadPhone}
                       onChange={(e) => setLeadPhone(e.target.value)}
                       className="w-full bg-neutral-900 border border-white/15 rounded-xl px-3 py-2 text-white text-xs focus:border-gold focus:outline-none"
@@ -1086,7 +1086,7 @@ export const AiConsultantModal: React.FC<AiConsultantModalProps> = ({
                   </button>
 
                   <p className="text-[10px] text-center text-neutral-500">
-                    Direct Thanisandra Hub Line: <a href="tel:+919916633338" className="text-gold underline">+91 99166 33338</a>
+                    Direct Thanisandra Hub Line: <a href="tel:+917026119311" className="text-gold underline">+91 70261 19311</a>
                   </p>
                 </form>
               )}
@@ -1218,7 +1218,7 @@ export const AiConsultantModal: React.FC<AiConsultantModalProps> = ({
           </form>
 
           <p className="text-[10px] text-center text-neutral-500 mt-2 font-mono">
-            Powered by Royal Epic AI • Thanisandra Manufacturing Hub • Call +91 99166 33338
+            Powered by Royal Epic AI • Thanisandra Manufacturing Hub • Call +91 70261 19311
           </p>
         </div>
 

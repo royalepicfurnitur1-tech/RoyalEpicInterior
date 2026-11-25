@@ -162,7 +162,7 @@ const DEFAULT_EMPLOYEES: EmployeeUser[] = [
     id: 'EMP-1001',
     name: 'Royal Epic Admin Team',
     email: 'royalepicfurnitur1@gmail.com',
-    phone: '+91 99166 33338',
+    phone: '+91 70261 19311',
     roleId: 'super_admin',
     department: 'Executive Management',
     status: 'ACTIVE',
@@ -981,7 +981,7 @@ export const AccessControlPanel: React.FC = () => {
                   <label className="block text-neutral-300 font-bold mb-1 uppercase">Phone Number</label>
                   <input
                     type="text"
-                    placeholder="+91 99000 00000"
+                    placeholder="+91 70261 19311"
                     value={newEmpPhone}
                     onChange={(e) => setNewEmpPhone(e.target.value)}
                     className="w-full bg-neutral-900 border border-white/15 rounded-xl p-2.5 text-white focus:outline-none focus:border-gold"

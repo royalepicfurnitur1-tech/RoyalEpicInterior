@@ -172,7 +172,7 @@ export const DocumentRepository: React.FC = () => {
         generateBoqPdf({
           quoteId: docItem.id,
           clientName: profile?.name || user?.user_metadata?.name || 'Valued Client',
-          clientPhone: profile?.phone || user?.phone || '+91 99166 33338',
+          clientPhone: profile?.phone || user?.phone || '+91 70261 19311',
           clientEmail: profile?.email || user?.email || 'client@royalepic.com',
           cityLocation: 'Whitefield, Bangalore',
           propertyType: '4BHK Villa',
@@ -393,7 +393,7 @@ export const DocumentRepository: React.FC = () => {
         </div>
 
         <a
-          href="https://wa.me/919916633338"
+          href="https://wa.me/917026119311"
           target="_blank"
           rel="noopener noreferrer"
           className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center gap-2 shrink-0 cursor-pointer"

@@ -151,7 +151,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
                 <Phone className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" />
                 <div>
                   <span className="text-stone-600 block font-semibold text-[11px]">Customer Care:</span>
-                  <a href="tel:+919916633338" className="hover:text-amber-800 font-mono text-stone-900 font-bold block">+91 99166 33338</a>
+                  <a href="tel:+917026119311" className="hover:text-amber-800 font-mono text-stone-900 font-bold block">+91 70261 19311</a>
                 </div>
               </div>
               <div className="flex items-start gap-2">

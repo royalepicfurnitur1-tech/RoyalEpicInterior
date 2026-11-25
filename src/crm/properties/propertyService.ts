@@ -11,7 +11,11 @@ import {
   PropertyDeal,
   PropertyPaymentRecord,
   PropertyDashboardData,
-  PropertyListingStatus
+  PropertyListingStatus,
+  PropertyAvailabilityStatus,
+  PropertyCrmStaffMember,
+  PropertyPaymentReceiptData,
+  NegotiationStatus
 } from './propertyTypes';
 
 async function handleApiResponse<T>(res: Response, defaultError: string): Promise<T> {
@@ -26,15 +30,64 @@ async function handleApiResponse<T>(res: Response, defaultError: string): Promis
   return data as T;
 }
 
-export async function fetchPropertyDashboard(startDate?: string, endDate?: string): Promise<PropertyDashboardData> {
+export async function fetchPropertyDashboard(
+  startDate?: string,
+  endDate?: string,
+  assignedStaff?: string
+): Promise<PropertyDashboardData> {
   const params = new URLSearchParams();
   if (startDate) params.set('startDate', startDate);
   if (endDate) params.set('endDate', endDate);
+  if (assignedStaff && assignedStaff !== 'All') params.set('assignedStaff', assignedStaff);
   const query = params.toString() ? `?${params.toString()}` : '';
   const res = await fetch(`/api/crm/properties/dashboard${query}`, {
     headers: getCrmAuthHeaders()
   });
   return handleApiResponse<PropertyDashboardData>(res, 'Failed to fetch Property Dashboard metrics.');
+}
+
+export async function fetchPropertyCrmStaff(): Promise<{ staff: PropertyCrmStaffMember[] }> {
+  const res = await fetch('/api/crm/properties/staff', {
+    headers: getCrmAuthHeaders()
+  });
+  return handleApiResponse<{ staff: PropertyCrmStaffMember[] }>(res, 'Failed to fetch CRM staff list.');
+}
+
+export async function fetchPropertyListingById(propertyId: string): Promise<{
+  property: PropertyRecord;
+  lead: PropertyLead | null;
+  images: PropertyImageRecord[];
+  enquiries: PropertyTenantEnquiry[];
+  siteVisits: PropertySiteVisit[];
+  deals: PropertyDeal[];
+  activities: PropertyActivityLog[];
+}> {
+  const res = await fetch(`/api/crm/properties/listings/${encodeURIComponent(propertyId)}`, {
+    headers: getCrmAuthHeaders()
+  });
+  return handleApiResponse(res, 'Failed to fetch property listing detail.');
+}
+
+export async function updatePropertyAvailability(
+  propertyId: string,
+  payload: {
+    availability_status: PropertyAvailabilityStatus;
+    notes?: string;
+    owner_confirmed?: boolean;
+  }
+): Promise<{ property: PropertyRecord }> {
+  const res = await fetch(`/api/crm/properties/listings/${encodeURIComponent(propertyId)}/availability`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getCrmAuthHeaders()
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleApiResponse<{ property: PropertyRecord }>(
+    res,
+    'Failed to update property availability status.'
+  );
 }
 
 export async function fetchPropertyLeads(filters: Record<string, string> = {}): Promise<{
@@ -237,6 +290,19 @@ export async function fetchTenantEnquiries(filters: Record<string, string> = {})
   return handleApiResponse(res, 'Failed to fetch tenant enquiries.');
 }
 
+export async function fetchTenantEnquiryDetail(id: string): Promise<{
+  enquiry: PropertyTenantEnquiry;
+  property: PropertyRecord | null;
+  siteVisits: PropertySiteVisit[];
+  deals: PropertyDeal[];
+  activities: PropertyActivityLog[];
+}> {
+  const res = await fetch(`/api/crm/properties/enquiries/${encodeURIComponent(id)}`, {
+    headers: getCrmAuthHeaders()
+  });
+  return handleApiResponse(res, 'Failed to fetch complete tenant enquiry detail.');
+}
+
 export async function createTenantEnquiry(
   payload: Partial<PropertyTenantEnquiry>
 ): Promise<{ enquiry: PropertyTenantEnquiry }> {
@@ -264,6 +330,55 @@ export async function updateTenantEnquiry(
     body: JSON.stringify(payload)
   });
   return handleApiResponse<{ enquiry: PropertyTenantEnquiry }>(res, 'Failed to update tenant enquiry.');
+}
+
+export async function logTenantEnquiryCall(
+  enquiryId: string,
+  payload: {
+    call_outcome: string;
+    call_notes: string;
+    next_followup_date?: string | null;
+    enquiry_status?: string;
+    staff_name?: string;
+  }
+): Promise<{ enquiry: PropertyTenantEnquiry; callLog: any }> {
+  const res = await fetch(`/api/crm/properties/enquiries/${encodeURIComponent(enquiryId)}/calls`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getCrmAuthHeaders()
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleApiResponse(res, 'Failed to log tenant call.');
+}
+
+export async function saveTenantEnquiryNegotiation(
+  enquiryId: string,
+  payload: {
+    original_expected_rent?: number | null;
+    tenant_offered_rent?: number | null;
+    owner_expected_rent?: number | null;
+    final_agreed_rent?: number | null;
+    original_deposit?: number | null;
+    final_agreed_deposit?: number | null;
+    maintenance_charges?: number | null;
+    negotiation_notes?: string;
+    negotiation_status?: NegotiationStatus;
+  }
+): Promise<{ enquiry: PropertyTenantEnquiry }> {
+  const res = await fetch(`/api/crm/properties/enquiries/${encodeURIComponent(enquiryId)}/negotiation`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getCrmAuthHeaders()
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleApiResponse<{ enquiry: PropertyTenantEnquiry }>(
+    res,
+    'Failed to save rent negotiation update.'
+  );
 }
 
 export async function fetchPropertySiteVisits(filters: Record<string, string> = {}): Promise<{
@@ -361,6 +476,8 @@ export async function recordDealPayment(
     payment_date?: string;
     payment_mode: string;
     transaction_reference?: string;
+    receipt_number?: string;
+    payment_status?: 'Completed' | 'Pending' | 'Cancelled';
     notes?: string;
   }
 ): Promise<{ payment: PropertyPaymentRecord; deal: PropertyDeal }> {
@@ -377,3 +494,73 @@ export async function recordDealPayment(
     'Failed to record deal payment.'
   );
 }
+
+export async function updateDealPaymentStatus(
+  dealId: string,
+  paymentId: string,
+  payload: {
+    payment_status?: 'Completed' | 'Pending' | 'Cancelled';
+    notes?: string;
+    transaction_reference?: string;
+  }
+): Promise<{ payment: PropertyPaymentRecord; deal: PropertyDeal }> {
+  const res = await fetch(
+    `/api/crm/properties/deals/${encodeURIComponent(dealId)}/payments/${encodeURIComponent(paymentId)}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getCrmAuthHeaders()
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+  return handleApiResponse(res, 'Failed to update payment status.');
+}
+
+export async function fetchDealReceipt(
+  dealId: string,
+  paymentId?: string
+): Promise<{ receipt: PropertyPaymentReceiptData }> {
+  const query = paymentId ? `?paymentId=${encodeURIComponent(paymentId)}` : '';
+  const res = await fetch(`/api/crm/properties/deals/${encodeURIComponent(dealId)}/receipt${query}`, {
+    headers: getCrmAuthHeaders()
+  });
+  return handleApiResponse<{ receipt: PropertyPaymentReceiptData }>(
+    res,
+    'Failed to generate payment receipt.'
+  );
+}
+
+export async function convertDealToInteriorCrmLead(
+  dealId: string,
+  payload: {
+    interested_in_interior?: string;
+    interior_service_requirement?: string;
+    interior_followup_date?: string;
+    interior_notes?: string;
+    assigned_staff?: string;
+    confirm_create?: boolean;
+  }
+): Promise<{
+  duplicate: boolean;
+  created: boolean;
+  existingLead?: any;
+  lead?: any;
+  message: string;
+  deal: PropertyDeal;
+}> {
+  const res = await fetch(
+    `/api/crm/properties/deals/${encodeURIComponent(dealId)}/convert-interior`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getCrmAuthHeaders()
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+  return handleApiResponse(res, 'Failed to create Interior CRM enquiry.');
+}
+

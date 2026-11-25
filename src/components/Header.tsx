@@ -468,7 +468,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Call Us</span>
               </button>
               <a
-                href="https://wa.me/919916633338?text=Hi%20Royal%20Epic,%20I%20want%20to%20inquire%20about%20interior%20design"
+                href="https://wa.me/917026119311?text=Hi%20Royal%20Epic,%20I%20want%20to%20inquire%20about%20interior%20design"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-200 border border-neutral-800 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"

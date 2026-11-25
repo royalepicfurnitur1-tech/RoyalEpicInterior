@@ -245,7 +245,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const handleDownloadBrochure = () => {
     const blob = new Blob(
-      [`ROYAL EPIC COMMERCIAL & HOME INTERIORS\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 99166 33338\nAddress: No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045`],
+      [`ROYAL EPIC COMMERCIAL & HOME INTERIORS\nProduct Specification & Brochure: ${product.name}\nSKU: ${currentSku}\n\nPrice: ${formatProductPrice(currentPrice || 0, product)}\nMaterial: ${product.specifications?.material || product.material || 'Factory Plywood'}\nWarranty: ${product.specifications?.warranty || '15 Years Factory Warranty'}\nContact: +91 70261 19311\nAddress: No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru - 560045`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
@@ -609,7 +609,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             {/* Direct WhatsApp Consultation & Brochure */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-200">
               <a
-                href="https://wa.me/919916633338?text=Hello%20Royal%20Epic%20Interior,%20I%20am%20interested%20in%20"
+                href="https://wa.me/917026119311?text=Hello%20Royal%20Epic%20Interior,%20I%20am%20interested%20in%20"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5"

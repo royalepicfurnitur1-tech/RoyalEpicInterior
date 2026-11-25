@@ -565,3 +565,22 @@ CREATE POLICY "CRM delete access for property-media"
 ON storage.objects FOR DELETE
 TO anon, authenticated
 USING (bucket_id = 'property-media');
+
+-- ------------------------------------------------------------------------------
+-- 12. PHASE 3: RENTAL OPERATIONS MANAGEMENT ADDITIVE SCHEMA UPGRADES (OPTIONAL)
+-- Note: The backend adapter automatically encodes and hydrates all Phase 3 fields
+-- (`availability_status`, `availability_history`, `min_budget`, `max_budget`,
+-- `bhk_requirement`, `furnishing_preference`, `parking_requirement`,
+-- `negotiation_status`, `negotiation_history`, `deal_status`, `receipt_number`,
+-- `interior_interest`, `linked_interior_lead_id`, etc.) inside existing JSONB/notes
+-- columns so Phase 3 runs with zero manual DDL downtime while supporting native columns.
+-- ------------------------------------------------------------------------------
+ALTER TABLE public.properties ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT 'Available';
+ALTER TABLE public.property_tenant_enquiries ADD COLUMN IF NOT EXISTS next_followup_date TEXT;
+ALTER TABLE public.property_tenant_enquiries ADD COLUMN IF NOT EXISTS negotiation_status TEXT DEFAULT 'Not Started';
+ALTER TABLE public.property_deals ADD COLUMN IF NOT EXISTS deal_status TEXT DEFAULT 'Deal Confirmed';
+ALTER TABLE public.property_deals ADD COLUMN IF NOT EXISTS tenant_enquiry_id TEXT;
+ALTER TABLE public.property_deals ADD COLUMN IF NOT EXISTS site_visit_id TEXT;
+ALTER TABLE public.property_deals ADD COLUMN IF NOT EXISTS linked_interior_lead_id TEXT;
+ALTER TABLE public.property_payments ADD COLUMN IF NOT EXISTS receipt_number TEXT;
+

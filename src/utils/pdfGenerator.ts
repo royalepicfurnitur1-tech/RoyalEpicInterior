@@ -74,7 +74,7 @@ export const generateBoqPdf = (data: BoqPdfData) => {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text('ISO 9001:2025 Certified Turnkey Interior & Furniture Manufacturing', margin, 18);
-  doc.text('Bengaluru Factory & Studio | Tel: +91 99166 33338 | royalepicfurnitur1@gmail.com', margin, 23);
+  doc.text('Bengaluru Factory & Studio | Tel: +91 70261 19311 | royalepicfurnitur1@gmail.com', margin, 23);
 
   // Quote Ref ID on top right
   const quoteRef = data.quoteId || `RE-BOQ-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -125,7 +125,7 @@ export const generateBoqPdf = (data: BoqPdfData) => {
   // Left Column
   const col1X = margin + 4;
   doc.text(`Client Name: ${data.clientName || 'Valued Customer'}`, col1X, y + 13);
-  doc.text(`Phone / Email: ${data.clientPhone || '+91 99166 33338'}`, col1X, y + 19);
+  doc.text(`Phone / Email: ${data.clientPhone || '+91 70261 19311'}`, col1X, y + 19);
   doc.text(`Location: ${data.cityLocation || 'Bengaluru / Pan-India'}`, col1X, y + 24);
 
   // Right Column
@@ -309,7 +309,7 @@ export const generateQuotePdf = (data: QuotePdfData) => {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text('ISO 9001:2025 Certified Turnkey Interior & Furniture Manufacturing', margin, 18);
-  doc.text('Bengaluru Factory & Studio | Tel: +91 99166 33338 | royalepicfurnitur1@gmail.com', margin, 23);
+  doc.text('Bengaluru Factory & Studio | Tel: +91 70261 19311 | royalepicfurnitur1@gmail.com', margin, 23);
 
   // Quote Ref ID on top right
   const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -431,7 +431,7 @@ export const generateQuotePdf = (data: QuotePdfData) => {
 
   doc.setFontSize(7);
   doc.setTextColor(120, 120, 120);
-  doc.text('Royal Epic Interior & Furniture • www.royalepic.in • +91 99166 33338', margin, footerY + 5);
+  doc.text('Royal Epic Interior & Furniture • www.royalepic.in • +91 70261 19311', margin, footerY + 5);
   doc.text('Official Customer Copy', pageWidth - margin, footerY + 5, { align: 'right' });
 
   doc.save(`Royal_Epic_Quotation_${data.quoteId}.pdf`);
