@@ -16,6 +16,7 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   { path: '/services/heritage-homes', changefreq: 'weekly', priority: 0.95 },
   { path: '/products', changefreq: 'daily', priority: 0.95 },
   { path: '/properties', changefreq: 'daily', priority: 0.95 },
+  { path: '/loans', changefreq: 'weekly', priority: 0.95 },
   { path: '/portfolio', changefreq: 'weekly', priority: 0.9 },
   { path: '/completed-projects', changefreq: 'weekly', priority: 0.9 },
   { path: '/restaurant-interior-gallery', changefreq: 'weekly', priority: 0.9 },
@@ -153,6 +154,7 @@ Allow: /products
 Allow: /products/*
 Allow: /properties
 Allow: /properties/*
+Allow: /loans
 Allow: /our-services
 Allow: /portfolio
 Allow: /completed-projects

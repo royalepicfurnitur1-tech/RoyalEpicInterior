@@ -38,9 +38,9 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = [
     { id: 'home' as ActiveTab, path: '/', label: 'Home' },
     { id: 'products' as ActiveTab, path: '/products', label: 'Products', hasDropdown: true },
-    { id: 'properties' as ActiveTab, path: '/properties', label: 'Properties' },
     { id: 'services' as ActiveTab, path: '/our-services', label: 'Services', hasDropdown: true },
-    { id: 'portfolio' as ActiveTab, path: '/portfolio', label: 'Projects' },
+    { id: 'properties' as ActiveTab, path: '/properties', label: 'Properties' },
+    { id: 'loans' as ActiveTab, path: '/loans', label: 'Loans' },
     { id: 'about' as ActiveTab, path: '/about-us', label: 'About Us' },
     { id: 'contact' as ActiveTab, path: '/contact-us', label: 'Contact' },
   ];

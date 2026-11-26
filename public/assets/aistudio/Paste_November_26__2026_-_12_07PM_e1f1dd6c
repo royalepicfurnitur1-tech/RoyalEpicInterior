@@ -1,0 +1,909 @@
+# PROJECT: ROYAL EPIC LOANS – COMPLETE WEBSITE AND CRM INTEGRATION
+
+## 1. PROJECT BACKGROUND
+
+We need to introduce a new business vertical called **Royal Epic Loans** into the existing Royal Epic Interiors website ecosystem.
+
+Main website:
+[https://royalepicinterior.com/](https://royalepicinterior.com/)
+
+Existing Telecaller CRM:
+[https://tele.royalepicinterior.com/](https://tele.royalepicinterior.com/)
+
+The existing website already has a separate Properties vertical. We now want to introduce Loans as another independent vertical, following a similar architectural approach where appropriate.
+
+### Business model
+
+Royal Epic receives finance enquiries from customers who need financial assistance for:
+
+- Home construction
+- Home interiors
+- Home renovation
+- Modular kitchens and furnishing projects
+- Other eligible property-related requirements
+
+Royal Epic's team collects the enquiry, understands the customer's requirements, performs an initial review and personally contacts the customer to discuss the next steps.
+
+Depending on the customer's requirements and applicable eligibility, suitable finance options may subsequently be explored.
+
+IMPORTANT BUSINESS CONFIDENTIALITY:
+
+Do not disclose on the public website that Royal Epic works with third-party loan providers, lending partners or referral partners.
+
+Do not display partner names, internal arrangements, commissions, referral procedures or backend business relationships.
+
+The website should simply present Royal Epic Loans as a professional finance enquiry assistance and customer guidance service.
+
+Do not falsely represent Royal Epic as a bank, NBFC or direct lender.
+
+Do not promise guaranteed loan approval, guaranteed interest rates, guaranteed amounts or guaranteed disbursement.
+
+---
+
+# 2. FIRST STEP: INSPECT THE EXISTING PROJECT
+
+Before making any changes, thoroughly inspect the existing source code and understand:
+
+1. Current website architecture and routing.
+2. How the existing Properties landing page is implemented.
+3. How Properties enquiry forms submit data.
+4. How the Properties CRM module works.
+5. Existing backend API structure.
+6. Existing Supabase database configuration and conventions.
+7. Existing staff authentication and authorisation.
+8. Existing website navigation and footer components.
+9. Existing SEO and sitemap implementation.
+10. How both .com and .in domains are served.
+11. Existing form validation, error handling and success messages.
+
+Use the Properties vertical as a reference for implementation patterns, but do not copy its business logic or database tables blindly.
+
+Create a separate Loans vertical with its own data and enquiry workflow.
+
+Do not modify any existing Properties or Interior CRM functionality.
+
+If a technical dependency or schema change is necessary, inspect the existing implementation first and choose the smallest compatible change.
+
+---
+
+# 3. PUBLIC WEBSITE STRUCTURE
+
+Create a dedicated public landing page:
+
+`/loans`
+
+The page must be accessible from:
+
+- [https://royalepicinterior.com/loans](https://royalepicinterior.com/loans)
+
+Both domains must remain independently indexable and use their own host-aware self-canonical URLs.
+
+Do not redirect one domain to the other.
+
+Add a new navigation item:
+
+**Loans**
+
+Place it alongside the existing Properties navigation item.
+
+Also add Loans to the website footer under the relevant services or business verticals section.
+
+Add a suitable Loans promotional section to the homepage, introducing the service and linking to `/loans`.
+
+Do not unnecessarily redesign the existing header, navigation, homepage or footer.
+
+Keep the new section visually consistent with the existing website.
+
+---
+
+# 4. DESIGN DIRECTION
+
+The Loans page must feel like a premium property and home-finance service, not like a bank website or a generic loan comparison portal.
+
+### Visual direction
+
+- Premium and elegant.
+- Warm, natural and welcoming.
+- Clean editorial layout.
+- High-quality residential and architectural photography.
+- Natural daylight.
+- Warm ivory, cream, beige and existing Royal Epic brand colours.
+- Restrained use of gold accents.
+- Clear typography and comfortable spacing.
+- Responsive design across desktop, tablet and mobile.
+
+Avoid:
+
+- Artificial-looking financial graphics.
+- Excessive gradients.
+- Bright banking-style colours.
+- Unnecessary animations.
+- Overcrowded sections.
+- Fake approval statistics.
+- Fake customer testimonials.
+- Invented interest rates or EMI offers.
+- Unverified claims such as instant approval or guaranteed loans.
+
+Use suitable existing brand fonts, design tokens and components.
+
+Do not introduce an entirely different visual identity.
+
+---
+
+# 5. COMPLETE LANDING PAGE CONTENT
+
+Implement the following copy accurately. Do not rewrite it into exaggerated marketing claims.
+
+## SECTION A: HERO
+
+Eyebrow:
+
+ROYAL EPIC LOANS
+
+Main heading:
+
+Your Dream Home. The Right Financial Direction.
+
+Description:
+
+From building your dream home to creating beautiful interiors, explore finance options that support your plans.
+
+Share your requirements with Royal Epic. Our team will understand your needs and personally guide you through the next steps.
+
+Primary CTA:
+
+Explore Finance Options
+
+Secondary CTA:
+
+Request a Callback
+
+Small disclaimer:
+
+Finance enquiries are subject to eligibility, verification and the applicable finance provider's terms and approval.
+
+The primary CTA should navigate to the enquiry form.
+
+The secondary CTA should also lead to the enquiry form, with an appropriate callback-oriented interaction if supported.
+
+## SECTION B: INTRODUCTION
+
+Heading:
+
+Financial Support for Your Home and Lifestyle Goals
+
+Content:
+
+Every home project begins with a vision. Whether you are planning a new construction, upgrading your existing home or designing interiors that reflect your lifestyle, financial planning can play an important role.
+
+At Royal Epic, we help you take the first step by understanding your financial requirements and guiding you towards suitable finance options.
+
+Tell us what you have planned. Our team will connect with you personally to understand your needs and explain the possible next steps.
+
+## SECTION C: FINANCE SERVICES
+
+Create four visually distinct service cards.
+
+### 1. Home Construction Finance
+
+Planning to build your own home?
+
+Enquire about finance options for residential construction, from getting started with your building plans to moving towards your dream home.
+
+### 2. Home Interior Finance
+
+Give your home the interiors it deserves.
+
+Explore finance options for complete home interiors, modular kitchens, wardrobes, living spaces and other interior design requirements.
+
+### 3. Home Renovation Finance
+
+Looking to renovate or upgrade your existing home?
+
+Enquire about finance options for remodelling, structural improvements and home upgrades.
+
+### 4. Property-Related Finance
+
+Have other property-related financial requirements?
+
+Share your plans with us and our team will help you understand the possible finance options available for your needs.
+
+Each card should have a suitable architectural or interior photograph.
+
+All service cards should have an enquiry CTA that preselects the corresponding purpose in the enquiry form.
+
+Do not imply that every category or project automatically qualifies for finance.
+
+## SECTION D: WHY CONNECT WITH ROYAL EPIC?
+
+Heading:
+
+A More Personal Approach to Your Finance Enquiry
+
+Create four benefit points:
+
+1. Understand Your Requirements
+
+We take time to understand your project and financial needs.
+
+2. Personal Assistance
+
+Our team connects with you to discuss your enquiry and guide you through the next steps.
+
+3. Relevant Options
+
+We help you explore finance possibilities based on your stated requirements and applicable eligibility.
+
+4. Support Beyond the Enquiry
+
+Whether your plans involve construction, renovation or interiors, we understand the home project journey.
+
+Do not invent years of finance experience, approval ratios, lender counts or financial success statistics.
+
+## SECTION E: HOW IT WORKS
+
+Create a clean four-step process:
+
+1. Submit Your Enquiry
+
+Tell us what kind of finance you are looking for and share your basic details.
+
+2. Our Team Connects With You
+
+A Royal Epic representative will contact you to understand your requirements.
+
+3. Requirement Review
+
+We review the information you share and discuss the next steps and potentially suitable finance options.
+
+4. Personal Guidance
+
+We guide you through the further process, including any applicable eligibility checks and documentation requirements.
+
+Use a simple visual process layout, not an overly complex infographic.
+
+## SECTION F: FINANCE ENQUIRY FORM
+
+Heading:
+
+Let's Understand Your Requirements
+
+Description:
+
+Share a few details and our team will get in touch with you.
+
+Create a clean, accessible and mobile-friendly form.
+
+### Required fields
+
+1. Full Name
+2. Mobile Number
+3. Finance Purpose
+
+### Optional fields
+
+4. Email Address
+5. Approximate Finance Requirement
+6. City / Location
+7. Project Details
+8. Preferred Time to Contact
+
+### Finance Purpose dropdown
+
+- Home Construction Finance
+- Home Interior Finance
+- Home Renovation Finance
+- Property-Related Finance
+- Other
+
+### Approximate Finance Requirement dropdown
+
+- Below ₹5 Lakhs
+- ₹5–10 Lakhs
+- ₹10–25 Lakhs
+- ₹25–50 Lakhs
+- ₹50 Lakhs–₹1 Crore
+- Above ₹1 Crore
+- Not Sure Yet
+
+### Preferred Time to Contact
+
+- Morning
+- Afternoon
+- Evening
+- Anytime
+
+### Project Details placeholder
+
+Briefly describe your home, construction or interior requirements...
+
+### Consent checkbox
+
+I agree to be contacted by Royal Epic regarding my finance enquiry and acknowledge the Privacy Policy.
+
+### Submit button
+
+Submit Finance Enquiry
+
+### Form requirements
+
+- Validate all required fields.
+- Validate Indian mobile numbers appropriately without rejecting legitimate international formats if the website supports them.
+- Validate email only when supplied.
+- Trim unnecessary whitespace.
+- Prevent accidental duplicate submissions.
+- Show loading state during submission.
+- Show clear success and error messages.
+- Preserve entered data if submission fails.
+- Ensure the form works properly on mobile.
+- Do not expose backend error details to customers.
+
+On successful submission, show:
+
+Thank you for contacting Royal Epic Loans.
+
+Your enquiry has been received. Our team will review your requirements and get in touch with you.
+
+Do not display a false success message if the backend submission fails.
+
+### IMPORTANT PRIVACY REQUIREMENT
+
+Do not request or collect the following through this public form:
+
+- Aadhaar number
+- PAN number
+- Bank account details
+- Bank statements
+- Salary slips
+- Credit card details
+- Passwords or OTPs
+- Sensitive financial documents
+
+Do not add public document-upload functionality.
+
+Any further documentation, if needed, must be requested through an appropriate secure process.
+
+## SECTION G: FREQUENTLY ASKED QUESTIONS
+
+Implement an accessible accordion FAQ section.
+
+### Q1. What types of finance can I enquire about through Royal Epic?
+
+You can enquire about home construction, home interiors, renovation and other eligible property-related finance requirements.
+
+### Q2. Can I apply for finance for my home interiors?
+
+Yes. You can submit an enquiry for complete home interiors, modular kitchens, wardrobes and other interior design requirements.
+
+### Q3. Is there a minimum or maximum finance amount?
+
+The amount depends on the finance product, applicant eligibility and applicable terms. Share your approximate requirement and our team can discuss the next steps.
+
+### Q4. How does the finance enquiry process work?
+
+Submit your basic details through the website. Our team will contact you, understand your requirements and guide you through the next steps.
+
+### Q5. Does submitting an enquiry guarantee loan approval?
+
+No. Submitting an enquiry is only the first step. Any finance facility is subject to verification, eligibility assessment, finance provider policies and final approval.
+
+### Q6. What documents will I need?
+
+Document requirements vary depending on the finance option and applicant profile. Our team will explain the applicable requirements when discussing your enquiry. Please do not upload sensitive financial documents through the public enquiry form.
+
+### Q7. Can I enquire even if I have not started construction or interior work?
+
+Yes. You can contact us during the planning stage to discuss your requirements and understand possible next steps.
+
+### Q8. How soon will your team contact me?
+
+Our team will aim to contact you using the details you provide. The actual response time may vary depending on enquiry volume and working hours.
+
+## SECTION H: FINAL CTA
+
+Heading:
+
+Your Home Plans Deserve a Thoughtful Start.
+
+Description:
+
+Whether you are building, renovating or creating your dream interiors, let us understand your requirements and help you explore the next steps.
+
+CTA:
+
+Enquire About Finance
+
+Link the CTA to the enquiry form.
+
+## SECTION I: FINANCE DISCLAIMER
+
+Display a concise disclaimer below the form and a fuller version in the relevant page footer or a dedicated disclaimer section.
+
+Finance Enquiry Disclaimer:
+
+Royal Epic provides finance enquiry assistance and customer guidance. Submission of an enquiry does not constitute a loan application, offer, sanction or guarantee of finance. Any finance facility is subject to the relevant provider's eligibility criteria, verification, documentation, applicable terms and final approval. Interest rates, fees, repayment periods and other conditions, where applicable, are determined by the relevant finance provider. Royal Epic does not guarantee approval, loan amounts or disbursement timelines.
+
+Privacy Notice:
+
+By submitting your details, you consent to Royal Epic contacting you regarding your enquiry. Your information will be handled in accordance with the applicable Privacy Policy. Further information or documents, if required, should be shared only through an appropriate secure process.
+
+Do not claim that Royal Epic is a regulated lending institution unless that status is independently confirmed.
+
+---
+
+# 6. DEDICATED LOANS CRM MODULE
+
+This is an essential part of the project.
+
+Do not make the public form merely send an email or store enquiries only in frontend state.
+
+All successful finance enquiries must be saved in a dedicated backend data structure and made accessible to authorised staff in the existing Telecaller CRM.
+
+Create a completely separate **Loans module**, following the organisational pattern of the Properties module.
+
+Suggested CRM navigation:
+
+- Loans Dashboard
+- Loan Enquiries
+- Add Loan Enquiry
+- Follow-ups
+- Loan Enquiry Reports
+
+Do not mix loan records with:
+
+- Interior Leads
+- Property Leads
+- Property Tenant Enquiries
+- Property Deals
+
+Do not reuse property records as loan records.
+
+### Dedicated database table
+
+Create a dedicated table:
+
+`loan_enquiries`
+
+Suggested fields:
+
+- id
+- enquiry_reference
+- customer_name
+- mobile_number
+- email
+- finance_purpose
+- approximate_amount
+- city
+- project_details
+- preferred_contact_time
+- enquiry_source
+- status
+- assigned_staff
+- created_at
+- updated_at
+- last_contacted_at
+- next_followup_at
+- internal_notes
+
+Use appropriate existing project conventions for UUIDs, timestamps, indexes and foreign keys.
+
+If additional tables are needed for call logs and follow-up history, create dedicated tables such as:
+
+- `loan_call_logs`
+- `loan_activities`
+
+Do not introduce unnecessary tables or complexity.
+
+### CRM dashboard
+
+Show meaningful metrics:
+
+- Total Loan Enquiries
+- New Enquiries
+- Pending Contact
+- Follow-ups Due
+- Contacted
+- Under Review
+- Converted
+- Closed
+
+These metrics must be calculated from actual database records.
+
+Do not use fabricated numbers.
+
+### Enquiry status workflow
+
+Use clear statuses:
+
+1. New
+2. Contact Pending
+3. Contacted
+4. Requirement Under Review
+5. Further Discussion
+6. Converted
+7. Not Proceeding
+8. Closed
+
+Use a sensible status-transition workflow.
+
+Do not mark an enquiry as approved or loan sanctioned simply because a customer enquiry has been received.
+
+### CRM enquiry details
+
+Staff should be able to:
+
+- View the full enquiry.
+- Call the customer.
+- Record call outcomes.
+- Add internal notes.
+- Assign the enquiry to a staff member.
+- Schedule follow-ups.
+- View follow-up history.
+- Change enquiry status.
+- Search and filter enquiries.
+- Track the enquiry source.
+- View creation and modification timestamps.
+
+### Call outcomes
+
+Provide suitable options:
+
+- Connected
+- No Answer
+- Call Back Requested
+- Interested
+- Not Interested
+- Details Shared
+- Follow-up Required
+
+### Follow-up management
+
+Allow staff to:
+
+- Schedule the next follow-up date and time.
+- View today's follow-ups.
+- View overdue follow-ups.
+- Record the result of each contact attempt.
+- View the complete interaction history.
+
+### Permissions
+
+Reuse the existing Telecaller CRM authentication and staff access approach.
+
+Do not create a separate login system.
+
+Follow existing project permission conventions.
+
+Only authorised CRM staff should access private customer enquiry records.
+
+Never expose CRM records or internal notes through public APIs.
+
+---
+
+# 7. BACKEND AND DATABASE REQUIREMENTS
+
+Before implementing database changes, inspect the existing Supabase schema and backend architecture.
+
+Use the existing Supabase project and configuration.
+
+Do not create a second Supabase project.
+
+Do not modify or rename existing Properties or Interior tables.
+
+Create dedicated Loans tables.
+
+Implement secure server-side APIs for:
+
+- Creating a public loan enquiry.
+- Listing loan enquiries for authorised CRM staff.
+- Fetching a loan enquiry by ID.
+- Updating enquiry status.
+- Assigning staff.
+- Recording call logs.
+- Scheduling follow-ups.
+- Retrieving dashboard metrics.
+
+### Public API security
+
+The public form should have access only to the operation needed to submit a new enquiry.
+
+Public users must not be able to:
+
+- Read other enquiries.
+- Read customer records.
+- Read internal notes.
+- Change enquiry statuses.
+- Access CRM staff information.
+- Modify existing records.
+
+Validate and sanitise all incoming data on the server.
+
+Apply suitable rate limiting and spam protection to the public enquiry endpoint.
+
+Use existing server-side privileged database access patterns securely. Never expose Supabase service-role keys or other private secrets to frontend code.
+
+If database row-level security is used, configure it consistently with the existing architecture and test it.
+
+Do not weaken security policies on existing tables.
+
+### Duplicate enquiry handling
+
+Implement sensible duplicate handling.
+
+If the same customer submits another enquiry, do not silently discard it.
+
+Preserve the new enquiry or associate it with the existing customer according to the chosen data model.
+
+Record the new enquiry and its source accurately.
+
+Do not merge unrelated customers solely because they share a name.
+
+---
+
+# 8. HOMEPAGE INTEGRATION
+
+Add a compact Royal Epic Loans promotional section to the existing homepage.
+
+Suggested content:
+
+Eyebrow:
+
+ROYAL EPIC LOANS
+
+Heading:
+
+Planning Your Dream Home? Let's Explore Your Finance Options.
+
+Description:
+
+From home construction to complete interiors and renovations, share your finance requirements with Royal Epic and let our team guide you through the next steps.
+
+CTA:
+
+Explore Finance Options
+
+Link to:
+
+`/loans`
+
+Design this as a restrained, premium promotional section consistent with the existing homepage.
+
+Do not add a large intrusive banner.
+
+Do not reorder or redesign unrelated homepage sections.
+
+---
+
+# 9. NAVIGATION AND FOOTER INTEGRATION
+
+Add Loans alongside Properties in the main website navigation.
+
+The Loans navigation item must work on desktop and mobile.
+
+Add the Loans link to the footer.
+
+Use the existing navigation component and styling.
+
+Do not create duplicate navigation systems.
+
+Do not alter existing menu behaviour.
+
+---
+
+# 10. SEO IMPLEMENTATION
+
+Implement proper SEO for `/loans`.
+
+Suggested page title:
+
+Royal Epic Loans | Home Construction, Interior & Renovation Finance Enquiries
+
+Suggested meta description:
+
+Explore finance options for home construction, home interiors and renovation with Royal Epic. Share your requirements and receive personal enquiry assistance.
+
+Requirements:
+
+- Unique page title.
+- Unique meta description.
+- Correct canonical URL.
+- Open Graph metadata.
+- Social sharing metadata.
+- Appropriate heading hierarchy.
+- Descriptive image alt text.
+- Indexable landing page.
+- Add `/loans` to the sitemap on both domains.
+- Remove it from sitemap only if the page is intentionally unpublished.
+- Do not block the page through robots.txt.
+- Do not change existing page URLs.
+- Do not change existing SEO architecture.
+- Do not introduce cross-domain canonical URLs.
+- Maintain independent self-canonical URLs for .com and .in.
+
+Use suitable structured data only when accurate.
+
+Do not add fake financial-product rates, offers or lender information to structured data.
+
+---
+
+# 11. ANALYTICS AND ENQUIRY SOURCE
+
+Track the following events using the existing analytics architecture, if available:
+
+- Loans page viewed.
+- Finance service card clicked.
+- Enquiry form started.
+- Enquiry form submitted successfully.
+- Callback CTA clicked.
+
+Do not transmit sensitive financial information or personal enquiry details to analytics platforms.
+
+Capture enquiry source as appropriate, for example:
+
+- Website Loans Page
+- Homepage Loans Section
+- Finance Service Card
+
+Do not create a new analytics system if an existing one can be reused.
+
+---
+
+# 12. RESPONSIVENESS AND ACCESSIBILITY
+
+Verify the page across:
+
+- Desktop
+- Laptop
+- Tablet
+- Mobile
+
+Requirements:
+
+- No horizontal overflow.
+- Proper image cropping.
+- Readable text.
+- Appropriate button sizes.
+- Functional navigation.
+- Accessible form labels.
+- Keyboard-accessible FAQ accordion.
+- Visible focus states.
+- Clear form validation messages.
+- Good contrast.
+- Proper loading and submission states.
+
+Optimise images and avoid unnecessarily large assets.
+
+---
+
+# 13. STRICT SCOPE PROTECTION
+
+This project must add a new Loans vertical without damaging existing functionality.
+
+DO NOT:
+
+1. Redesign the existing website.
+2. Redesign the Properties page.
+3. Modify existing property listing functionality.
+4. Modify property enquiry processing.
+5. Modify property CRM tables or workflows.
+6. Modify Interior Leads or Interior CRM functionality.
+7. Change existing staff authentication.
+8. Change existing staff PINs or access.
+9. Change existing website navigation behaviour beyond adding Loans.
+10. Change existing homepage content except for the new Loans promotional section.
+11. Change existing SEO URL structures.
+12. Change existing canonical rules.
+13. Change existing product catalogues.
+14. Change existing payment systems.
+15. Replace the current database.
+16. Create a new Supabase project.
+17. Expose private lending relationships.
+18. Display unverified interest rates, approval claims or loan offers.
+19. Add sensitive financial document uploads.
+20. Deploy the application.
+
+Keep all existing functionality working.
+
+Use the smallest reasonable set of file changes.
+
+Do not refactor unrelated components.
+
+---
+
+# 14. TESTING AND QUALITY ASSURANCE
+
+After implementation, run comprehensive tests.
+
+### Public website tests
+
+- `/loans` loads correctly.
+- Navigation link works.
+- Homepage Loans CTA works.
+- All four service cards render correctly.
+- Service card CTA selects the right enquiry purpose.
+- All enquiry fields work.
+- Required validation works.
+- Invalid phone and email inputs are handled.
+- Consent is required.
+- Successful form submission creates a database record.
+- Failed submission displays a proper error.
+- Duplicate submissions are handled correctly.
+- FAQ accordion works.
+- Mobile layout works.
+
+### CRM tests
+
+- Loans module appears for authorised staff.
+- Existing staff login continues to work.
+- Loan enquiries appear in the correct module.
+- Search and filtering work.
+- Status updates persist.
+- Staff assignment works.
+- Call logs persist.
+- Follow-ups persist.
+- Dashboard counts reflect actual data.
+- Unauthorised users cannot access private enquiries.
+- Public users cannot read or modify existing enquiries.
+
+### Regression tests
+
+Confirm that:
+
+- Interior CRM is unaffected.
+- Properties CRM is unaffected.
+- Public Properties pages are unaffected.
+- Existing property enquiry forms are unaffected.
+- Existing website contact forms are unaffected.
+- Existing authentication works.
+- Existing SEO configuration remains intact.
+- Both .com and .in continue to work independently.
+
+### Build verification
+
+Run:
+
+- TypeScript checks.
+- Production build.
+- Relevant automated tests.
+- API tests.
+- Database integration tests.
+- Responsive checks.
+
+Resolve all implementation errors before reporting completion.
+
+---
+
+# 15. FINAL IMPLEMENTATION REPORT
+
+After completing the implementation, provide a detailed report containing:
+
+1. Summary of the new Royal Epic Loans vertical.
+2. All files created.
+3. All files modified.
+4. Database tables created.
+5. API endpoints created.
+6. Public website routes added.
+7. CRM module functionality implemented.
+8. Navigation and homepage integration.
+9. SEO changes.
+10. Security and privacy measures.
+11. Test results with actual pass/fail counts.
+12. TypeScript check results.
+13. Production build results.
+14. Any remaining limitations or manual configuration required.
+
+Clearly distinguish implemented features from features that still require configuration.
+
+Do not claim a test passed unless it was actually executed.
+
+## FINAL INSTRUCTION
+
+Implement the complete Royal Epic Loans vertical using the existing project architecture.
+
+Prioritise data security, separation from existing business modules, clean design, reliable enquiry submission and easy CRM management.
+
+Do not deploy.
+
+Do not modify unrelated functionality.
+
+After implementation and testing, stop and provide the complete report for review and approval before any deployment.

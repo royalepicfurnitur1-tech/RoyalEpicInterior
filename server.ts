@@ -17,6 +17,7 @@ import {
   injectSeoPageIntoHtml,
   injectPropertiesListIntoHtml,
   injectPropertyDetailIntoHtml,
+  injectLoansPageIntoHtml,
   SITE_URL
 } from "./src/server/productHtmlRenderer";
 import { SEO_PAGES } from "./src/data/seoPages";
@@ -41,6 +42,7 @@ import {
   getApprovedPublishedPropertiesForWebsite,
   findPublicPropertyBySlugOrId,
 } from "./src/server/propertyCrmRoutes";
+import { publicLoansRouter } from "./src/server/loanCrmRoutes";
 
 dotenv.config();
 
@@ -755,6 +757,34 @@ async function startServer() {
     }
 
     next();
+  });
+
+  // Royal Epic Loans Route (/loans) - Host-Aware Self-Canonical & Structured Data
+  app.get("/loans", async (req, res, next) => {
+    try {
+      const host = (
+        (req.get("x-forwarded-host") || req.get("host") || "") +
+        " " +
+        String(req.query.hostname || req.query.host || "")
+      ).toLowerCase();
+      const hostOrigin = host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
+        ? "https://royalepicinterior.in"
+        : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
+          ? "https://royalepicinterior.com"
+          : SITE_URL;
+
+      const template = await getIndexHtmlTemplate(req.originalUrl || "/loans");
+      const enrichedHtml = injectLoansPageIntoHtml(template, hostOrigin);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      return res.status(200).send(enrichedHtml);
+    } catch (err: any) {
+      console.warn("[LoansSSR] Error rendering /loans HTML:", err?.message || err);
+      next();
+    }
   });
 
   // Google Merchant Center Product Feed (/merchant-feed.xml)
@@ -2283,6 +2313,10 @@ async function startServer() {
   app.use("/api/properties", publicPropertiesRouter);
   app.use("/api/public/properties", publicPropertiesRouter);
 
+  // Mount Royal Epic Loans Public Website API Routes
+  app.use("/api/loans", publicLoansRouter);
+  app.use("/api/public/loans", publicLoansRouter);
+
 
   // Normalize raw Supabase / static catalog rows into frontend Product shape for API filtering
   const normalizeServerProduct = (row: any) => {
@@ -3139,7 +3173,7 @@ Provide a JSON response with the following keys:
   } else {
 
     // Guard against relative asset requests originating from nested subpaths (e.g. /products/assets/* -> /assets/*)
-    app.use(/^\/(?:products|properties|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res, next) => {
+    app.use(/^\/(?:products|properties|loans|services|portfolio|blog|customers|dev|admin)\/assets\/(.+)$/, (req, res, next) => {
       const assetFileName = req.params[0];
       const targetFilePath = path.join(distPath, "assets", assetFileName);
       if (fs.existsSync(targetFilePath)) {

@@ -34,6 +34,8 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { PublicPropertiesPage } from './pages/PublicPropertiesPage';
 import { PublicPropertyDetailPage } from './pages/PublicPropertyDetailPage';
 import { PropertiesShowcaseSection } from './components/PropertiesShowcaseSection';
+import { PublicLoansPage } from './pages/PublicLoansPage';
+import { LoansShowcaseSection } from './components/LoansShowcaseSection';
 import { ActiveTab, CartItem, ProductVariation } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
 
@@ -99,6 +101,7 @@ function getInitialActiveTab(): ActiveTab {
   const path = window.location.pathname;
   if (path === '/products' || path.startsWith('/products')) return 'products';
   if (path === '/properties' || path.startsWith('/properties/')) return 'properties';
+  if (path === '/loans' || path.startsWith('/loans/')) return 'loans';
   if (path === '/our-services' || path === '/services') return 'services';
   if (path === '/portfolio' || path === '/projects') return 'portfolio';
   if (path === '/gallery') return 'gallery';
@@ -201,6 +204,8 @@ export default function App() {
         setActiveProductCategory(catParam || 'All');
       } else if (url.pathname === '/properties' || url.pathname.startsWith('/properties/')) {
         setActiveTab('properties');
+      } else if (url.pathname === '/loans' || url.pathname.startsWith('/loans/')) {
+        setActiveTab('loans');
       } else if (url.pathname === '/') {
         setActiveTab('home');
       } else if (url.pathname === '/our-services' || url.pathname === '/services') {
@@ -231,6 +236,8 @@ export default function App() {
         setActiveProductCategory(params.get('category') || 'All');
       } else if (path === '/properties' || path.startsWith('/properties/')) {
         setActiveTab('properties');
+      } else if (path === '/loans' || path.startsWith('/loans/')) {
+        setActiveTab('loans');
       } else if (path === '/') {
         setActiveTab('home');
       } else if (path === '/our-services' || path === '/services') {
@@ -684,6 +691,8 @@ export default function App() {
             onSelectProperty={(slug) => navigateTo(`/properties/${slug}`)}
             onNavigateHome={() => navigateTo('/')}
           />
+        ) : currentPath === '/loans' || currentPath.startsWith('/loans/') ? (
+          <PublicLoansPage onNavigate={navigateTo} />
         ) : currentPath.startsWith('/products/') ? (
           (() => {
             const slug = currentPath.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
@@ -759,6 +768,7 @@ export default function App() {
                   onExploreProperties={() => navigateTo('/properties')}
                   onSelectProperty={(slug) => navigateTo(`/properties/${slug}`)}
                 />
+                <LoansShowcaseSection onNavigate={navigateTo} />
                 <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
                 <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} onNavigate={navigateTo} />
                 <ContactSection />
@@ -770,6 +780,10 @@ export default function App() {
                 onSelectProperty={(slug) => navigateTo(`/properties/${slug}`)}
                 onNavigateHome={() => navigateTo('/')}
               />
+            )}
+
+            {activeTab === 'loans' && (
+              <PublicLoansPage onNavigate={navigateTo} />
             )}
 
             {activeTab === 'services' && (

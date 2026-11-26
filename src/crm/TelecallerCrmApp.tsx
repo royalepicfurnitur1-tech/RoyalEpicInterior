@@ -37,16 +37,19 @@ import {
   CheckCircle2,
   Globe,
   Building2,
+  Landmark,
   ChevronDown
 } from 'lucide-react';
 import { RoyalEpicPropertiesModule } from './properties/RoyalEpicPropertiesModule';
 import { PropertyModuleSection } from './properties/propertyTypes';
+import { RoyalEpicLoansModule } from './loans/RoyalEpicLoansModule';
+import { LoanNavigationTab } from './loans/loanTypes';
 
 interface TelecallerCrmAppProps {
   onBackToWebsite?: () => void;
 }
 
-type TabType = 'dashboard' | 'leads' | 'website' | 'followups' | 'history' | 'reports' | 'users' | 'settings' | 'properties';
+type TabType = 'dashboard' | 'leads' | 'website' | 'followups' | 'history' | 'reports' | 'users' | 'settings' | 'properties' | 'loans';
 
 const WEBSITE_INITIAL_FILTERS = { sortBy: 'created_desc' as const };
 
@@ -62,11 +65,21 @@ const PROPERTY_NAV_SECTIONS: { id: PropertyModuleSection; label: string }[] = [
   { id: 'reports', label: 'Property Reports' }
 ];
 
+const LOANS_NAV_SECTIONS: { id: LoanNavigationTab; label: string }[] = [
+  { id: 'dashboard', label: 'Loans Dashboard' },
+  { id: 'enquiries', label: 'Loan Enquiries' },
+  { id: 'add', label: 'Add Loan Enquiry' },
+  { id: 'followups', label: 'Follow-ups' },
+  { id: 'reports', label: 'Loan Enquiry Reports' },
+];
+
 const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
   const { user, isAuthenticated, loading, isAdmin, logout } = useCrmAuth();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [propertySection, setPropertySection] = useState<PropertyModuleSection>('dashboard');
   const [propertiesExpanded, setPropertiesExpanded] = useState(true);
+  const [loanSection, setLoanSection] = useState<LoanNavigationTab>('dashboard');
+  const [loansExpanded, setLoansExpanded] = useState(true);
   const [followupSubTab, setFollowupSubTab] = useState<'today' | 'overdue' | 'upcoming' | 'completed'>('today');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -190,6 +203,10 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
       case 'properties': {
         const found = PROPERTY_NAV_SECTIONS.find(s => s.id === propertySection);
         return `Royal Epic Properties — ${found ? found.label : 'Properties CRM'}`;
+      }
+      case 'loans': {
+        const foundLoan = LOANS_NAV_SECTIONS.find(s => s.id === loanSection);
+        return `Royal Epic Loans — ${foundLoan ? foundLoan.label : 'Loans CRM'}`;
       }
       default: return 'CRM Workspace';
     }
@@ -468,6 +485,61 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
               </div>
             )}
 
+            {/* Royal Epic Loans Module */}
+            <div className="my-2 border-t border-[#E2E8F0]" />
+
+            {!isSidebarCollapsed && (
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#1C2331]">
+                Royal Epic Loans
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setActiveTab('loans');
+                setLoansExpanded(prev => activeTab === 'loans' ? !prev : true);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'loans'
+                  ? 'bg-[#1C2331] text-white'
+                  : 'text-[#1C2331] bg-[#F5F7FA] hover:bg-[#EAEFF5]'
+              }`}
+              title="Loans"
+            >
+              <div className="flex items-center gap-3">
+                <Landmark className="w-4 h-4 shrink-0 text-[#C5A059]" />
+                {!isSidebarCollapsed && <span>Loans</span>}
+              </div>
+              {!isSidebarCollapsed && (
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    loansExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+              )}
+            </button>
+
+            {!isSidebarCollapsed && loansExpanded && (
+              <div className="pl-3 space-y-0.5 border-l-2 border-[#D6DEE8] ml-3 mt-1">
+                {LOANS_NAV_SECTIONS.map(sec => (
+                  <button
+                    key={sec.id}
+                    onClick={() => {
+                      setActiveTab('loans');
+                      setLoanSection(sec.id);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-md text-[11px] font-medium transition cursor-pointer ${
+                      activeTab === 'loans' && loanSection === sec.id
+                        ? 'bg-[#EAEFF5] text-[#1C2331] font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-[#1C2331]'
+                    }`}
+                  >
+                    {sec.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Admin-only Navigation */}
             {isAdmin && (
               <>
@@ -735,6 +807,14 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                 currentUserName={user?.name || 'Telecaller'}
               />
             )}
+
+            {activeTab === 'loans' && (
+              <RoyalEpicLoansModule
+                activeSubTab={loanSection}
+                onChangeSubTab={(sec) => setLoanSection(sec)}
+                currentUser={user}
+              />
+            )}
           </main>
 
           {/* Compact Clean Footer */}
@@ -904,6 +984,29 @@ const CrmInnerApp: React.FC<TelecallerCrmAppProps> = ({ onBackToWebsite }) => {
                   }`}
                 >
                   <Building2 className="w-3.5 h-3.5 text-[#B48E55]" />
+                  <span>{sec.label}</span>
+                </button>
+              ))}
+
+              <div className="my-2 border-t border-[#E2E8F0]" />
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C2331]">
+                Royal Epic Loans
+              </div>
+              {LOANS_NAV_SECTIONS.map(sec => (
+                <button
+                  key={sec.id}
+                  onClick={() => {
+                    setActiveTab('loans');
+                    setLoanSection(sec.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-left ${
+                    activeTab === 'loans' && loanSection === sec.id
+                      ? 'bg-[#1C2331] text-white font-semibold'
+                      : 'text-[#1C2331]'
+                  }`}
+                >
+                  <Landmark className="w-3.5 h-3.5 text-[#C5A059]" />
                   <span>{sec.label}</span>
                 </button>
               ))}

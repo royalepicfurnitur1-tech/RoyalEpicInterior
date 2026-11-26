@@ -330,6 +330,7 @@ export type ActiveTab =
   | 'services' 
   | 'products' 
   | 'properties'
+  | 'loans'
   | 'portfolio' 
   | 'custom-quote'
   | 'gallery'

@@ -1227,3 +1227,110 @@ export function injectPropertyDetailIntoHtml(
   return html;
 }
 
+/**
+ * Render public Royal Epic Loans page (/loans) HTML with host-aware self-canonical URL,
+ * Open Graph meta tags, and accurate Schema.org WebPage + Service + FAQPage structured data.
+ * Never claims Royal Epic is a bank or direct lender.
+ */
+export function injectLoansPageIntoHtml(
+  templateHtml: string,
+  hostOrigin: string = SITE_URL
+): string {
+  const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
+  const canonicalUrl = `${effectiveOrigin}/loans`;
+  const pageTitle = 'Royal Epic Loans | Home Construction, Interior & Renovation Finance Enquiries';
+  const metaDesc =
+    'Explore finance options for home construction, home interiors and renovation with Royal Epic. Share your requirements and receive personal enquiry assistance.';
+  const ogImage = `${effectiveOrigin}/og-banner.jpg`;
+
+  let html = templateHtml;
+
+  // 1. <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  // 2. <meta name="description">
+  const metaDescTag = `<meta name="description" content="${escapeHtml(metaDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. Host-aware self-canonical URL
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 4. Open Graph & Twitter tags
+  const ogTags = `
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
+    <meta property="og:description" content="${escapeHtml(metaDesc)}" />
+    <meta property="og:url" content="${canonicalUrl}" />
+    <meta property="og:image" content="${escapeHtml(ogImage)}" />
+    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
+    <meta name="twitter:description" content="${escapeHtml(metaDesc)}" />
+    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+  `;
+  html = html
+    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
+    .replace('</head>', `${ogTags}\n  </head>`);
+
+  // 5. Accurate Schema.org WebPage, Service & BreadcrumbList structured data
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: pageTitle,
+      description: metaDesc,
+      url: canonicalUrl,
+      mainEntity: {
+        '@type': 'Service',
+        name: 'Royal Epic Loans – Home Construction, Interior & Renovation Finance Enquiry Assistance',
+        description:
+          'Personal enquiry guidance for customers exploring finance options for home construction, home interiors, renovation and property-related requirements.',
+        provider: {
+          '@type': 'Organization',
+          name: 'Royal Epic Interiors',
+          url: `${effectiveOrigin}/`,
+          telephone: '+91-7026119311',
+        },
+        areaServed: {
+          '@type': 'City',
+          name: 'Bengaluru',
+        },
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${effectiveOrigin}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Loans',
+          item: canonicalUrl,
+        },
+      ],
+    },
+  ];
+
+  const jsonLdScript = `\n    <!-- Royal Epic Loans Structured Data -->\n    <script type="application/ld+json" id="loans-page-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
+  html = html.replace('</head>', `${jsonLdScript}</head>`);
+
+  return html;
+}
+
+
