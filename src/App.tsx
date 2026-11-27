@@ -36,6 +36,7 @@ import { PublicPropertyDetailPage } from './pages/PublicPropertyDetailPage';
 import { PropertiesShowcaseSection } from './components/PropertiesShowcaseSection';
 import { PublicLoansPage } from './pages/PublicLoansPage';
 import { LoansShowcaseSection } from './components/LoansShowcaseSection';
+import { BlogKnowledgeCentrePage } from './pages/BlogKnowledgeCentrePage';
 import { ActiveTab, CartItem, ProductVariation } from './types';
 import { submitLeadToSupabase } from './lib/supabase';
 
@@ -105,7 +106,7 @@ function getInitialActiveTab(): ActiveTab {
   if (path === '/our-services' || path === '/services') return 'services';
   if (path === '/portfolio' || path === '/projects') return 'portfolio';
   if (path === '/gallery') return 'gallery';
-  if (path === '/blog') return 'blog';
+  if (path === '/blog' || path.startsWith('/blog/')) return 'blog';
   if (path === '/admin') return 'admin';
   if (path === '/customers' || path === '/customer') return 'customers';
   if (path === '/track-order' || path === '/dashboard') return 'dashboard';
@@ -212,6 +213,8 @@ export default function App() {
         setActiveTab('services');
       } else if (url.pathname === '/portfolio' || url.pathname === '/projects') {
         setActiveTab('portfolio');
+      } else if (url.pathname === '/blog' || url.pathname.startsWith('/blog/')) {
+        setActiveTab('blog');
       }
     } catch (_) {
       setCurrentPath(path);
@@ -244,6 +247,8 @@ export default function App() {
         setActiveTab('services');
       } else if (path === '/portfolio' || path === '/projects') {
         setActiveTab('portfolio');
+      } else if (path === '/blog' || path.startsWith('/blog/')) {
+        setActiveTab('blog');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -665,6 +670,12 @@ export default function App() {
           <PolicyPage policyType="shipping" onNavigate={navigateTo} />
         ) : currentPath === '/refund-policy' || currentPath === '/return-policy' ? (
           <PolicyPage policyType="refund" onNavigate={navigateTo} />
+        ) : (currentPath === '/blog' || currentPath.startsWith('/blog/')) ? (
+          <BlogKnowledgeCentrePage
+            currentPath={currentPath}
+            onNavigate={navigateTo}
+            onOpenConsultation={() => handleOpenQuote('Home Interior Consultation')}
+          />
         ) : currentPath !== '/' && currentPath !== '/contact-us' && SEO_PAGES[currentPath] ? (
           <SeoPageRenderer
             pageData={SEO_PAGES[currentPath]}
@@ -813,7 +824,13 @@ export default function App() {
               <PortfolioSection onRequestQuote={(title) => handleOpenQuote(title)} />
             )}
 
-            {activeTab === 'blog' && <BlogSection onRequestQuote={(title) => handleOpenQuote(title)} onNavigate={navigateTo} />}
+            {activeTab === 'blog' && (
+              <BlogKnowledgeCentrePage
+                currentPath={currentPath.startsWith('/blog') ? currentPath : '/blog'}
+                onNavigate={navigateTo}
+                onOpenConsultation={() => handleOpenQuote('Home Interior Consultation')}
+              />
+            )}
 
             {activeTab === 'contact' && <ContactSection />}
 

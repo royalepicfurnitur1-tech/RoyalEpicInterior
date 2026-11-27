@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BLOG_POSTS } from '../data/mockData';
+import { ALL_BLOG_POSTS } from '../data/blogArticlesData';
 import { BlogPost } from '../types';
 import { ArrowUpRight, ArrowRight, Share2, Check, Clock, X, Sparkles, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -16,7 +16,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
   const [showAllArchive, setShowAllArchive] = useState<boolean>(false);
 
   // Safeguard: Ensure at least one post exists
-  const allPosts = BLOG_POSTS && BLOG_POSTS.length > 0 ? BLOG_POSTS : [];
+  const allPosts = ALL_BLOG_POSTS && ALL_BLOG_POSTS.length > 0 ? ALL_BLOG_POSTS : [];
   const featuredPost: BlogPost | undefined = allPosts[featuredIndex] || allPosts[0];
 
   // Up to 4 next articles (excluding the currently featured one)
@@ -25,7 +25,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
   const handleCopyShare = async (e: React.MouseEvent, post: BlogPost) => {
     e.stopPropagation();
     try {
-      const url = `${window.location.origin}/blog#${post.slug}`;
+      const url = `${window.location.origin}/blog/${post.slug}`;
       if (navigator.clipboard) {
         await navigator.clipboard.writeText(url);
         setCopiedLink(true);
@@ -38,7 +38,11 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ onRequestQuote, onNavi
   };
 
   const handleOpenArticle = (post: BlogPost) => {
-    setActiveArticle(post);
+    if (onNavigate) {
+      onNavigate(`/blog/${post.slug}`);
+    } else {
+      setActiveArticle(post);
+    }
   };
 
   const handleViewAllArticles = () => {

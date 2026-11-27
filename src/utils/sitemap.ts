@@ -86,6 +86,25 @@ export const SITEMAP_ROUTES: SitemapRoute[] = [
   { path: '/wardrobe-design-ideas', changefreq: 'weekly', priority: 0.75 },
   { path: '/false-ceiling-design-ideas', changefreq: 'weekly', priority: 0.75 },
 
+  // Design Journal & Interior Design Knowledge Centre Articles (/blog/:slug)
+  { path: '/blog/2bhk-3bhk-home-interior-planning-checklist', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/plywood-vs-mdf-vs-hdhmr-vs-particle-board', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/modular-kitchen-design-mistakes-to-avoid', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/how-to-read-interior-design-quotation', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/laminate-vs-acrylic-vs-membrane-vs-veneer', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/false-ceiling-guide-types-materials-cost', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/wardrobe-design-measurements-storage-guide', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/how-to-protect-kitchen-cabinets-from-moisture', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/bengaluru-apartment-interior-design-planning-guide', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/home-interior-project-timeline', changefreq: 'weekly', priority: 0.85 },
+  { path: '/blog/turnkey-interior-projects-guide', changefreq: 'monthly', priority: 0.8 },
+  { path: '/blog/modular-kitchen-cost-bangalore', changefreq: 'monthly', priority: 0.8 },
+  { path: '/blog/home-interior-decorating-guide', changefreq: 'monthly', priority: 0.8 },
+  { path: '/blog/corporate-office-workspace-planning', changefreq: 'monthly', priority: 0.8 },
+  { path: '/blog/restaurant-interior-design-trends', changefreq: 'monthly', priority: 0.8 },
+  { path: '/blog/interior-design-trends-2026', changefreq: 'monthly', priority: 0.8 },
+  { path: '/blog/beauty-spa-interior-design', changefreq: 'monthly', priority: 0.8 },
+
   // Legal & Customer Policies (Google Merchant Center Requirements)
   { path: '/privacy-policy', changefreq: 'monthly', priority: 0.7 },
   { path: '/terms-and-conditions', changefreq: 'monthly', priority: 0.7 },
@@ -159,6 +178,7 @@ Allow: /our-services
 Allow: /portfolio
 Allow: /completed-projects
 Allow: /blog
+Allow: /blog/*
 Allow: /about-us
 Allow: /contact-us
 Allow: /get-free-quote

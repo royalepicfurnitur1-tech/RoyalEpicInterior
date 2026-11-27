@@ -18,8 +18,11 @@ import {
   injectPropertiesListIntoHtml,
   injectPropertyDetailIntoHtml,
   injectLoansPageIntoHtml,
+  injectBlogListIntoHtml,
+  injectBlogPostIntoHtml,
   SITE_URL
 } from "./src/server/productHtmlRenderer";
+import { ALL_BLOG_POSTS, findBlogPostBySlug, computeArticleWordCount } from "./src/data/blogArticlesData";
 import { SEO_PAGES } from "./src/data/seoPages";
 import { PRODUCTS_DATA } from "./src/data/mockData";
 import {
@@ -783,6 +786,71 @@ async function startServer() {
       return res.status(200).send(enrichedHtml);
     } catch (err: any) {
       console.warn("[LoansSSR] Error rendering /loans HTML:", err?.message || err);
+      next();
+    }
+  });
+
+  // Design Journal & Interior Design Knowledge Centre (/blog) - Host-Aware Self-Canonical & Structured Data
+  app.get("/blog", async (req, res, next) => {
+    try {
+      const host = (
+        (req.get("x-forwarded-host") || req.get("host") || "") +
+        " " +
+        String(req.query.hostname || req.query.host || "")
+      ).toLowerCase();
+      const hostOrigin =
+        host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
+          ? "https://royalepicinterior.in"
+          : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
+            ? "https://royalepicinterior.com"
+            : SITE_URL;
+
+      const template = await getIndexHtmlTemplate(req.originalUrl || "/blog");
+      const enrichedHtml = injectBlogListIntoHtml(template, ALL_BLOG_POSTS, hostOrigin);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      return res.status(200).send(enrichedHtml);
+    } catch (err: any) {
+      console.warn("[BlogListSSR] Error rendering /blog HTML:", err?.message || err);
+      next();
+    }
+  });
+
+  // Individual Blog Article Detail Page (/blog/:slug) - Host-Aware Self-Canonical & BlogPosting Schema
+  app.get("/blog/:slug", async (req, res, next) => {
+    try {
+      const slug = String(req.params.slug || "").trim();
+      const post = findBlogPostBySlug(slug);
+      if (!post) {
+        return next();
+      }
+
+      const host = (
+        (req.get("x-forwarded-host") || req.get("host") || "") +
+        " " +
+        String(req.query.hostname || req.query.host || "")
+      ).toLowerCase();
+      const hostOrigin =
+        host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
+          ? "https://royalepicinterior.in"
+          : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
+            ? "https://royalepicinterior.com"
+            : SITE_URL;
+
+      const wordCount = post.wordCount || computeArticleWordCount(post);
+      const template = await getIndexHtmlTemplate(req.originalUrl || `/blog/${post.slug}`);
+      const enrichedHtml = injectBlogPostIntoHtml(template, post, wordCount, hostOrigin);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      return res.status(200).send(enrichedHtml);
+    } catch (err: any) {
+      console.warn("[BlogPostSSR] Error rendering /blog/:slug HTML:", err?.message || err);
       next();
     }
   });

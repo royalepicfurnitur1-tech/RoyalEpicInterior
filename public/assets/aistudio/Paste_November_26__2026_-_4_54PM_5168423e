@@ -1,0 +1,790 @@
+# ROYAL EPIC WEBSITE – ADD 10 HIGH-QUALITY SEO BLOG ARTICLES AND IMPROVE THE DESIGN JOURNAL
+
+I want to expand the existing Royal Epic Interiors website by adding approximately 10 high-quality, genuinely informative blog articles.
+
+This is an enhancement to my existing website, not a new website or a complete redesign.
+
+Website: https://royalepicinterior.com/
+
+The website is built using the existing React/Vite and Node/Express architecture. Supabase is used for backend functionality. You must first inspect the current project structure and understand how the existing Design Journal/blog system works before making any changes.
+
+Your task is to create 10 original, detailed, useful, SEO-optimised blog articles and integrate them naturally into the existing website.
+
+The result should look like a professionally managed interior design knowledge centre, not a collection of generic AI-generated articles.
+
+---
+
+# PART 1 – FIRST AUDIT THE EXISTING WEBSITE AND BLOG SYSTEM
+
+Before writing or modifying anything:
+
+1. Inspect the complete existing website structure.
+2. Locate the existing Design Journal or blog listing page.
+3. Identify the existing five blog articles.
+4. Read their titles, content, categories, URL slugs, metadata and internal links.
+5. Identify the existing blog detail page template and its styling.
+6. Understand how blog articles are currently stored and rendered.
+7. Identify the existing navigation, header, footer, typography, colours, spacing, buttons and responsive design system.
+8. Inspect the current SEO implementation, sitemap generation, canonical URL handling and structured data.
+9. Identify how images are currently stored and served.
+10. Check whether blog content is stored in source files, a database or another existing content system.
+
+IMPORTANT:
+
+- Do not create duplicate articles.
+- Do not replace the existing five articles.
+- Do not create a second, disconnected blog system.
+- Do not change the existing website architecture unnecessarily.
+- Reuse the existing blog listing and detail page components wherever possible.
+- If the existing implementation already supports all required functionality, extend it rather than rebuilding it.
+- Preserve all existing blog URLs and avoid breaking indexed pages.
+
+After the audit, choose 10 topics from the list below that do not substantially duplicate existing articles. If a topic is already covered, replace it with another relevant topic from the same category.
+
+---
+
+# PART 2 – ADD THESE 10 BLOG ARTICLES
+
+Create the following articles with detailed, practical, original content.
+
+Each article must be written for Indian homeowners, with particular relevance to Bengaluru wherever appropriate.
+
+Do not write short filler articles. Each article should ideally contain approximately 1,500–2,200 words where the subject genuinely supports that depth.
+
+Content must be useful, accurate, easy to understand and professionally written.
+
+## ARTICLE 1
+
+Title:
+Before Starting Your 2BHK or 3BHK Home Interiors: The Complete Homeowner Checklist
+
+Suggested URL:
+ /blog/2bhk-3bhk-home-interior-planning-checklist
+
+Primary keyword:
+2BHK interior design checklist
+
+Secondary keywords:
+3BHK interior planning, home interior checklist, apartment interior design, home interior planning Bangalore
+
+Content should cover:
+
+- What to check before starting an interior project.
+- How to measure rooms and understand the available space.
+- Family lifestyle and storage requirements.
+- Kitchen planning.
+- Bedroom and wardrobe planning.
+- Living room and dining area planning.
+- Electrical point planning.
+- Lighting requirements.
+- False ceiling considerations.
+- Flooring and wall finish decisions.
+- Material selection.
+- Budget planning.
+- How to compare interior design quotations.
+- Questions to ask an interior designer.
+- Common mistakes homeowners should avoid.
+- A practical printable-style checklist at the end.
+
+Make this article extremely useful for someone who has recently purchased a new apartment.
+
+## ARTICLE 2
+
+Title:
+Plywood vs MDF vs HDHMR vs Particle Board: Which Material Is Best for Home Interiors?
+
+Suggested URL:
+ /blog/plywood-vs-mdf-vs-hdhmr-vs-particle-board
+
+Primary keyword:
+best plywood for home interiors India
+
+Secondary keywords:
+MDF vs plywood, HDHMR board uses, particle board furniture, interior furniture materials
+
+Content should cover:
+
+- What each material is.
+- How each material is manufactured at a high level.
+- Strength and durability.
+- Moisture resistance and limitations.
+- Suitable applications.
+- Kitchen cabinet suitability.
+- Wardrobe suitability.
+- Cost considerations.
+- Edge treatment and finishing.
+- Maintenance.
+- How homeowners should choose materials.
+- Questions to ask before approving materials.
+
+Include a clear comparison table.
+
+Do not incorrectly claim that one material is universally waterproof or termite-proof. Explain that product specifications, grades, manufacturing quality and installation conditions matter.
+
+## ARTICLE 3
+
+Title:
+15 Modular Kitchen Design Mistakes to Avoid Before Installation
+
+Suggested URL:
+ /blog/modular-kitchen-design-mistakes-to-avoid
+
+Primary keyword:
+modular kitchen design mistakes
+
+Secondary keywords:
+modular kitchen planning, kitchen design ideas India, modular kitchen storage, kitchen interior design Bangalore
+
+Content should cover:
+
+- Poor kitchen workflow.
+- Incorrect counter height.
+- Insufficient storage.
+- Poor corner-unit planning.
+- Incorrect placement of sink and hob.
+- Chimney and ventilation planning.
+- Insufficient electrical points.
+- Poor lighting.
+- Wrong shutter materials.
+- Inadequate hardware selection.
+- Poor appliance integration.
+- Plumbing accessibility.
+- Wasted vertical space.
+- Inadequate countertop space.
+- Lack of maintenance planning.
+
+Include practical suggestions and explain how to prevent each mistake.
+
+## ARTICLE 4
+
+Title:
+How to Read an Interior Design Quotation: BOQ, Materials, Hardware and Hidden Costs Explained
+
+Suggested URL:
+ /blog/how-to-read-interior-design-quotation
+
+Primary keyword:
+interior design quotation explained
+
+Secondary keywords:
+interior design BOQ, home interior cost breakdown, interior design estimate, turnkey interior quotation
+
+Content should cover:
+
+- What a BOQ means.
+- How to understand quantities and measurements.
+- Material specifications.
+- Plywood and board specifications.
+- Laminate and finish specifications.
+- Hardware and accessories.
+- Kitchen and wardrobe costs.
+- False ceiling and electrical work.
+- Painting and civil work.
+- Installation and labour.
+- Transportation and miscellaneous charges.
+- GST and exclusions.
+- Variation charges.
+- How to compare two interior quotations fairly.
+- Warning signs in unclear quotations.
+
+Include a sample illustrative BOQ table.
+
+Clearly label sample prices and quantities as illustrative only. Do not invent Royal Epic's actual pricing or present hypothetical figures as company quotations.
+
+## ARTICLE 5
+
+Title:
+Laminate vs Acrylic vs Membrane vs Veneer: Which Finish Should You Choose for Your Home?
+
+Suggested URL:
+ /blog/laminate-vs-acrylic-vs-membrane-vs-veneer
+
+Primary keyword:
+laminate vs acrylic kitchen shutters
+
+Secondary keywords:
+veneer vs laminate, acrylic kitchen finish, membrane kitchen shutters, wardrobe finishes India
+
+Content should cover:
+
+- What each finish is.
+- Appearance and texture.
+- Available design options.
+- Durability.
+- Scratch resistance and maintenance.
+- Moisture-related limitations.
+- Cleaning requirements.
+- Repairability.
+- Suitable applications.
+- Relative cost considerations.
+- Kitchen and wardrobe recommendations.
+
+Include a comparison table and practical examples.
+
+Avoid claiming that a particular finish is always the best.
+
+## ARTICLE 6
+
+Title:
+False Ceiling Guide: Types, Materials, Designs, Costs and Things to Know Before Installation
+
+Suggested URL:
+ /blog/false-ceiling-guide-types-materials-cost
+
+Primary keyword:
+false ceiling design and cost Bangalore
+
+Secondary keywords:
+gypsum false ceiling, POP ceiling, modern false ceiling designs, false ceiling materials India
+
+Content should cover:
+
+- What a false ceiling is.
+- Why homeowners install one.
+- Gypsum ceilings.
+- POP ceilings.
+- Other suitable ceiling systems.
+- Material differences.
+- Cove lighting.
+- Recessed lighting.
+- Fan and air-conditioning coordination.
+- Ceiling height considerations.
+- Access panels.
+- Maintenance.
+- Common installation mistakes.
+- When a false ceiling may not be necessary.
+- Cost factors.
+
+Do not invent fixed market prices. Explain what affects the final cost.
+
+## ARTICLE 7
+
+Title:
+How to Design the Perfect Wardrobe: Measurements, Storage, Drawers and Internal Layout
+
+Suggested URL:
+ /blog/wardrobe-design-measurements-storage-guide
+
+Primary keyword:
+wardrobe design measurements India
+
+Secondary keywords:
+modern wardrobe design, wardrobe internal layout, sliding wardrobe vs hinged wardrobe, bedroom storage ideas
+
+Content should cover:
+
+- How to plan wardrobe dimensions.
+- Hanging sections.
+- Shelves.
+- Drawers.
+- Loft storage.
+- Shoe storage.
+- Accessories.
+- Sliding vs hinged shutters.
+- Internal lighting.
+- Material selection.
+- Ventilation considerations.
+- Space planning for small bedrooms.
+- Common wardrobe design mistakes.
+
+Include a practical internal-layout comparison and explain that final measurements must be confirmed on site.
+
+## ARTICLE 8
+
+Title:
+How to Protect Kitchen Cabinets from Moisture, Termites and Everyday Wear
+
+Suggested URL:
+ /blog/how-to-protect-kitchen-cabinets-from-moisture
+
+Primary keyword:
+how to protect kitchen cabinets from moisture
+
+Secondary keywords:
+waterproof kitchen cabinets India, kitchen cabinet maintenance, kitchen plywood selection, kitchen interior maintenance
+
+Content should cover:
+
+- Common causes of kitchen cabinet damage.
+- Sink-area moisture.
+- Plumbing leaks.
+- Edge sealing.
+- Material selection.
+- Hardware quality.
+- Ventilation.
+- Cleaning practices.
+- Maintenance routines.
+- Early warning signs.
+- How to prevent long-term damage.
+
+Clearly distinguish between moisture-resistant materials and genuinely waterproof systems. Do not make unsupported product performance claims.
+
+## ARTICLE 9
+
+Title:
+Interior Design for Bengaluru Apartments: What Homeowners Should Plan Before Moving In
+
+Suggested URL:
+ /blog/bengaluru-apartment-interior-design-planning-guide
+
+Primary keyword:
+apartment interior design Bangalore
+
+Secondary keywords:
+home interiors Bangalore, 2BHK interiors Bangalore, 3BHK interiors Bangalore, apartment interior planning
+
+Content should cover:
+
+- Planning after apartment handover.
+- Understanding builder-provided fittings.
+- Site measurements.
+- Apartment association rules and permissions.
+- Electrical and plumbing coordination.
+- Kitchen planning.
+- Wardrobe and storage planning.
+- Balcony considerations.
+- Natural light and ventilation.
+- Moisture-prone areas.
+- Material selection.
+- Delivery and installation coordination.
+- Planning before moving into a new apartment.
+
+Make this genuinely relevant to Bengaluru apartment homeowners rather than simply repeating the city name throughout the article.
+
+Do not invent local regulations or make universal claims about all apartment projects.
+
+## ARTICLE 10
+
+Title:
+How Long Does a Home Interior Project Take? A Complete Step-by-Step Timeline
+
+Suggested URL:
+ /blog/home-interior-project-timeline
+
+Primary keyword:
+home interior work timeline Bangalore
+
+Secondary keywords:
+turnkey interior project timeline, home interior execution process, modular furniture installation, interior design project stages
+
+Content should cover:
+
+- Initial consultation.
+- Site measurement.
+- Design planning.
+- 3D design and revisions.
+- Material selection.
+- BOQ and quotation approval.
+- Production planning.
+- Civil and electrical preparation.
+- False ceiling and painting.
+- Factory production.
+- Transportation.
+- Furniture installation.
+- Finishing and quality checks.
+- Final handover.
+
+Explain which activities can happen simultaneously and which depend on earlier work.
+
+Include a sample project timeline clearly labelled as illustrative, not a guaranteed Royal Epic delivery commitment.
+
+---
+
+# PART 3 – CONTENT QUALITY REQUIREMENTS
+
+This is extremely important.
+
+Every article must:
+
+1. Be original and written specifically for Royal Epic's audience.
+2. Provide useful information before promoting Royal Epic.
+3. Have a clear introduction explaining the reader's problem.
+4. Use a logical H1, H2 and H3 structure.
+5. Include practical examples.
+6. Include comparison tables wherever useful.
+7. Include actionable recommendations.
+8. Explain technical terms in simple language.
+9. Include a concise conclusion.
+10. Include 5–8 genuinely relevant FAQs.
+11. Include a natural, non-aggressive call to action.
+12. Include relevant internal links.
+13. Avoid keyword stuffing.
+14. Avoid repetitive introductions and generic AI phrases.
+15. Avoid copying content from competitors.
+16. Avoid fabricated statistics, survey results, citations, customer experiences or project claims.
+17. Avoid making unsupported guarantees about materials, costs, durability or timelines.
+
+Use Indian English spelling and terminology.
+
+Use ₹ when mentioning Indian currency.
+
+Write naturally for homeowners who may not know technical interior design terminology.
+
+Do not make every article sound like an advertisement.
+
+---
+
+# PART 4 – SEO IMPLEMENTATION FOR ALL 10 ARTICLES
+
+Implement proper on-page SEO for every article.
+
+For each blog article, provide:
+
+- SEO title.
+- Meta description.
+- Clean URL slug.
+- Primary keyword.
+- Secondary keywords.
+- H1 heading.
+- Relevant H2 and H3 headings.
+- Image alt text.
+- Open Graph title and description.
+- Appropriate internal links.
+- Article publication date.
+- Modified date when the article is genuinely updated.
+- Author or editorial attribution, using only genuine company information.
+
+SEO title guidance:
+
+- Keep titles descriptive and natural.
+- Aim for approximately 50–60 characters where practical.
+- Include the primary topic naturally.
+- Avoid repetitive keyword patterns.
+
+Meta description guidance:
+
+- Aim for approximately 140–160 characters where practical.
+- Explain what the article helps the reader understand.
+- Use a natural invitation to read.
+- Do not stuff keywords.
+
+IMPORTANT TECHNICAL SEO REQUIREMENTS:
+
+1. Add valid Article or BlogPosting structured data where appropriate.
+2. Include headline, image, author, publisher, datePublished and dateModified when the corresponding information is available and accurate.
+3. Use the existing Royal Epic organisation information and logo where appropriate.
+4. Do not fabricate author identities, dates, ratings or reviews.
+5. Add BreadcrumbList structured data if appropriate.
+6. Ensure the blog listing page and article pages have descriptive titles and meta descriptions.
+7. Ensure canonical URLs are correct.
+8. Maintain separate self-referencing canonical URLs for:
+   - https://royalepicinterior.com/
+   - https://royalepicinterior.in/
+9. Do not redirect either domain to the other.
+10. Do not introduce cross-domain canonical tags.
+11. Ensure the sitemap includes all 10 new blog URLs on both domains, using the existing host-aware sitemap architecture.
+12. Ensure existing blog URLs remain in the sitemap.
+13. Ensure articles are crawlable without requiring JavaScript interaction to reveal their main content.
+14. Use descriptive internal links rather than generic links such as "click here".
+15. Avoid creating unnecessary tag pages, duplicate category pages or thin-content URLs.
+16. Do not add FAQ structured data automatically just because FAQs appear in an article. Follow current Google eligibility requirements.
+17. Avoid misleading structured data or unsupported review markup.
+
+All SEO implementation must follow the existing architecture. Do not introduce a second SEO system.
+
+---
+
+# PART 5 – BLOG DESIGN AND USER EXPERIENCE
+
+The new articles must fit naturally into the existing Royal Epic website.
+
+Do not make the blog look like a separate template purchased from another website.
+
+Follow the current website's:
+
+- Brand identity.
+- Typography.
+- Colours.
+- Buttons.
+- Header.
+- Footer.
+- Spacing system.
+- Border radius.
+- Image presentation.
+- Responsive design.
+
+However, improve the blog experience where necessary.
+
+## Blog listing page
+
+The existing Design Journal should become a polished knowledge centre.
+
+Consider the following improvements, only where they fit the current implementation:
+
+1. A refined hero section with the heading:
+
+   "Design Better. Live Better."
+
+   Supporting text:
+
+   "Explore practical interior design guides, material comparisons, planning tips and expert insights to help you make informed decisions about your space."
+
+2. A featured article section.
+3. A clean article card grid.
+4. Article categories.
+5. Search or filtering if useful and supported by the existing implementation.
+6. Clear article titles and short descriptions.
+7. Estimated reading time.
+8. Publication dates.
+9. Attractive cover images.
+10. Pagination or a sensible load-more experience if the number of articles grows.
+
+Suggested categories:
+
+- Home Planning
+- Modular Kitchens
+- Materials & Finishes
+- Cost & Budget Guides
+- Storage & Furniture
+- Lighting & False Ceilings
+- Maintenance & Care
+- Office & Commercial Interiors
+
+Do not overcomplicate the listing page.
+
+## Individual blog detail pages
+
+Each article should have:
+
+- Large, high-quality featured image.
+- Article title.
+- Short introduction.
+- Publication date.
+- Estimated reading time.
+- Category.
+- Clear table of contents for long articles.
+- Properly formatted headings.
+- Readable paragraphs.
+- Comparison tables where appropriate.
+- Image captions when needed.
+- Relevant inline images.
+- Author/editorial attribution.
+- Related articles.
+- A relevant Royal Epic service link.
+- A tasteful enquiry CTA near the end.
+
+Make the article comfortable to read on desktop, tablet and mobile.
+
+Avoid excessively wide text columns.
+
+Use sufficient line spacing and clear heading hierarchy.
+
+The table of contents should work correctly on mobile and link to the appropriate article sections.
+
+---
+
+# PART 6 – IMAGE REQUIREMENTS
+
+Images are important for the visual quality of an interior design blog.
+
+Use suitable, high-quality interior design images for every article.
+
+Requirements:
+
+1. Every article must have a relevant featured image.
+2. Use additional images inside longer articles when they genuinely improve understanding.
+3. Images must match the section they accompany.
+4. Prefer realistic Indian residential interiors where relevant.
+5. Use a mixture of kitchens, bedrooms, wardrobes, living rooms, materials, ceilings, furniture and completed interiors.
+6. Avoid repeating the same image across all 10 articles.
+7. Avoid generic business stock photographs.
+8. Avoid artificial-looking interiors with excessive lighting or unrealistic proportions.
+9. Use natural-looking lighting and realistic materials.
+10. Optimise image sizes and use modern formats such as WebP or AVIF where supported.
+11. Use lazy loading for images below the fold.
+12. Provide descriptive alt text for meaningful images.
+13. Keep image dimensions and aspect ratios consistent within the blog card layout.
+
+Prefer genuine Royal Epic project photographs if they already exist in the project assets and are suitable.
+
+If genuine project images are unavailable, use properly licensed images or generated illustrative interior images.
+
+Never describe an illustrative image as an actual Royal Epic completed project.
+
+Do not invent project names, customer identities or project locations.
+
+---
+
+# PART 7 – INTERNAL LINKING AND CONVERSION STRATEGY
+
+The blog must help visitors discover Royal Epic's services naturally.
+
+Build contextual internal links from relevant articles to existing service pages.
+
+Examples:
+
+- Modular kitchen article → Modular Kitchen service.
+- False ceiling article → False Ceiling service.
+- Wardrobe article → Wardrobe or Interior Design service.
+- Apartment planning article → Residential Interior Design service.
+- BOQ article → Turnkey Interior service.
+- Office planning article → Office Interior Design service.
+
+Use actual existing website routes. Do not invent URLs.
+
+Also:
+
+1. Add relevant links between related blog articles.
+2. Add a related articles section at the end of each article.
+3. Add a subtle enquiry CTA.
+4. Use CTA text such as:
+   - "Planning Your Home Interiors?"
+   - "Discuss Your Interior Requirements with Royal Epic"
+   - "Explore Our Interior Design Services"
+
+Do not make every section promotional.
+
+The main purpose of each article should remain education.
+
+---
+
+# PART 8 – BUILD A LONG-TERM KNOWLEDGE CENTRE
+
+Make the blog system scalable so we can add more articles in the future without redesigning it.
+
+Where practical:
+
+- Reuse the existing blog data model.
+- Keep article content separate from reusable page layout components.
+- Use reusable article cards.
+- Use reusable FAQ components.
+- Use reusable table-of-contents functionality.
+- Use reusable related-article components.
+- Ensure new articles can be added without duplicating large amounts of code.
+
+Do not add a new database or CMS unless the existing architecture genuinely requires it.
+
+Do not create unnecessary backend APIs for static blog content.
+
+If the current project already has a content management system, use it.
+
+Do not break the existing five articles.
+
+---
+
+# PART 9 – STRICT PROTECTION OF EXISTING WEBSITE FUNCTIONALITY
+
+This instruction is mandatory.
+
+The website has several existing verticals and systems.
+
+Do not modify or break:
+
+- Existing Interior Design pages.
+- Existing Properties pages.
+- Existing Loans pages.
+- Existing Telecaller CRM.
+- Existing Interior CRM.
+- Existing Properties CRM.
+- Existing Loans CRM.
+- Authentication and staff permissions.
+- Supabase configuration.
+- Existing enquiry forms.
+- Existing API routes.
+- Existing payment or customer functionality.
+- Existing navigation functionality.
+- Existing domain and canonical handling.
+
+Do not change database schemas unless absolutely necessary and explicitly explain why before doing so.
+
+Do not change environment variables.
+
+Do not expose Supabase service-role keys or any server secrets.
+
+Do not make unnecessary dependency upgrades.
+
+Do not rewrite the application architecture.
+
+Only modify files necessary to improve the Design Journal/blog experience and add the new articles.
+
+---
+
+# PART 10 – TESTING AND QUALITY ASSURANCE
+
+After implementation, perform a careful audit.
+
+Check the following:
+
+## Content checks
+- All 10 articles exist.
+- No substantial duplication with the existing five articles.
+- Every article has complete content.
+- All headings are correctly structured.
+- All FAQs are relevant.
+- All internal links work.
+- All cover images load.
+
+## Design checks
+- Blog listing page looks consistent with Royal Epic.
+- Article detail pages are professionally formatted.
+- Mobile layouts work properly.
+- Tables are responsive.
+- Table of contents works.
+- Navigation works.
+- Related articles work.
+- No broken images or layout overflow.
+
+## SEO checks
+- Unique SEO title for every article.
+- Unique meta description for every article.
+- Correct canonical URL on both domains.
+- Valid Article structured data.
+- Correct breadcrumb data if implemented.
+- Sitemap includes all articles on both domains.
+- Existing URLs remain unchanged.
+- No duplicate canonical tags.
+- No accidental noindex tags.
+- No broken internal links.
+
+## Technical checks
+- TypeScript checks pass.
+- Production build passes.
+- Existing routing works.
+- Existing Interior, Properties and Loans pages still load.
+- Existing CRM routes are unaffected.
+- No new console errors.
+- No broken imports.
+- No missing assets.
+
+Do not claim a test passed unless it was actually executed.
+
+If a test cannot be executed, clearly identify it as not verified.
+
+---
+
+# PART 11 – FINAL REPORT REQUIRED
+
+After completing the work, provide a clear report containing:
+
+1. The names of the 10 articles created.
+2. Their final URL slugs.
+3. Their primary and secondary keywords.
+4. Their SEO titles and meta descriptions.
+5. Their article word counts.
+6. Their categories.
+7. The images used.
+8. All files created.
+9. All existing files modified.
+10. Changes made to the blog listing page.
+11. Changes made to article detail pages.
+12. SEO and structured data changes.
+13. Sitemap changes.
+14. Mobile responsiveness results.
+15. TypeScript and build results.
+16. Any issues that remain unresolved.
+17. Confirmation that the existing five articles were preserved.
+18. Confirmation that Interior, Properties and Loans functionality was not intentionally changed.
+
+IMPORTANT FINAL INSTRUCTION:
+
+Do not deploy the website.
+
+Do not push code to production.
+
+Do not modify the live database.
+
+Complete the implementation in the existing development environment, run the available checks and provide the final report for my review.
+
+Wait for my approval before any deployment or production changes.
+
+The final result should make Royal Epic's Design Journal feel like a premium, informative and trustworthy interior design knowledge centre that homeowners genuinely want to read and return to.

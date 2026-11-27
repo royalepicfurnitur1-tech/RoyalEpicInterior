@@ -1333,4 +1333,455 @@ export function injectLoansPageIntoHtml(
   return html;
 }
 
+/**
+ * Injects SEO metadata, host-aware self-referencing canonical, Blog + BreadcrumbList JSON-LD,
+ * and pre-rendered HTML for the Design Journal main listing page (/blog).
+ */
+export function injectBlogListIntoHtml(
+  templateHtml: string,
+  posts: any[],
+  siteOrigin?: string
+): string {
+  const effectiveOrigin = (siteOrigin || SITE_URL).replace(/\/+$/, '');
+  const canonicalUrl = `${effectiveOrigin}/blog`;
+  const pageTitle = 'Design Journal & Interior Design Guides | Royal Epic Interiors';
+  const metaDesc =
+    'Read practical guides on home interiors, modular kitchens, materials, wardrobes, false ceilings, pricing and planning by Royal Epic Interiors in Bengaluru.';
+  const ogImage = `${effectiveOrigin}/images/indian-luxury-living-room.jpg`;
+
+  let html = templateHtml;
+
+  // 1. <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  // 2. <meta name="description">
+  const metaDescTag = `<meta name="description" content="${escapeHtml(metaDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. Host-aware self-referencing canonical
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 4. Open Graph & Twitter tags
+  const ogTags = `
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
+    <meta property="og:description" content="${escapeHtml(metaDesc)}" />
+    <meta property="og:url" content="${canonicalUrl}" />
+    <meta property="og:image" content="${escapeHtml(ogImage)}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
+    <meta name="twitter:description" content="${escapeHtml(metaDesc)}" />
+    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+  `;
+  html = html
+    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
+    .replace('</head>', `${ogTags}\n  </head>`);
+
+  // 5. Blog + BreadcrumbList JSON-LD (no FAQPage schema)
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Blog',
+        '@id': `${canonicalUrl}#blog`,
+        name: 'Royal Epic Design Journal & Interior Design Knowledge Centre',
+        description: metaDesc,
+        url: canonicalUrl,
+        inLanguage: 'en-IN',
+        publisher: {
+          '@type': 'Organization',
+          name: 'Royal Epic Interiors',
+          url: `${effectiveOrigin}/`,
+          telephone: '+91-7026119311',
+        },
+        blogPost: (Array.isArray(posts) ? posts : []).slice(0, 15).map((p) => ({
+          '@type': 'BlogPosting',
+          headline: p.title,
+          url: `${effectiveOrigin}/blog/${p.slug}`,
+          datePublished: p.datePublishedIso || '2026-11-18',
+          description: p.metaDescription || p.excerpt,
+        })),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${canonicalUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: `${effectiveOrigin}/`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Design Journal',
+            item: canonicalUrl,
+          },
+        ],
+      },
+    ],
+  };
+
+  const jsonLdScript = `\n    <!-- Royal Epic Design Journal Structured Data -->\n    <script type="application/ld+json" id="blog-list-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
+  html = html.replace('</head>', `${jsonLdScript}</head>`);
+
+  // 6. Pre-render crawlable article cards inside <div id="root">
+  const cardsHtml = (Array.isArray(posts) ? posts : [])
+    .map(
+      (post) => `
+      <article style="border: 1px solid #e5e7eb; background: #ffffff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #b45309;">${escapeHtml(post.category || 'Interior Design')}</span>
+          <h2 style="font-size: 20px; font-weight: 700; color: #0F291E; margin: 8px 0 10px 0; line-height: 1.35;">
+            <a href="/blog/${escapeHtml(post.slug)}" style="color: #0F291E; text-decoration: none;">${escapeHtml(post.title)}</a>
+          </h2>
+          <p style="font-size: 14px; color: #4b5563; line-height: 1.65; margin: 0 0 14px 0;">${escapeHtml(post.excerpt || '')}</p>
+        </div>
+        <div style="font-size: 12px; color: #6b7280; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f3f4f6; padding-top: 12px;">
+          <span>${escapeHtml(post.date || 'Nov 2026')} • ${escapeHtml(post.readTime || '9 min read')}</span>
+          <a href="/blog/${escapeHtml(post.slug)}" style="color: #0F291E; font-weight: 700; text-decoration: underline;">Read Article →</a>
+        </div>
+      </article>
+    `
+    )
+    .join('');
+
+  const preRenderedBlogList = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #FAF8F5; color: #1f2937; font-family: Georgia, serif;">
+        <header style="background: #0F291E; color: #ffffff; padding: 56px 24px;">
+          <div style="max-width: 1200px; margin: 0 auto;">
+            <nav aria-label="Breadcrumb" style="font-size: 12px; margin-bottom: 16px; color: #d1d5db;">
+              <a href="/" style="color: #d1d5db; text-decoration: none;">Home</a> &gt; <span>Design Journal</span>
+            </nav>
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.25em; color: #D4AF37; font-weight: 700; display: block; margin-bottom: 12px;">ROYAL EPIC DESIGN JOURNAL</span>
+            <h1 style="font-size: 42px; color: #ffffff; margin: 0 0 14px 0;">Design Better. Live Better.</h1>
+            <p style="font-size: 17px; color: #e5e7eb; max-width: 760px; line-height: 1.6; margin: 0;">
+              Practical guides on home interiors, modular kitchens, materials, wardrobes, false ceilings, pricing and planning for homeowners and businesses.
+            </p>
+          </div>
+        </header>
+        <section style="max-width: 1200px; margin: 0 auto; padding: 40px 24px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;">
+            ${cardsHtml}
+          </div>
+        </section>
+      </main>
+    </div>
+  `;
+
+  html = html.replace('<div id="root"></div>', preRenderedBlogList);
+  return html;
+}
+
+/**
+ * Injects SEO metadata, host-aware self-referencing canonical, BlogPosting + BreadcrumbList JSON-LD
+ * (without FAQPage JSON-LD), and full pre-rendered article body HTML for /blog/:slug.
+ */
+export function injectBlogPostIntoHtml(
+  templateHtml: string,
+  post: any,
+  wordCount: number,
+  siteOrigin?: string
+): string {
+  const effectiveOrigin = (siteOrigin || SITE_URL).replace(/\/+$/, '');
+  const canonicalUrl = `${effectiveOrigin}/blog/${post.slug}`;
+  const pageTitle = post.seoTitle || `${post.title} | Royal Epic Interiors`;
+  const metaDesc = post.metaDescription || post.excerpt || '';
+  const ogImage =
+    post.image && String(post.image).startsWith('http')
+      ? post.image
+      : `${effectiveOrigin}${post.image || '/images/indian-luxury-living-room.jpg'}`;
+
+  let html = templateHtml;
+
+  // 1. <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  // 2. <meta name="description">
+  const metaDescTag = `<meta name="description" content="${escapeHtml(metaDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. Host-aware self-referencing canonical
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 4. Open Graph & Twitter tags
+  const ogTags = `
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
+    <meta property="og:description" content="${escapeHtml(metaDesc)}" />
+    <meta property="og:url" content="${canonicalUrl}" />
+    <meta property="og:image" content="${escapeHtml(ogImage)}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
+    <meta name="twitter:description" content="${escapeHtml(metaDesc)}" />
+    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+  `;
+  html = html
+    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
+    .replace('</head>', `${ogTags}\n  </head>`);
+
+  // 5. BlogPosting + BreadcrumbList JSON-LD (no automatic FAQPage JSON-LD)
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BlogPosting',
+        '@id': `${canonicalUrl}#article`,
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': canonicalUrl,
+        },
+        headline: post.title,
+        description: metaDesc,
+        image: [ogImage],
+        datePublished: post.datePublishedIso || '2026-11-18',
+        dateModified: post.dateModifiedIso || '2026-11-26',
+        wordCount: wordCount || 1800,
+        articleSection: post.category,
+        inLanguage: 'en-IN',
+        keywords: [post.primaryKeyword, ...(post.secondaryKeywords || [])]
+          .filter(Boolean)
+          .join(', '),
+        author: {
+          '@type': 'Organization',
+          name: post.author || 'Royal Epic Interiors Editorial Team',
+          url: `${effectiveOrigin}/`,
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: 'Royal Epic Interiors',
+          url: `${effectiveOrigin}/`,
+          logo: {
+            '@type': 'ImageObject',
+            url: `${effectiveOrigin}/images/royal-epic-logo.png`,
+          },
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${canonicalUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: `${effectiveOrigin}/`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Design Journal',
+            item: `${effectiveOrigin}/blog`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: post.title,
+            item: canonicalUrl,
+          },
+        ],
+      },
+    ],
+  };
+
+  const jsonLdScript = `\n    <!-- Royal Epic BlogPosting Structured Data -->\n    <script type="application/ld+json" id="blog-post-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
+  html = html.replace('</head>', `${jsonLdScript}</head>`);
+
+  // 6. Full pre-rendered semantic HTML inside <div id="root">
+  const sectionsHtml = (Array.isArray(post.sections) ? post.sections : [])
+    .map((sec: any) => {
+      const paras = (sec.paragraphs || [])
+        .map((p: string) => `<p style="line-height: 1.8; margin: 0 0 14px 0;">${escapeHtml(p)}</p>`)
+        .join('');
+
+      const subs = (sec.subSections || [])
+        .map(
+          (sub: any) => `
+          <div style="margin: 18px 0; padding-left: 16px; border-left: 2px solid #D4AF37;">
+            <h3 style="font-size: 19px; color: #0F291E; margin: 0 0 8px 0;">${escapeHtml(sub.heading)}</h3>
+            ${(sub.paragraphs || []).map((sp: string) => `<p style="line-height: 1.75; margin: 0 0 10px 0;">${escapeHtml(sp)}</p>`).join('')}
+            ${sub.bullets ? `<ul>${sub.bullets.map((b: string) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>` : ''}
+          </div>
+        `
+        )
+        .join('');
+
+      const bullets = sec.bullets
+        ? `<ul style="margin: 14px 0 18px 20px; line-height: 1.7;">${sec.bullets.map((b: string) => `<li style="margin-bottom: 6px;">${escapeHtml(b)}</li>`).join('')}</ul>`
+        : '';
+
+      const tableHtml = sec.table
+        ? `
+          <div style="overflow-x: auto; margin: 20px 0;">
+            ${sec.table.caption ? `<p style="font-weight: 700; color: #0F291E; margin-bottom: 8px;">${escapeHtml(sec.table.caption)}</p>` : ''}
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; font-size: 14px;">
+              <thead>
+                <tr style="background: #f3f4f6;">
+                  ${(sec.table.headers || []).map((h: string) => `<th style="border: 1px solid #d1d5db; padding: 10px; text-align: left;">${escapeHtml(h)}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${(sec.table.rows || [])
+                  .map(
+                    (row: string[]) =>
+                      `<tr>${row.map((cell: string) => `<td style="border: 1px solid #d1d5db; padding: 10px;">${escapeHtml(cell)}</td>`).join('')}</tr>`
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+            ${sec.table.footnote || sec.table.note ? `<p style="font-size: 12px; color: #6b7280; font-style: italic; margin-top: 6px;">${escapeHtml(sec.table.footnote || sec.table.note)}</p>` : ''}
+          </div>
+        `
+        : '';
+
+      const checklistItems = sec.checklist?.items || sec.checklistItems || [];
+      const checklistHtml =
+        checklistItems.length > 0
+          ? `
+            <div style="background: #0F291E; color: #ffffff; padding: 20px; margin: 20px 0;">
+              <h3 style="color: #D4AF37; margin: 0 0 10px 0;">${escapeHtml(sec.checklist?.title || 'Homeowner Checklist')}</h3>
+              <ul>
+                ${checklistItems.map((item: string) => `<li style="margin-bottom: 6px;">${escapeHtml(item)}</li>`).join('')}
+              </ul>
+            </div>
+          `
+          : '';
+
+      const internalLinksHtml =
+        sec.internalLinks && sec.internalLinks.length > 0
+          ? `<div style="margin: 16px 0;">${sec.internalLinks
+              .map(
+                (l: any) =>
+                  `<p><a href="${escapeHtml(l.url)}" style="color: #0F291E; font-weight: 700;">${escapeHtml(l.label)}</a>${l.context ? ` — ${escapeHtml(l.context)}` : ''}</p>`
+              )
+              .join('')}</div>`
+          : '';
+
+      return `
+        <section id="${escapeHtml(sec.id)}" style="margin-bottom: 36px;">
+          <h2 style="font-size: 26px; color: #0F291E; margin: 0 0 14px 0;">${escapeHtml(sec.heading)}</h2>
+          ${paras}
+          ${subs}
+          ${bullets}
+          ${tableHtml}
+          ${checklistHtml}
+          ${internalLinksHtml}
+        </section>
+      `;
+    })
+    .join('');
+
+  const conclusionParagraphs = Array.isArray(post.conclusion)
+    ? post.conclusion
+    : post.conclusion?.paragraphs || [];
+  const conclusionHtml =
+    conclusionParagraphs.length > 0
+      ? `
+        <section id="article-conclusion" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+          <h2 style="font-size: 24px; color: #0F291E;">${escapeHtml(post.conclusion?.heading || 'Final Thoughts & Homeowner Takeaways')}</h2>
+          ${conclusionParagraphs.map((p: string) => `<p style="line-height: 1.8;">${escapeHtml(p)}</p>`).join('')}
+        </section>
+      `
+      : '';
+
+  const faqsHtml =
+    Array.isArray(post.faqs) && post.faqs.length > 0
+      ? `
+        <section id="frequently-asked-questions" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+          <h2 style="font-size: 24px; color: #0F291E; margin-bottom: 16px;">Frequently Asked Questions</h2>
+          ${post.faqs
+            .map(
+              (f: any, idx: number) => `
+              <div style="margin-bottom: 16px; padding: 16px; background: #FAF8F5; border: 1px solid #e5e7eb;">
+                <h3 style="font-size: 17px; color: #0F291E; margin: 0 0 6px 0;">${idx + 1}. ${escapeHtml(f.question)}</h3>
+                <p style="margin: 0; line-height: 1.75;">${escapeHtml(f.answer)}</p>
+              </div>
+            `
+            )
+            .join('')}
+        </section>
+      `
+      : '';
+
+  const relatedServicesHtml =
+    Array.isArray(post.relatedServiceLinks) && post.relatedServiceLinks.length > 0
+      ? `
+        <section style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+          <h2 style="font-size: 22px; color: #0F291E;">Explore Royal Epic Interior Services</h2>
+          <ul>
+            ${post.relatedServiceLinks
+              .map(
+                (s: any) =>
+                  `<li><a href="${escapeHtml(s.url || s.href || '/our-services')}">${escapeHtml(s.title || s.label)}</a> — ${escapeHtml(s.description || '')}</li>`
+              )
+              .join('')}
+          </ul>
+        </section>
+      `
+      : '';
+
+  const preRenderedArticle = `
+    <div id="root">
+      <article style="min-height: 100vh; background-color: #FAF8F5; color: #1f2937; font-family: Georgia, serif;">
+        <header style="background: #0F291E; color: #ffffff; padding: 48px 24px;">
+          <div style="max-width: 960px; margin: 0 auto;">
+            <nav aria-label="Breadcrumb" style="font-size: 12px; margin-bottom: 16px; color: #d1d5db;">
+              <a href="/" style="color: #d1d5db; text-decoration: none;">Home</a> &gt;
+              <a href="/blog" style="color: #d1d5db; text-decoration: none;">Design Journal</a> &gt;
+              <span>${escapeHtml(post.category)}</span>
+            </nav>
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #D4AF37; font-weight: 700;">${escapeHtml(post.category)}</span>
+            <h1 style="font-size: 36px; color: #ffffff; margin: 10px 0 14px 0; line-height: 1.2;">${escapeHtml(post.title)}</h1>
+            <p style="font-size: 17px; color: #e5e7eb; line-height: 1.65;">${escapeHtml(post.excerpt)}</p>
+            <div style="font-size: 12px; color: #d1d5db; margin-top: 16px;">
+              By ${escapeHtml(post.author)} • ${escapeHtml(post.date)} • ${escapeHtml(post.readTime)} • ${wordCount} words
+            </div>
+          </div>
+        </header>
+        <div style="max-width: 960px; margin: 0 auto; padding: 36px 24px; background: #ffffff;">
+          ${post.content ? `<p style="font-size: 18px; line-height: 1.8; margin-bottom: 28px;">${escapeHtml(post.content)}</p>` : ''}
+          ${sectionsHtml}
+          ${conclusionHtml}
+          ${faqsHtml}
+          ${relatedServicesHtml}
+          <div style="margin-top: 32px; padding: 24px; background: #0F291E; color: #ffffff;">
+            <h2 style="font-size: 22px; color: #D4AF37; margin: 0 0 8px 0;">${escapeHtml(post.ctaConfig?.heading || 'Planning Your Home Interiors?')}</h2>
+            <p style="margin: 0 0 14px 0;">${escapeHtml(post.ctaConfig?.subtext || 'Connect with Royal Epic Interiors in Bengaluru for a structured layout review and transparent quotation.')}</p>
+            <a href="/contact-us" style="color: #D4AF37; font-weight: 700;">Discuss Your Interior Requirements with Royal Epic →</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  `;
+
+  html = html.replace('<div id="root"></div>', preRenderedArticle);
+  return html;
+}
+
 

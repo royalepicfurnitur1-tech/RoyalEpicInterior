@@ -847,7 +847,7 @@ By commanding both precision manufacturing and on-site engineering, turnkey deli
     date: 'July 24, 2026',
     category: 'Turnkey Architecture',
     readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
+    image: '/images/blog/legacy-turnkey-interiors.jpg'
   },
   {
     id: 'blog-7',
@@ -866,7 +866,7 @@ By commanding both precision manufacturing and on-site engineering, turnkey deli
     date: 'July 22, 2026',
     category: 'Modular Kitchens',
     readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80'
+    image: '/images/blog/legacy-modular-kitchen-cost.png'
   },
   {
     id: 'blog-3',
@@ -885,7 +885,7 @@ By commanding both precision manufacturing and on-site engineering, turnkey deli
     date: 'July 15, 2026',
     category: 'Residential Interior',
     readTime: '5 min read',
-    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80'
+    image: '/images/blog/legacy-spatial-curation.jpg'
   },
   {
     id: 'blog-5',
@@ -904,7 +904,7 @@ By commanding both precision manufacturing and on-site engineering, turnkey deli
     date: 'July 05, 2026',
     category: 'Commercial Office',
     readTime: '7 min read',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80'
+    image: '/images/blog/legacy-corporate-office.jpg'
   },
   {
     id: 'blog-4',
@@ -923,7 +923,7 @@ By commanding both precision manufacturing and on-site engineering, turnkey deli
     date: 'July 10, 2026',
     category: 'Hospitality & Dining',
     readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80'
+    image: '/images/blog/legacy-restaurant-hospitality.jpg'
   },
   {
     id: 'blog-6',
@@ -942,7 +942,7 @@ By commanding both precision manufacturing and on-site engineering, turnkey deli
     date: 'June 28, 2026',
     category: 'Architectural Woodwork',
     readTime: '5 min read',
-    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80'
+    image: '/images/blog/legacy-architectural-doors.png'
   },
   {
     id: 'blog-2',
@@ -961,7 +961,7 @@ By commanding both precision manufacturing and on-site engineering, turnkey deli
     date: 'June 20, 2026',
     category: 'Wellness & Spa',
     readTime: '6 min read',
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80'
+    image: '/images/blog/legacy-luxury-spa-interior.jpg'
   }
 ];
 

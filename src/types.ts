@@ -154,6 +154,67 @@ export interface CustomAiDesignResult {
   timelineWeeks: string;
 }
 
+export interface BlogTableData {
+  caption?: string;
+  headers: string[];
+  rows: string[][];
+  footnote?: string;
+  note?: string;
+}
+
+export interface BlogSubSection {
+  id?: string;
+  heading: string;
+  paragraphs?: string[];
+  bullets?: string[];
+}
+
+export interface BlogInlineImage {
+  src: string;
+  alt: string;
+  caption?: string;
+}
+
+export interface BlogInternalLink {
+  label: string;
+  url: string;
+  context?: string;
+}
+
+export interface BlogArticleSection {
+  id: string;
+  heading: string;
+  paragraphs: string[];
+  subSections?: BlogSubSection[];
+  bullets?: string[];
+  table?: BlogTableData;
+  checklist?: {
+    title: string;
+    subtitle?: string;
+    items: string[];
+  };
+  checklistItems?: string[];
+  inlineImage?: BlogInlineImage;
+  callout?: {
+    title: string;
+    text: string;
+  };
+  internalLinks?: BlogInternalLink[];
+}
+
+export interface BlogFaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface BlogRelatedServiceLink {
+  title?: string;
+  url?: string;
+  label?: string;
+  href?: string;
+  description: string;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -165,6 +226,36 @@ export interface BlogPost {
   category: string;
   readTime: string;
   image: string;
+  // Extended SEO & Long-Form Knowledge Centre Fields
+  seoTitle?: string;
+  metaDescription?: string;
+  primaryKeyword?: string;
+  secondaryKeywords?: string[];
+  datePublishedIso?: string;
+  dateModifiedIso?: string;
+  imageAlt?: string;
+  imageCaption?: string;
+  wordCount?: number;
+  isFeatured?: boolean;
+  sections?: BlogArticleSection[];
+  conclusion?:
+    | {
+        heading: string;
+        paragraphs: string[];
+      }
+    | string[];
+  faqs?: BlogFaqItem[];
+  relatedArticleSlugs?: string[];
+  relatedServiceLinks?: BlogRelatedServiceLink[];
+  ctaConfig?: {
+    heading: string;
+    subtext: string;
+    primaryButtonText?: string;
+    secondaryLinkText?: string;
+    secondaryLinkUrl?: string;
+    buttonText?: string;
+    buttonHref?: string;
+  };
 }
 
 export interface KitchenEquipmentItem {
