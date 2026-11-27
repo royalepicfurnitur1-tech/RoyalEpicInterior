@@ -21,6 +21,7 @@ import {
   Filter,
   ArrowRight,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import {
   LoanNavigationTab,
@@ -45,6 +46,7 @@ import {
   updateLoanEnquiry,
   logLoanCall,
   fetchLoanFollowups,
+  deleteLoanEnquiry,
 } from './loanService';
 
 interface RoyalEpicLoansModuleProps {
@@ -361,6 +363,28 @@ export const RoyalEpicLoansModule: React.FC<RoyalEpicLoansModuleProps> = ({
     }
   };
 
+  const handleDeleteEnquiry = async (enq: LoanEnquiry, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const label = `${enq.customer_name} (${enq.enquiry_reference})`;
+    if (!window.confirm(`Are you sure you want to delete loan lead for "${label}"? This cannot be undone.`)) {
+      return;
+    }
+    setSavingUpdate(true);
+    try {
+      await deleteLoanEnquiry(enq.id);
+      showToast('success', `Loan lead ${enq.enquiry_reference} deleted.`);
+      if (selectedEnquiryId === enq.id) {
+        setSelectedEnquiryId(null);
+        setSelectedDetail(null);
+      }
+      await loadAllData();
+    } catch (err: any) {
+      showToast('error', err?.message || 'Failed to delete loan lead.');
+    } finally {
+      setSavingUpdate(false);
+    }
+  };
+
   const metrics = dashboardData?.metrics || {
     total_enquiries: 0,
     new_enquiries: 0,
@@ -625,7 +649,7 @@ export const RoyalEpicLoansModule: React.FC<RoyalEpicLoansModuleProps> = ({
                               {enq.status}
                             </span>
                           </td>
-                          <td className="py-3 pl-3 text-right space-x-2">
+                          <td className="py-3 pl-3 text-right whitespace-nowrap space-x-1.5">
                             <a
                               href={`tel:${enq.mobile_number}`}
                               onClick={() => openEnquiryDetail(enq.id, true)}
@@ -639,6 +663,15 @@ export const RoyalEpicLoansModule: React.FC<RoyalEpicLoansModuleProps> = ({
                               className="px-2.5 py-1 rounded-lg bg-neutral-800 text-neutral-200 hover:bg-neutral-700 font-semibold cursor-pointer"
                             >
                               Open
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteEnquiry(enq, e)}
+                              disabled={savingUpdate}
+                              title="Delete Loan Lead"
+                              className="inline-flex items-center justify-center p-1.5 rounded-lg bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/30 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </td>
                         </tr>
@@ -932,6 +965,15 @@ export const RoyalEpicLoansModule: React.FC<RoyalEpicLoansModuleProps> = ({
                           className="px-2.5 py-1.5 rounded-lg bg-neutral-800 text-neutral-200 hover:bg-neutral-700 font-semibold cursor-pointer"
                         >
                           Details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteEnquiry(enq, e)}
+                          disabled={savingUpdate}
+                          title="Delete Loan Lead"
+                          className="inline-flex items-center justify-center p-1.5 rounded-lg bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/30 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -1234,7 +1276,7 @@ export const RoyalEpicLoansModule: React.FC<RoyalEpicLoansModuleProps> = ({
                         <span className="text-[10px] text-neutral-500">
                           Staff: {enq.assigned_staff_name || 'Unassigned'}
                         </span>
-                        <div className="space-x-1.5">
+                        <div className="space-x-1.5 flex items-center">
                           <a
                             href={`tel:${enq.mobile_number}`}
                             onClick={() => openEnquiryDetail(enq.id, true)}
@@ -1248,6 +1290,15 @@ export const RoyalEpicLoansModule: React.FC<RoyalEpicLoansModuleProps> = ({
                             className="px-2 py-1 rounded bg-neutral-800 text-neutral-200 font-semibold text-[11px] cursor-pointer"
                           >
                             Open
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteEnquiry(enq, e)}
+                            disabled={savingUpdate}
+                            title="Delete Loan Lead"
+                            className="inline-flex items-center justify-center p-1 rounded bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/30 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
@@ -1345,16 +1396,30 @@ export const RoyalEpicLoansModule: React.FC<RoyalEpicLoansModuleProps> = ({
                   {selectedDetail?.enquiry.customer_name || 'Loan Enquiry Detail'}
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedEnquiryId(null);
-                  setSelectedDetail(null);
-                }}
-                className="p-2 rounded-xl bg-neutral-900 text-neutral-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {selectedDetail?.enquiry && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteEnquiry(selectedDetail.enquiry)}
+                    disabled={savingUpdate}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                    title="Delete Loan Lead"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Lead</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedEnquiryId(null);
+                    setSelectedDetail(null);
+                  }}
+                  className="p-2 rounded-xl bg-neutral-900 text-neutral-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {detailLoading || !selectedDetail ? (

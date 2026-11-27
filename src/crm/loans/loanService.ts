@@ -177,3 +177,14 @@ export async function fetchLoanFollowups(assignedStaff?: string): Promise<{
   });
   return handleLoanApiResponse(res, 'Failed to fetch loan follow-ups.');
 }
+
+export async function deleteLoanEnquiry(
+  id: string
+): Promise<{ success: boolean; message?: string }> {
+  const res = await fetch(`/api/crm/loans/enquiries/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getCrmAuthHeaders(),
+  });
+  return handleLoanApiResponse(res, 'Failed to delete loan enquiry.');
+}
+

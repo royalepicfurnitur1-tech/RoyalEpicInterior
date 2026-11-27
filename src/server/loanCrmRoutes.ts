@@ -223,14 +223,18 @@ function writeJsonArray<T>(filePath: string, data: T[]): void {
   }
 }
 
+const LOAN_DELETED_IDS_FILE = path.join(DB_DIR, 'loan_deleted_ids.json');
+
 let devEnquiriesStore: LoanEnquiryRecord[] = readJsonArray<LoanEnquiryRecord>(LOAN_ENQUIRIES_FILE);
 let devCallLogsStore: LoanCallLogRecord[] = readJsonArray<LoanCallLogRecord>(LOAN_CALL_LOGS_FILE);
 let devActivitiesStore: LoanActivityRecord[] = readJsonArray<LoanActivityRecord>(LOAN_ACTIVITIES_FILE);
+const deletedEnquiryIds = new Set<string>(readJsonArray<string>(LOAN_DELETED_IDS_FILE));
 
 function saveDevStores(): void {
   writeJsonArray(LOAN_ENQUIRIES_FILE, devEnquiriesStore);
   writeJsonArray(LOAN_CALL_LOGS_FILE, devCallLogsStore);
   writeJsonArray(LOAN_ACTIVITIES_FILE, devActivitiesStore);
+  writeJsonArray(LOAN_DELETED_IDS_FILE, Array.from(deletedEnquiryIds));
 }
 
 function upsertLocalEnquiry(record: LoanEnquiryRecord): void {
@@ -283,10 +287,14 @@ async function parseSupabaseError(res: globalThis.Response): Promise<{ code: str
 function mergeEnquiryLists(primary: LoanEnquiryRecord[], secondary: LoanEnquiryRecord[]): LoanEnquiryRecord[] {
   const map = new Map<string, LoanEnquiryRecord>();
   for (const item of secondary) {
-    map.set(item.id, item);
+    if (!deletedEnquiryIds.has(item.id) && !deletedEnquiryIds.has(item.enquiry_reference)) {
+      map.set(item.id, item);
+    }
   }
   for (const item of primary) {
-    map.set(item.id, item);
+    if (!deletedEnquiryIds.has(item.id) && !deletedEnquiryIds.has(item.enquiry_reference)) {
+      map.set(item.id, item);
+    }
   }
   return Array.from(map.values()).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -294,9 +302,12 @@ function mergeEnquiryLists(primary: LoanEnquiryRecord[], secondary: LoanEnquiryR
 }
 
 async function sbFetchAllEnquiries(): Promise<LoanEnquiryRecord[]> {
+  const filteredLocal = devEnquiriesStore.filter(
+    (e) => !deletedEnquiryIds.has(e.id) && !deletedEnquiryIds.has(e.enquiry_reference)
+  );
   const cfg = getLoanServiceSupabaseConfig();
   if (!cfg.isConfigured || !cfg.serviceRoleKey) {
-    return [...devEnquiriesStore];
+    return [...filteredLocal];
   }
 
   try {
@@ -309,19 +320,41 @@ async function sbFetchAllEnquiries(): Promise<LoanEnquiryRecord[]> {
     );
 
     if (!res.ok) {
-      return [...devEnquiriesStore];
+      return [...filteredLocal];
     }
 
     const rows = await res.json();
     const sbRows: LoanEnquiryRecord[] = Array.isArray(rows) ? rows : [];
-    const merged = mergeEnquiryLists(sbRows, devEnquiriesStore);
+    const merged = mergeEnquiryLists(sbRows, filteredLocal);
     if (sbRows.length > 0) {
       devEnquiriesStore = merged;
       saveDevStores();
     }
     return merged;
   } catch (_) {
-    return [...devEnquiriesStore];
+    return [...filteredLocal];
+  }
+}
+
+async function sbDeleteEnquiry(enquiry: LoanEnquiryRecord): Promise<void> {
+  deletedEnquiryIds.add(enquiry.id);
+  deletedEnquiryIds.add(enquiry.enquiry_reference);
+  devEnquiriesStore = devEnquiriesStore.filter(
+    (e) => e.id !== enquiry.id && e.enquiry_reference !== enquiry.enquiry_reference
+  );
+  devCallLogsStore = devCallLogsStore.filter((c) => c.loan_enquiry_id !== enquiry.id);
+  devActivitiesStore = devActivitiesStore.filter((a) => a.loan_enquiry_id !== enquiry.id);
+  saveDevStores();
+
+  const cfg = getLoanServiceSupabaseConfig();
+  if (cfg.isConfigured && cfg.serviceRoleKey) {
+    try {
+      await fetch(`${cfg.url}/rest/v1/loan_enquiries?id=eq.${encodeURIComponent(enquiry.id)}`, {
+        method: 'DELETE',
+        headers: getServiceRoleHeaders(cfg.serviceRoleKey),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (_) {}
   }
 }
 
@@ -1410,6 +1443,31 @@ loanCrmRouter.patch('/enquiries/:id', async (req: Request, res: Response) => {
     return res.status(503).json({
       success: false,
       error: err?.message || 'Failed to update loan enquiry in Supabase.',
+    });
+  }
+});
+
+// 6b. DELETE /api/crm/loans/enquiries/:id (Authorised CRM staff only)
+loanCrmRouter.delete('/enquiries/:id', async (req: Request, res: Response) => {
+  try {
+    const idOrRef = req.params.id;
+    const enquiry = await sbFindEnquiryByIdOrRef(idOrRef);
+
+    if (!enquiry) {
+      return res.status(404).json({ success: false, error: 'Loan enquiry not found.' });
+    }
+
+    await sbDeleteEnquiry(enquiry);
+
+    return res.json({
+      success: true,
+      message: 'Loan enquiry deleted successfully.',
+    });
+  } catch (err: any) {
+    console.error('[LoansCRM] Delete enquiry error:', err?.message || 'Database error');
+    return res.status(503).json({
+      success: false,
+      error: err?.message || 'Failed to delete loan enquiry.',
     });
   }
 });

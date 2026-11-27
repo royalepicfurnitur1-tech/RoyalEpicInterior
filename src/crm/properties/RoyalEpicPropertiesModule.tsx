@@ -44,6 +44,7 @@ import {
   fetchPropertyCrmStaff,
   fetchPropertyLeads,
   createPropertyLead,
+  archivePropertyLead,
   fetchPropertyFollowups,
   fetchPropertyListings,
   reviewPropertyListing,
@@ -97,7 +98,8 @@ import {
   Calendar,
   ArrowRight,
   Clock,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 
 interface RoyalEpicPropertiesModuleProps {
@@ -454,6 +456,25 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
       setErrorBanner(err.message || 'Failed to create property lead.');
     } finally {
       setSubmittingLead(false);
+    }
+  };
+
+  const handleDeletePropertyLead = async (lead: PropertyLead, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const label = `${lead.owner_name || 'Property Owner'} (${lead.lead_code || lead.id})`;
+    if (!window.confirm(`Are you sure you want to delete property lead for "${label}"? This cannot be undone.`)) {
+      return;
+    }
+    setErrorBanner(null);
+    try {
+      await archivePropertyLead(lead.id);
+      showSuccess(`Property Lead ${lead.lead_code || lead.id} deleted.`);
+      if (workspaceLeadId === lead.id) {
+        setWorkspaceLeadId(null);
+      }
+      await loadSectionData();
+    } catch (err: any) {
+      setErrorBanner(err.message || 'Failed to delete property lead.');
     }
   };
 
@@ -1357,6 +1378,14 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                             <Eye className="w-3 h-3" />
                             <span>Open</span>
                           </button>
+                          <button
+                            type="button"
+                            onClick={e => handleDeletePropertyLead(lead, e)}
+                            className="inline-flex items-center justify-center p-1.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer"
+                            title="Delete Property Lead"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -1792,7 +1821,7 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                       <td className="py-3 px-4 text-[#6E5A3E]">
                         {lead.followup_notes || lead.initial_notes || '—'}
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap space-x-1.5">
                         <button
                           onClick={() => {
                             setWorkspaceLeadId(lead.id);
@@ -1802,6 +1831,14 @@ export const RoyalEpicPropertiesModule: React.FC<RoyalEpicPropertiesModuleProps>
                         >
                           <Phone className="w-3.5 h-3.5" />
                           <span>Log Owner Call</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={e => handleDeletePropertyLead(lead, e)}
+                          className="inline-flex items-center justify-center p-1.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer"
+                          title="Delete Property Lead"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
