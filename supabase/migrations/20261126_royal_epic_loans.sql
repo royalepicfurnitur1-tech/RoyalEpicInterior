@@ -100,31 +100,23 @@ ALTER TABLE public.loan_call_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.loan_activities ENABLE ROW LEVEL SECURITY;
 
 -- -----------------------------------------------------------------------------
--- 5. Strict Privilege Isolation (Revoke from PUBLIC/anon/authenticated; Grant only to service_role)
+-- 5. Grant Privileges to anon, authenticated, and service_role (Matches Properties CRM)
 -- -----------------------------------------------------------------------------
-REVOKE ALL ON TABLE public.loan_enquiries FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON TABLE public.loan_call_logs FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON TABLE public.loan_activities FROM PUBLIC, anon, authenticated;
-
-GRANT USAGE ON SCHEMA public TO service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.loan_enquiries TO service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.loan_call_logs TO service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.loan_activities TO service_role;
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.loan_enquiries TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.loan_call_logs TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.loan_activities TO anon, authenticated, service_role;
 
 -- -----------------------------------------------------------------------------
--- 6. Clean Up Legacy Policies & Enforce Service-Role-Only RLS Policies
+-- 6. Clean Up Legacy Policies & Enable CRM Access Policies (anon, authenticated, service_role)
 -- -----------------------------------------------------------------------------
-CREATE POLICY "service_role_manage_loan_enquiries"
+DROP POLICY IF EXISTS "Allow CRM access on loan_enquiries" ON public.loan_enquiries;
+CREATE POLICY "Allow CRM access on loan_enquiries"
   ON public.loan_enquiries
   FOR ALL
-  TO service_role
+  TO anon, authenticated, service_role
   USING (true)
-  WITH CHECK (
-    length(trim(customer_name)) >= 2
-    AND length(trim(mobile_number)) >= 10
-    AND length(trim(finance_purpose)) >= 3
-    AND consent_accepted = true
-  );
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Authenticated staff can read loan_call_logs" ON public.loan_call_logs;
 DROP POLICY IF EXISTS "Authenticated staff can insert loan_call_logs" ON public.loan_call_logs;
@@ -134,15 +126,12 @@ DROP POLICY IF EXISTS "Allow CRM access on loan_call_logs" ON public.loan_call_l
 DROP POLICY IF EXISTS "service_role_full_access_loan_call_logs" ON public.loan_call_logs;
 DROP POLICY IF EXISTS "service_role_manage_loan_call_logs" ON public.loan_call_logs;
 
-CREATE POLICY "service_role_manage_loan_call_logs"
+CREATE POLICY "Allow CRM access on loan_call_logs"
   ON public.loan_call_logs
   FOR ALL
-  TO service_role
+  TO anon, authenticated, service_role
   USING (true)
-  WITH CHECK (
-    length(trim(staff_id)) >= 1
-    AND length(trim(call_status)) >= 2
-  );
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Authenticated staff can read loan_activities" ON public.loan_activities;
 DROP POLICY IF EXISTS "Authenticated staff can insert loan_activities" ON public.loan_activities;
@@ -152,15 +141,12 @@ DROP POLICY IF EXISTS "Allow CRM access on loan_activities" ON public.loan_activ
 DROP POLICY IF EXISTS "service_role_full_access_loan_activities" ON public.loan_activities;
 DROP POLICY IF EXISTS "service_role_manage_loan_activities" ON public.loan_activities;
 
-CREATE POLICY "service_role_manage_loan_activities"
+CREATE POLICY "Allow CRM access on loan_activities"
   ON public.loan_activities
   FOR ALL
-  TO service_role
+  TO anon, authenticated, service_role
   USING (true)
-  WITH CHECK (
-    length(trim(action_type)) >= 2
-    AND length(trim(description)) >= 2
-  );
+  WITH CHECK (true);
 
 -- -----------------------------------------------------------------------------
 -- 7. Reload PostgREST Schema Cache & Return Verification Output
