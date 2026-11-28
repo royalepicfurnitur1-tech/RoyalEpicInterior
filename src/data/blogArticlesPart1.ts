@@ -327,9 +327,14 @@ export const BLOG_ARTICLES_PART_1: BlogPost[] = [
         description: 'Custom ergonomic kitchens engineered with IS 710 BWR ply, HDHMR and German hardware.',
       },
       {
-        title: 'Home Interior & Renovation Finance Assistance',
-        url: '/loans',
-        description: 'Explore finance enquiry assistance for turnkey home interiors, modular kitchens and renovation projects in Bengaluru.',
+        title: 'Home Interior Finance Assistance',
+        url: '/loans/home-interior-finance',
+        description: 'Explore finance enquiry assistance for turnkey home interiors, modular kitchens and wardrobes in Bengaluru.',
+      },
+      {
+        title: 'Home Renovation Finance Assistance',
+        url: '/loans/home-renovation-finance',
+        description: 'Planning civil remodelling or home upgrades? View our structured home renovation finance guidance.',
       },
       {
         title: 'Verified Rental Properties in Bengaluru',
@@ -1165,9 +1170,14 @@ export const BLOG_ARTICLES_PART_1: BlogPost[] = [
         description: 'Custom 2BHK, 3BHK and villa interior planning with complete material transparency.',
       },
       {
-        title: 'Home Interior Finance & Loans Assistance',
-        url: '/loans',
-        description: 'Explore structured home interior and renovation finance guidance from Royal Epic.',
+        title: 'Home Interior Finance Assistance',
+        url: '/loans/home-interior-finance',
+        description: 'Explore structured home interior finance enquiry assistance for modular kitchens, wardrobes and turnkey fit-outs.',
+      },
+      {
+        title: 'Home Construction & Renovation Finance Guides',
+        url: '/loans/home-construction-finance',
+        description: 'Planning independent home construction or renovation in Bengaluru? Explore our dedicated finance guidance.',
       },
     ],
     ctaConfig: {

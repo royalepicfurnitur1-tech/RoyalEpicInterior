@@ -131,7 +131,6 @@ export const ContactSection: React.FC = () => {
                   <div className="space-y-1">
                     <span className="font-bold text-stone-900 block">Official Email Support</span>
                     <a href="mailto:royalepicfurnitur1@gmail.com" className="hover:text-amber-800 font-mono block text-stone-600">royalepicfurnitur1@gmail.com</a>
-                    <a href="mailto:info@royalepic.in" className="hover:text-amber-800 font-mono block text-stone-600">info@royalepic.in</a>
                     <a href="mailto:enquiry@royalepicinterior.com" className="hover:text-amber-800 font-mono block text-stone-600">enquiry@royalepicinterior.com</a>
                   </div>
                 </div>

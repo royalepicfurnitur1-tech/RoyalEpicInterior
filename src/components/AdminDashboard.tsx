@@ -155,7 +155,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     bannerOfferActive: true,
     contactAddress: 'No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045',
     contactPhone: '+91 70261 19311',
-    contactEmail: 'info@royalepicfurniture.com'
+    contactEmail: 'enquiry@royalepicinterior.com'
   });
   const [isSavingCms, setIsSavingCms] = useState(false);
 

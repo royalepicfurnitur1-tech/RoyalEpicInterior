@@ -19,10 +19,13 @@ import {
   injectPropertyDetailIntoHtml,
   injectPropertyNotFoundIntoHtml,
   injectLoansPageIntoHtml,
+  injectLoanServicePageIntoHtml,
+  injectLoanPageNotFoundIntoHtml,
   injectBlogListIntoHtml,
   injectBlogPostIntoHtml,
   SITE_URL
 } from "./src/server/productHtmlRenderer";
+import { findLoanServicePageBySlug } from "./src/data/loansServicePagesData";
 import { ALL_BLOG_POSTS, findBlogPostBySlug, computeArticleWordCount } from "./src/data/blogArticlesData";
 import { SEO_PAGES } from "./src/data/seoPages";
 import { PRODUCTS_DATA } from "./src/data/mockData";
@@ -800,6 +803,41 @@ async function startServer() {
       return res.status(200).send(enrichedHtml);
     } catch (err: any) {
       console.warn("[LoansSSR] Error rendering /loans HTML:", err?.message || err);
+      next();
+    }
+  });
+
+  // Royal Epic Loans Dedicated Service Pages (/loans/:slug) - Host-Aware Self-Canonical, Structured Data & 404 Handling
+  app.get("/loans/:slug", async (req, res, next) => {
+    if (/\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|xml|txt)$/i.test(req.params.slug)) {
+      return next();
+    }
+
+    try {
+      const hostOrigin = resolveRequestHostOrigin(req);
+      const slug = req.params.slug;
+      const pageData = findLoanServicePageBySlug(slug);
+      const template = await getIndexHtmlTemplate(req.originalUrl || `/loans/${slug}`);
+
+      if (pageData) {
+        const enrichedHtml = injectLoanServicePageIntoHtml(template, pageData, hostOrigin);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(200).send(enrichedHtml);
+      } else {
+        const notFoundHtml = injectLoanPageNotFoundIntoHtml(template, hostOrigin);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(404).send(notFoundHtml);
+      }
+    } catch (err: any) {
+      console.warn("[LoansServiceSSR] Error rendering /loans/:slug HTML:", err?.message || err);
       next();
     }
   });
@@ -3070,7 +3108,7 @@ Provide a JSON response with the following keys:
     bannerOfferActive: true,
     contactAddress: "No. 10, Royal EPIC Interiors, 2nd, Thanisandra Main Road, Near Railway Bridge, Sinthan Nagar, Rachenahalli, Nagawara, Bengaluru, Karnataka 560045",
     contactPhone: "+91 70261 19311",
-    contactEmail: "info@royalepicinterior.com"
+    contactEmail: "enquiry@royalepicinterior.com"
   };
 
   app.get("/api/cms/content", (req, res) => {

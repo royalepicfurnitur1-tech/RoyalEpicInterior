@@ -921,6 +921,16 @@ export const BLOG_ARTICLES_PART2: BlogPost[] = [
         href: '/custom-furniture-and-wardrobes',
         description: 'Space-saving foyer units, WFH workstations, TV consoles, and floor-to-ceiling wardrobes.',
       },
+      {
+        label: 'Home Interior Finance Assistance',
+        href: '/loans/home-interior-finance',
+        description: 'Structured finance enquiry assistance for 2BHK, 3BHK and villa interiors in Bengaluru.',
+      },
+      {
+        label: 'Property-Related Finance Assistance',
+        href: '/loans/property-related-finance',
+        description: 'Personal guidance for residential property acquisition and property-linked finance enquiries.',
+      },
     ],
     ctaConfig: {
       heading: 'Getting Possession of Your Bengaluru Apartment Soon?',
@@ -1144,6 +1154,16 @@ export const BLOG_ARTICLES_PART2: BlogPost[] = [
         label: 'Home Interior Decorating',
         href: '/home-interior-decorating',
         description: 'Coordinated living, dining, and bedroom interiors backed by a 15-Year Warranty.',
+      },
+      {
+        label: 'Home Interior Finance Assistance',
+        href: '/loans/home-interior-finance',
+        description: 'Align your interior project milestones with structured home interior finance guidance.',
+      },
+      {
+        label: 'Home Renovation Finance Assistance',
+        href: '/loans/home-renovation-finance',
+        description: 'Planning civil remodelling or home extensions? Explore our renovation finance assistance.',
       },
     ],
     ctaConfig: {

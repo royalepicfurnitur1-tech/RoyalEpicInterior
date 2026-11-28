@@ -64,7 +64,11 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
 
   const galleryLinks = [
     { label: 'Royal Epic Properties – Rental Listings', path: '/properties' },
-    { label: 'Royal Epic Loans – Finance Enquiries', path: '/loans' },
+    { label: 'Royal Epic Loans – Finance Hub', path: '/loans' },
+    { label: 'Home Construction Finance Assistance', path: '/loans/home-construction-finance' },
+    { label: 'Home Interior Finance Assistance', path: '/loans/home-interior-finance' },
+    { label: 'Home Renovation Finance Assistance', path: '/loans/home-renovation-finance' },
+    { label: 'Property-Related Finance Assistance', path: '/loans/property-related-finance' },
     { label: 'Restaurant Interior Gallery', path: '/restaurant-interior-gallery' },
     { label: 'Chettinad & Kerala Traditional Homes', path: '/chettinad-kerala-traditional-homes' },
     { label: 'Completed Project Showcase', path: '/completed-projects' }
@@ -166,7 +170,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, onOpenQuote, onOpe
                 <div className="space-y-0.5">
                   <span className="text-stone-600 block font-semibold text-[11px]">Email Support:</span>
                   <a href="mailto:royalepicfurnitur1@gmail.com" className="hover:text-amber-800 block font-mono text-[11px] text-stone-800 font-medium">royalepicfurnitur1@gmail.com</a>
-                  <a href="mailto:info@royalepicinterior.com" className="hover:text-amber-800 block font-mono text-[11px] text-stone-800 font-medium">info@royalepicinterior.com</a>
+                  <a href="mailto:enquiry@royalepicinterior.com" className="hover:text-amber-800 block font-mono text-[11px] text-stone-800 font-medium">enquiry@royalepicinterior.com</a>
                 </div>
               </div>
             </div>

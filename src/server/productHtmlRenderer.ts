@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import { slugify } from '../utils/productSlug';
 import { PRODUCTS_DATA } from '../data/mockData';
+import { LOANS_SERVICE_PAGES, LoanServicePageData } from '../data/loansServicePagesData';
 
 export const SITE_URL = 'https://royalepicinterior.com';
 
@@ -1834,20 +1835,32 @@ export function injectLoansPageIntoHtml(
           <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 32px 0 16px 0;">Finance Services We Assist With</h2>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 40px;">
             <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Home Construction Finance</h3>
-              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Planning to build an independent house or residential property? Share your construction plans and approximate requirement with us, and our team will connect with you to discuss suitable finance options.</p>
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">
+                <a href="/loans/home-construction-finance" style="color: #1C2331; text-decoration: none;">Home Construction Finance</a>
+              </h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0 0 12px 0;">Planning to build an independent house or residential property? Share your construction plans and approximate requirement with us, and our team will connect with you to discuss suitable finance options.</p>
+              <a href="/loans/home-construction-finance" style="font-size: 13px; font-weight: 600; color: #8C6D3B;">Explore Home Construction Finance &rarr;</a>
             </article>
             <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Home Interior Finance</h3>
-              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Designing your new apartment, villa or independent home? Explore finance support for turnkey home interiors, modular kitchens, wardrobes, furniture and complete interior execution.</p>
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">
+                <a href="/loans/home-interior-finance" style="color: #1C2331; text-decoration: none;">Home Interior Finance</a>
+              </h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0 0 12px 0;">Designing your new apartment, villa or independent home? Explore finance support for turnkey home interiors, modular kitchens, wardrobes, furniture and complete interior execution.</p>
+              <a href="/loans/home-interior-finance" style="font-size: 13px; font-weight: 600; color: #8C6D3B;">Explore Home Interior Finance &rarr;</a>
             </article>
             <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Home Renovation Finance</h3>
-              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Upgrading your existing home, remodelling key rooms or modernising your interiors? Submit an enquiry to explore finance options for home improvement and renovation work.</p>
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">
+                <a href="/loans/home-renovation-finance" style="color: #1C2331; text-decoration: none;">Home Renovation Finance</a>
+              </h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0 0 12px 0;">Upgrading your existing home, remodelling key rooms or modernising your interiors? Submit an enquiry to explore finance options for home improvement and renovation work.</p>
+              <a href="/loans/home-renovation-finance" style="font-size: 13px; font-weight: 600; color: #8C6D3B;">Explore Home Renovation Finance &rarr;</a>
             </article>
             <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Property-Related Finance</h3>
-              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Looking for financial guidance related to a residential property requirement? Share your details and our team will review your enquiry and guide you appropriately.</p>
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">
+                <a href="/loans/property-related-finance" style="color: #1C2331; text-decoration: none;">Property-Related Finance</a>
+              </h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0 0 12px 0;">Looking for financial guidance related to a residential property requirement? Share your details and our team will review your enquiry and guide you appropriately.</p>
+              <a href="/loans/property-related-finance" style="font-size: 13px; font-weight: 600; color: #8C6D3B;">Explore Property-Related Finance &rarr;</a>
             </article>
           </div>
 
@@ -1862,6 +1875,10 @@ export function injectLoansPageIntoHtml(
           <section style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px; margin-bottom: 36px;">
             <h2 style="font-size: 20px; font-weight: 700; color: #1C2331; margin: 0 0 12px 0;">Explore Related Royal Epic Services &amp; Planning Guides</h2>
             <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+              <li><a href="/loans/home-construction-finance" style="color: #8C6D3B; font-weight: 600;">Home Construction Finance Assistance in Bengaluru</a></li>
+              <li><a href="/loans/home-interior-finance" style="color: #8C6D3B; font-weight: 600;">Home Interior Finance Assistance in Bengaluru</a></li>
+              <li><a href="/loans/home-renovation-finance" style="color: #8C6D3B; font-weight: 600;">Home Renovation Finance Assistance in Bengaluru</a></li>
+              <li><a href="/loans/property-related-finance" style="color: #8C6D3B; font-weight: 600;">Property-Related Finance Assistance in Bengaluru</a></li>
               <li><a href="/turnkey-interior-contractors-bangalore" style="color: #8C6D3B; font-weight: 600;">Turnkey Interior Contractors in Bengaluru</a></li>
               <li><a href="/home-interior-design-bangalore" style="color: #8C6D3B; font-weight: 600;">Home Interior Design Services Bengaluru</a></li>
               <li><a href="/modular-kitchen-bangalore" style="color: #8C6D3B; font-weight: 600;">Factory Modular Kitchen Design in Bengaluru</a></li>
@@ -1893,6 +1910,396 @@ export function injectLoansPageIntoHtml(
   `;
 
   return html.replace('<div id="root"></div>', preRenderedLoans);
+}
+
+/**
+ * Render one of the four dedicated Royal Epic Loans service landing pages (/loans/:slug)
+ * with host-aware self-canonical URL, in-place Open Graph & Twitter tags,
+ * WebPage + Service + BreadcrumbList + FAQPage JSON-LD, and full semantic SSR HTML inside #root.
+ */
+export function injectLoanServicePageIntoHtml(
+  templateHtml: string,
+  pageData: LoanServicePageData,
+  hostOrigin: string = SITE_URL
+): string {
+  const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
+  const canonicalUrl = `${effectiveOrigin}${pageData.path}`;
+  const pageTitle = pageData.seoTitle;
+  const metaDesc = pageData.metaDescription;
+  const ogImage = `${effectiveOrigin}${pageData.ogImagePath}`;
+
+  let html = templateHtml;
+
+  // 1. <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  // 2. <meta name="description">
+  const metaDescTag = `<meta name="description" content="${escapeHtml(metaDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. Host-aware self-canonical URL
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 4. Open Graph & Twitter tags (in-place replacement, no duplicates)
+  html = applyCleanSocialMetaAndOrigin(html, {
+    title: pageTitle,
+    description: metaDesc,
+    canonicalUrl,
+    ogImage,
+    ogType: 'website',
+    effectiveOrigin,
+  });
+
+  // 5. Structured Data: WebPage, Service, BreadcrumbList, FAQPage
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: pageTitle,
+      description: metaDesc,
+      url: canonicalUrl,
+      primaryImageOfPage: {
+        '@type': 'ImageObject',
+        url: ogImage,
+      },
+      mainEntity: {
+        '@type': 'Service',
+        name: `${pageData.h1} – Royal Epic Loans`,
+        description: pageData.heroSubtitle,
+        image: ogImage,
+        serviceType: `${pageData.financePurpose} Enquiry Assistance`,
+        provider: {
+          '@type': 'Organization',
+          name: 'Royal Epic Interiors',
+          url: `${effectiveOrigin}/`,
+          telephone: '+91-7026119311',
+        },
+        areaServed: {
+          '@type': 'City',
+          name: 'Bengaluru',
+        },
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${effectiveOrigin}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Loans',
+          item: `${effectiveOrigin}/loans`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: pageData.h1,
+          item: canonicalUrl,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: pageData.faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    },
+  ];
+
+  const jsonLdScript = `\n    <!-- Royal Epic Loans Service Page Structured Data -->\n    <script type="application/ld+json" id="loan-service-page-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
+  html = html.replace('</head>', `${jsonLdScript}</head>`);
+
+  // 6. Semantic Pre-rendered HTML inside <div id="root">
+  const siblingPages = LOANS_SERVICE_PAGES.filter((p) => p.slug !== pageData.slug);
+  const preRenderedServiceHtml = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #FAF7F2; color: #1C2331; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <nav aria-label="Breadcrumb" style="background: #F4EFE6; border-bottom: 1px solid #E5DEC9; padding: 12px 24px; font-size: 13px;">
+          <div style="max-width: 1280px; margin: 0 auto;">
+            <a href="/" style="color: #57534e; text-decoration: none;">Home</a> &gt;
+            <a href="/loans" style="color: #57534e; text-decoration: none;">Loans</a> &gt;
+            <span style="color: #1C2331; font-weight: 600;">${escapeHtml(pageData.h1)}</span>
+          </div>
+        </nav>
+
+        <article style="max-width: 1280px; margin: 0 auto; padding: 48px 24px;">
+          <header style="margin-bottom: 36px;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: #8C6D3B; display: block; margin-bottom: 10px;">
+              ${escapeHtml(pageData.badgeText)}
+            </span>
+            <h1 style="font-size: 36px; font-weight: 800; color: #1C2331; margin: 0 0 16px 0;">
+              ${escapeHtml(pageData.h1)}
+            </h1>
+            <p style="font-size: 17px; line-height: 1.7; color: #57534e; max-width: 840px; margin: 0 0 14px 0;">
+              ${escapeHtml(pageData.heroSubtitle)}
+            </p>
+            <p style="font-size: 14px; line-height: 1.6; color: #8C6D3B; margin: 0;">
+              ${escapeHtml(pageData.heroSupportNote)}
+            </p>
+          </header>
+
+          <section style="margin-bottom: 40px;">
+            <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 0 0 14px 0;">
+              ${escapeHtml(pageData.introHeading)}
+            </h2>
+            ${pageData.introParagraphs
+              .map(
+                (para) =>
+                  `<p style="font-size: 15px; line-height: 1.75; color: #44403c; margin: 0 0 14px 0;">${escapeHtml(para)}</p>`
+              )
+              .join('')}
+          </section>
+
+          <section style="margin-bottom: 40px;">
+            <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 0 0 10px 0;">
+              ${escapeHtml(pageData.whoThisHelpsHeading)}
+            </h2>
+            <p style="font-size: 15px; line-height: 1.7; color: #57534e; margin: 0 0 20px 0;">
+              ${escapeHtml(pageData.whoThisHelpsLead)}
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+              ${pageData.whoThisHelpsCards
+                .map(
+                  (card) => `
+                <div style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
+                  <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 10px 0;">${escapeHtml(card.title)}</h3>
+                  <p style="font-size: 14px; line-height: 1.65; color: #57534e; margin: 0 0 12px 0;">${escapeHtml(card.description)}</p>
+                  <ul style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.7; color: #44403c;">
+                    ${card.points.map((pt) => `<li>${escapeHtml(pt)}</li>`).join('')}
+                  </ul>
+                </div>`
+                )
+                .join('')}
+            </div>
+          </section>
+
+          <section style="margin-bottom: 40px;">
+            <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 0 0 10px 0;">
+              ${escapeHtml(pageData.stagesHeading)}
+            </h2>
+            <p style="font-size: 15px; line-height: 1.7; color: #57534e; margin: 0 0 20px 0;">
+              ${escapeHtml(pageData.stagesLead)}
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+              ${pageData.stages
+                .map(
+                  (st) => `
+                <div style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
+                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #8C6D3B; display: block; margin-bottom: 6px;">${escapeHtml(st.stageNumber)}</span>
+                  <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">${escapeHtml(st.title)}</h3>
+                  <p style="font-size: 14px; line-height: 1.65; color: #57534e; margin: 0 0 12px 0;">${escapeHtml(st.summary)}</p>
+                  <ul style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.7; color: #44403c;">
+                    ${st.details.map((dt) => `<li>${escapeHtml(dt)}</li>`).join('')}
+                  </ul>
+                </div>`
+                )
+                .join('')}
+            </div>
+          </section>
+
+          <section style="margin-bottom: 40px;">
+            <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 0 0 14px 0;">
+              ${escapeHtml(pageData.budgetGuidanceHeading)}
+            </h2>
+            ${pageData.budgetGuidanceParagraphs
+              .map(
+                (para) =>
+                  `<p style="font-size: 15px; line-height: 1.75; color: #44403c; margin: 0 0 14px 0;">${escapeHtml(para)}</p>`
+              )
+              .join('')}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 20px;">
+              ${pageData.budgetPlanningTips
+                .map(
+                  (tip) => `
+                <div style="background: #F4EFE6; border: 1px solid #E5DEC9; border-radius: 14px; padding: 18px;">
+                  <h3 style="font-size: 16px; font-weight: 700; color: #1C2331; margin: 0 0 6px 0;">${escapeHtml(tip.title)}</h3>
+                  <p style="font-size: 13px; line-height: 1.65; color: #57534e; margin: 0;">${escapeHtml(tip.description)}</p>
+                </div>`
+                )
+                .join('')}
+            </div>
+          </section>
+
+          <section style="margin-bottom: 40px; background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 28px;">
+            <h2 style="font-size: 22px; font-weight: 700; color: #1C2331; margin: 0 0 10px 0;">
+              ${escapeHtml(pageData.preparationHeading)}
+            </h2>
+            <p style="font-size: 14px; line-height: 1.7; color: #57534e; margin: 0 0 14px 0;">
+              ${escapeHtml(pageData.preparationLead)}
+            </p>
+            <ul style="margin: 0 0 24px 0; padding-left: 20px; font-size: 14px; line-height: 1.8; color: #44403c;">
+              ${pageData.preparationChecklist.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+            </ul>
+            <h3 style="font-size: 20px; font-weight: 700; color: #1C2331; margin: 0 0 10px 0;">
+              ${escapeHtml(pageData.bengaluruContextHeading)}
+            </h3>
+            ${pageData.bengaluruContextParagraphs
+              .map(
+                (para) =>
+                  `<p style="font-size: 14px; line-height: 1.75; color: #44403c; margin: 0 0 12px 0;">${escapeHtml(para)}</p>`
+              )
+              .join('')}
+          </section>
+
+          <section style="margin-bottom: 40px;">
+            <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 0 0 10px 0;">
+              ${escapeHtml(pageData.howEnquiryWorksHeading)}
+            </h2>
+            <p style="font-size: 15px; line-height: 1.7; color: #57534e; margin: 0 0 16px 0;">
+              ${escapeHtml(pageData.howEnquiryWorksLead)}
+            </p>
+            <ol style="font-size: 14px; line-height: 1.8; color: #44403c; margin: 0; padding-left: 20px;">
+              ${pageData.howEnquiryWorksSteps
+                .map(
+                  (st) =>
+                    `<li><strong>${escapeHtml(st.title)}:</strong> ${escapeHtml(st.description)}</li>`
+                )
+                .join('')}
+            </ol>
+          </section>
+
+          <section style="margin-bottom: 40px;">
+            <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 0 0 16px 0;">
+              Common Questions About ${escapeHtml(pageData.h1)}
+            </h2>
+            ${pageData.faqs
+              .map(
+                (f) => `
+              <div style="border: 1px solid #E5DEC9; border-radius: 12px; padding: 16px; margin-bottom: 12px; background: #ffffff;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #1C2331; margin: 0 0 6px 0;">${escapeHtml(f.question)}</h3>
+                <p style="font-size: 14px; line-height: 1.65; color: #57534e; margin: 0;">${escapeHtml(f.answer)}</p>
+              </div>`
+              )
+              .join('')}
+          </section>
+
+          <section style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: #1C2331; margin: 0 0 12px 0;">
+              Explore Other Royal Epic Finance Guides &amp; Related Services
+            </h2>
+            <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+              <li><a href="/loans" style="color: #8C6D3B; font-weight: 600;">Royal Epic Loans Main Hub (/loans)</a></li>
+              ${siblingPages
+                .map(
+                  (sib) =>
+                    `<li><a href="${escapeHtml(sib.path)}" style="color: #8C6D3B; font-weight: 600;">${escapeHtml(sib.h1)}</a> — ${escapeHtml(sib.badgeText)}</li>`
+                )
+                .join('')}
+              ${pageData.relatedRoyalEpicLinks
+                .map(
+                  (lnk) =>
+                    `<li><a href="${escapeHtml(lnk.href)}" style="color: #8C6D3B; font-weight: 600;">${escapeHtml(lnk.title)}</a> — ${escapeHtml(lnk.description)}</li>`
+                )
+                .join('')}
+            </ul>
+          </section>
+
+          <p style="font-size: 12px; color: #78716c; line-height: 1.6; border-top: 1px solid #E5DEC9; padding-top: 16px;">
+            ${escapeHtml(pageData.complianceNote)}
+          </p>
+        </article>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', preRenderedServiceHtml);
+}
+
+/**
+ * Render HTTP 404 Not Found HTML for invalid /loans/:slug paths
+ * with <meta name="robots" content="noindex, follow" />, canonical pointing to /loans,
+ * and crawlable links back to /loans and the four dedicated finance assistance pages.
+ */
+export function injectLoanPageNotFoundIntoHtml(
+  templateHtml: string,
+  hostOrigin: string = SITE_URL
+): string {
+  const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
+  const canonicalUrl = `${effectiveOrigin}/loans`;
+  const pageTitle = 'Finance Page Not Found | Royal Epic Loans';
+  const metaDesc =
+    'The requested finance assistance page could not be found. Explore home construction, interior, renovation and property finance guidance with Royal Epic Loans.';
+  const ogImage = `${effectiveOrigin}/images/royal-epic-loans-og.jpg`;
+
+  let html = templateHtml;
+
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  const metaDescTag = `<meta name="description" content="${escapeHtml(metaDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  const robotsTag = `<meta name="robots" content="noindex, follow" />`;
+  if (/<meta\s+name=["']robots["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']robots["'][^>]*>/i, robotsTag);
+  } else {
+    html = html.replace('</head>', `  ${robotsTag}\n  </head>`);
+  }
+
+  const canonicalTag = `<link rel="canonical" href="${canonicalUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  html = applyCleanSocialMetaAndOrigin(html, {
+    title: pageTitle,
+    description: metaDesc,
+    canonicalUrl,
+    ogImage,
+    ogType: 'website',
+    effectiveOrigin,
+  });
+
+  const notFoundHtml = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #FAF7F2; color: #1C2331; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 64px 24px;">
+        <div style="max-width: 760px; margin: 0 auto; background: #ffffff; border: 1px solid #E5DEC9; border-radius: 24px; padding: 40px; text-align: center;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: #8C6D3B; display: block; margin-bottom: 10px;">404 • Page Not Found</span>
+          <h1 style="font-size: 30px; font-weight: 800; color: #1C2331; margin: 0 0 12px 0;">Finance Assistance Page Not Found</h1>
+          <p style="font-size: 15px; line-height: 1.7; color: #57534e; margin: 0 0 24px 0;">
+            The finance page you are looking for does not exist or may have moved. Explore our main Royal Epic Loans page or choose one of our four dedicated finance assistance guides below:
+          </p>
+          <p style="margin-bottom: 24px;">
+            <a href="/loans" style="display: inline-block; background: #1C2331; color: #FAF7F2; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 14px;">Return to Royal Epic Loans Hub</a>
+          </p>
+          <ul style="list-style: none; padding: 0; margin: 0; text-align: left; border-top: 1px solid #E5DEC9; padding-top: 20px; font-size: 14px; line-height: 2;">
+            <li><a href="/loans/home-construction-finance" style="color: #8C6D3B; font-weight: 600;">Home Construction Finance Assistance</a></li>
+            <li><a href="/loans/home-interior-finance" style="color: #8C6D3B; font-weight: 600;">Home Interior Finance Assistance</a></li>
+            <li><a href="/loans/home-renovation-finance" style="color: #8C6D3B; font-weight: 600;">Home Renovation Finance Assistance</a></li>
+            <li><a href="/loans/property-related-finance" style="color: #8C6D3B; font-weight: 600;">Property-Related Finance Assistance</a></li>
+          </ul>
+        </div>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', notFoundHtml);
 }
 
 /**

@@ -4,6 +4,7 @@ import {
   Phone,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ShieldCheck,
   Home,
   Sparkles,
@@ -16,7 +17,16 @@ import {
   MapPin,
   AlertCircle,
   Loader2,
+  BookOpen,
+  Layers,
+  ClipboardCheck,
 } from 'lucide-react';
+import {
+  LOANS_SERVICE_PAGES,
+  findLoanServicePageBySlug,
+  extractLoanServiceSlugFromPath,
+  LoanServicePageData,
+} from '../data/loansServicePagesData';
 
 const loansHeroImage = new URL(
   '../assets/images/loans_hero_architecture_1795675215978.jpg',
@@ -38,6 +48,25 @@ const loansPropertyImage = new URL(
   '../assets/images/loans_property_finance_1795675220339.jpg',
   import.meta.url
 ).href;
+
+const SERVICE_HERO_IMAGES: Record<string, { src: string; alt: string }> = {
+  'home-construction-finance': {
+    src: loansConstructionImage,
+    alt: 'Contemporary independent residential home construction architecture in Bengaluru',
+  },
+  'home-interior-finance': {
+    src: loansInteriorsImage,
+    alt: 'Bespoke luxury residential living and dining room interiors by Royal Epic in Bengaluru',
+  },
+  'home-renovation-finance': {
+    src: loansRenovationImage,
+    alt: 'Modern home renovation and bespoke oak joinery corridor in Bengaluru',
+  },
+  'property-related-finance': {
+    src: loansPropertyImage,
+    alt: 'Elegant residential villa property exterior with landscaped pathway in Bengaluru',
+  },
+};
 
 export const FINANCE_PURPOSE_OPTIONS = [
   'Home Construction Finance',
@@ -66,6 +95,7 @@ export const PREFERRED_CONTACT_TIME_OPTIONS = [
 
 interface FinanceServiceCardItem {
   id: string;
+  path: string;
   purpose: string;
   title: string;
   description: string;
@@ -77,6 +107,7 @@ interface FinanceServiceCardItem {
 const FINANCE_SERVICES: FinanceServiceCardItem[] = [
   {
     id: 'home-construction-finance',
+    path: '/loans/home-construction-finance',
     purpose: 'Home Construction Finance',
     title: 'Home Construction Finance',
     description:
@@ -87,6 +118,7 @@ const FINANCE_SERVICES: FinanceServiceCardItem[] = [
   },
   {
     id: 'home-interior-finance',
+    path: '/loans/home-interior-finance',
     purpose: 'Home Interior Finance',
     title: 'Home Interior Finance',
     description:
@@ -97,6 +129,7 @@ const FINANCE_SERVICES: FinanceServiceCardItem[] = [
   },
   {
     id: 'home-renovation-finance',
+    path: '/loans/home-renovation-finance',
     purpose: 'Home Renovation Finance',
     title: 'Home Renovation Finance',
     description:
@@ -107,6 +140,7 @@ const FINANCE_SERVICES: FinanceServiceCardItem[] = [
   },
   {
     id: 'property-related-finance',
+    path: '/loans/property-related-finance',
     purpose: 'Property-Related Finance',
     title: 'Property-Related Finance',
     description:
@@ -211,10 +245,20 @@ const LOANS_FAQ_ITEMS = [
 ];
 
 interface PublicLoansPageProps {
+  currentPath?: string;
   onNavigate?: (path: string) => void;
 }
 
-export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) => {
+export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ currentPath, onNavigate }) => {
+  const effectivePath =
+    currentPath ||
+    (typeof window !== 'undefined' ? window.location.pathname : '/loans');
+  const rawSubSlug = extractLoanServiceSlugFromPath(effectivePath);
+  const activeServicePage: LoanServicePageData | null = rawSubSlug
+    ? findLoanServicePageBySlug(rawSubSlug)
+    : null;
+  const isInvalidLoanSubpage = Boolean(rawSubSlug && !activeServicePage);
+
   const formSectionRef = useRef<HTMLElement | null>(null);
   const servicesSectionRef = useRef<HTMLElement | null>(null);
   const fullNameInputRef = useRef<HTMLInputElement | null>(null);
@@ -223,7 +267,9 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [financePurpose, setFinancePurpose] = useState<string>('Home Interior Finance');
+  const [financePurpose, setFinancePurpose] = useState<string>(
+    activeServicePage ? activeServicePage.financePurpose : 'Home Interior Finance'
+  );
   const [approximateAmount, setApproximateAmount] = useState<string>('');
   const [city, setCity] = useState('Bengaluru');
   const [projectDetails, setProjectDetails] = useState('');
@@ -253,19 +299,51 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
     } catch (_) {}
   };
 
-  // Host-aware SEO & Canonical tag synchronization
-  useEffect(() => {
-    const pageTitle = 'Home Interior & Construction Finance Assistance | Royal Epic';
-    const metaDesc =
-      'Explore home construction, interior and renovation finance enquiry assistance in Bengaluru. Share your requirements with Royal Epic for personal guidance.';
-    document.title = pageTitle;
+  const handleLinkNavigation = (e: React.MouseEvent<HTMLAnchorElement>, targetPath: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (onNavigate) {
+      e.preventDefault();
+      onNavigate(targetPath);
+    }
+  };
 
+  // Automatically preselect the matching Finance Purpose when visiting a dedicated subpage
+  useEffect(() => {
+    if (activeServicePage) {
+      setFinancePurpose(activeServicePage.financePurpose);
+      setEnquirySource('Website Loans Page');
+      setOpenFaqIndex(0);
+    }
+  }, [activeServicePage?.slug]);
+
+  // Host-aware SEO & Canonical tag synchronization for Hub, Dedicated Service Pages, and 404 State
+  useEffect(() => {
     const origin =
       typeof window !== 'undefined' && window.location.origin
         ? window.location.origin
         : 'https://royalepicinterior.com';
-    const selfCanonicalUrl = `${origin}/loans`;
-    const ogImageUrl = `${origin}/images/royal-epic-loans-og.jpg`;
+
+    let pageTitle = 'Home Interior & Construction Finance Assistance | Royal Epic';
+    let metaDesc =
+      'Explore home construction, interior and renovation finance enquiry assistance in Bengaluru. Share your requirements with Royal Epic for personal guidance.';
+    let selfCanonicalUrl = `${origin}/loans`;
+    let ogImageUrl = `${origin}/images/royal-epic-loans-og.jpg`;
+    let robotsContent = 'index, follow, max-image-preview:large, max-snippet:-1';
+
+    if (activeServicePage) {
+      pageTitle = activeServicePage.seoTitle;
+      metaDesc = activeServicePage.metaDescription;
+      selfCanonicalUrl = `${origin}${activeServicePage.path}`;
+      ogImageUrl = `${origin}${activeServicePage.ogImagePath}`;
+    } else if (isInvalidLoanSubpage) {
+      pageTitle = 'Finance Page Not Found | Royal Epic Loans';
+      metaDesc =
+        'The requested finance assistance page could not be found. Explore home construction, interior, renovation and property finance guidance with Royal Epic Loans.';
+      selfCanonicalUrl = `${origin}/loans`;
+      robotsContent = 'noindex, follow';
+    }
+
+    document.title = pageTitle;
 
     let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!canonicalEl) {
@@ -289,7 +367,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
       robotsEl.setAttribute('name', 'robots');
       document.head.appendChild(robotsEl);
     }
-    robotsEl.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1');
+    robotsEl.setAttribute('content', robotsContent);
 
     const setOg = (prop: string, val: string) => {
       let tag = document.querySelector(`meta[property="${prop}"]`);
@@ -322,8 +400,11 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
     setTwitter('twitter:url', selfCanonicalUrl);
     setTwitter('twitter:image', ogImageUrl);
 
-    trackLoansEvent('loans_page_view', { page_location: selfCanonicalUrl });
-  }, []);
+    trackLoansEvent('loans_page_view', {
+      page_location: selfCanonicalUrl,
+      finance_category: activeServicePage ? activeServicePage.slug : isInvalidLoanSubpage ? '404' : 'hub',
+    });
+  }, [activeServicePage?.slug, isInvalidLoanSubpage]);
 
   const scrollToEnquiryForm = (preselectedPurpose?: string, sourceOverride?: string) => {
     if (preselectedPurpose) {
@@ -352,7 +433,10 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
 
   const handleRequestCallbackClick = () => {
     trackLoansEvent('loans_callback_cta_click');
-    scrollToEnquiryForm(undefined, 'Callback Request');
+    scrollToEnquiryForm(
+      activeServicePage ? activeServicePage.financePurpose : undefined,
+      'Callback Request'
+    );
   };
 
   const handleServiceCardClick = (purpose: string) => {
@@ -441,6 +525,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
       trackLoansEvent('loans_enquiry_submit_success', {
         finance_purpose: financePurpose,
         enquiry_source: enquirySource,
+        page_slug: activeServicePage ? activeServicePage.slug : 'loans-hub',
       });
 
       setSubmittedReference(data.enquiry_reference || null);
@@ -465,6 +550,993 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
     }
   };
 
+  const renderEnquiryFormSection = (customHeading?: string, customDescription?: string) => (
+    <section
+      ref={formSectionRef}
+      id="finance-enquiry-form"
+      className="py-14 sm:py-20 bg-[#F4EFE6] border-b border-[#E5DEC9]"
+    >
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-[#FAF7F2] border border-[#DFD5C5] rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm">
+          <div className="max-w-2xl mb-8">
+            <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-2 font-mono">
+              ROYAL EPIC LOANS ENQUIRY
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C2331] mb-2">
+              {customHeading || "Let's Understand Your Requirements"}
+            </h2>
+            <p className="text-stone-600 text-sm sm:text-base">
+              {customDescription || 'Share a few details and our team will get in touch with you.'}
+            </p>
+          </div>
+
+          {submittedSuccess ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="bg-emerald-950/5 border border-emerald-800/30 rounded-2xl p-6 sm:p-8 text-left space-y-4"
+            >
+              <div className="flex items-start gap-3.5">
+                <CheckCircle2 className="w-7 h-7 text-emerald-700 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <h3 className="text-xl font-serif font-bold text-[#1C2331]">
+                    Enquiry Received
+                  </h3>
+                  <p className="text-sm sm:text-base text-stone-700 leading-relaxed">
+                    Thank you for contacting Royal Epic Loans. Your enquiry has been received. Our team will review your requirements and get in touch with you.
+                  </p>
+                  {submittedReference && (
+                    <p className="text-xs font-mono text-stone-600 pt-1">
+                      Enquiry Reference: <strong className="text-[#1C2331]">{submittedReference}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="pt-3 border-t border-emerald-800/15 flex flex-wrap items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmittedSuccess(false);
+                    setSubmittedReference(null);
+                  }}
+                  className="text-xs font-semibold text-[#8C6D3B] hover:text-[#1C2331] underline cursor-pointer"
+                >
+                  Submit another finance enquiry
+                </button>
+                <a
+                  href="/loans"
+                  onClick={(e) => handleLinkNavigation(e, '/loans')}
+                  className="text-xs font-semibold text-stone-600 hover:text-[#1C2331] cursor-pointer"
+                >
+                  Explore All Royal Epic Loans Services
+                </a>
+                {onNavigate && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('/')}
+                    className="text-xs font-semibold text-stone-600 hover:text-[#1C2331] cursor-pointer"
+                  >
+                    Return to Royal Epic Homepage
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmitEnquiry} noValidate className="space-y-6">
+              {submitError && (
+                <div
+                  role="alert"
+                  className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-2.5"
+                >
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {/* 1. Full Name (Required) */}
+                <div>
+                  <label
+                    htmlFor="loan-full-name"
+                    className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
+                  >
+                    Full Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    ref={fullNameInputRef}
+                    id="loan-full-name"
+                    name="customer_name"
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      if (fieldErrors.fullName) {
+                        setFieldErrors((prev) => ({ ...prev, fullName: '' }));
+                      }
+                    }}
+                    placeholder="Enter your full name"
+                    className={`w-full px-4 py-3 rounded-xl bg-white border ${
+                      fieldErrors.fullName ? 'border-red-500' : 'border-[#D6C7B2]'
+                    } text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]`}
+                  />
+                  {fieldErrors.fullName && (
+                    <p className="text-xs text-red-600 mt-1">{fieldErrors.fullName}</p>
+                  )}
+                </div>
+
+                {/* 2. Mobile Number (Required) */}
+                <div>
+                  <label
+                    htmlFor="loan-mobile-number"
+                    className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
+                  >
+                    Mobile Number <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="loan-mobile-number"
+                    name="mobile_number"
+                    type="tel"
+                    required
+                    value={mobileNumber}
+                    onChange={(e) => {
+                      setMobileNumber(e.target.value);
+                      if (fieldErrors.mobileNumber) {
+                        setFieldErrors((prev) => ({ ...prev, mobileNumber: '' }));
+                      }
+                    }}
+                    placeholder="e.g. 98450 12345"
+                    className={`w-full px-4 py-3 rounded-xl bg-white border ${
+                      fieldErrors.mobileNumber ? 'border-red-500' : 'border-[#D6C7B2]'
+                    } text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]`}
+                  />
+                  {fieldErrors.mobileNumber && (
+                    <p className="text-xs text-red-600 mt-1">{fieldErrors.mobileNumber}</p>
+                  )}
+                </div>
+
+                {/* 3. Email Address (Optional) */}
+                <div>
+                  <label
+                    htmlFor="loan-email"
+                    className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
+                  >
+                    Email Address <span className="text-stone-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    id="loan-email"
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) {
+                        setFieldErrors((prev) => ({ ...prev, email: '' }));
+                      }
+                    }}
+                    placeholder="you@example.com"
+                    className={`w-full px-4 py-3 rounded-xl bg-white border ${
+                      fieldErrors.email ? 'border-red-500' : 'border-[#D6C7B2]'
+                    } text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]`}
+                  />
+                  {fieldErrors.email && (
+                    <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
+                  )}
+                </div>
+
+                {/* 4. Finance Purpose (Required) */}
+                <div>
+                  <label
+                    htmlFor="loan-finance-purpose"
+                    className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
+                  >
+                    Finance Purpose <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    id="loan-finance-purpose"
+                    name="finance_purpose"
+                    required
+                    value={financePurpose}
+                    onChange={(e) => {
+                      setFinancePurpose(e.target.value);
+                      if (fieldErrors.financePurpose) {
+                        setFieldErrors((prev) => ({ ...prev, financePurpose: '' }));
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
+                  >
+                    {FINANCE_PURPOSE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErrors.financePurpose && (
+                    <p className="text-xs text-red-600 mt-1">{fieldErrors.financePurpose}</p>
+                  )}
+                </div>
+
+                {/* 5. Approximate Finance Requirement (Optional) */}
+                <div>
+                  <label
+                    htmlFor="loan-approximate-amount"
+                    className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
+                  >
+                    Approximate Finance Requirement{' '}
+                    <span className="text-stone-400 font-normal">(Optional)</span>
+                  </label>
+                  <select
+                    id="loan-approximate-amount"
+                    name="approximate_amount"
+                    value={approximateAmount}
+                    onChange={(e) => setApproximateAmount(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
+                  >
+                    <option value="">Select approximate range</option>
+                    {APPROXIMATE_REQUIREMENT_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 6. City / Location (Optional) */}
+                <div>
+                  <label
+                    htmlFor="loan-city"
+                    className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-[#8C6D3B]" />
+                      City / Location
+                    </span>{' '}
+                    <span className="text-stone-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    id="loan-city"
+                    name="city"
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="e.g. Thanisandra, Bengaluru"
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
+                  />
+                </div>
+              </div>
+
+              {/* 7. Preferred Time to Contact (Optional) */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2">
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-[#8C6D3B]" />
+                    Preferred Time to Contact
+                  </span>{' '}
+                  <span className="text-stone-400 font-normal">(Optional)</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {PREFERRED_CONTACT_TIME_OPTIONS.map((timeOption) => (
+                    <button
+                      key={timeOption}
+                      type="button"
+                      onClick={() => setPreferredContactTime(timeOption)}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                        preferredContactTime === timeOption
+                          ? 'bg-[#1C2331] text-white border-[#1C2331]'
+                          : 'bg-white text-stone-700 border-[#D6C7B2] hover:border-[#8C6D3B]'
+                      }`}
+                    >
+                      {timeOption}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 8. Project Details (Optional) */}
+              <div>
+                <label
+                  htmlFor="loan-project-details"
+                  className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
+                >
+                  Project Details <span className="text-stone-400 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  id="loan-project-details"
+                  name="project_details"
+                  rows={3}
+                  value={projectDetails}
+                  onChange={(e) => setProjectDetails(e.target.value)}
+                  placeholder="Briefly describe your home, construction or interior requirements..."
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
+                />
+              </div>
+
+              {/* 9. Consent Checkbox (Required) */}
+              <div className="pt-1">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => {
+                      setConsent(e.target.checked);
+                      if (fieldErrors.consent) {
+                        setFieldErrors((prev) => ({ ...prev, consent: '' }));
+                      }
+                    }}
+                    className="mt-1 w-4 h-4 rounded border-stone-400 text-[#1C2331] focus:ring-[#C5A059]"
+                  />
+                  <span className="text-xs sm:text-sm text-stone-700 leading-relaxed">
+                    I agree to be contacted by Royal Epic regarding my finance enquiry and acknowledge the{' '}
+                    <a
+                      href="/privacy-policy"
+                      onClick={(e) => handleLinkNavigation(e, '/privacy-policy')}
+                      className="underline font-semibold text-[#1C2331] hover:text-[#8C6D3B]"
+                    >
+                      Privacy Policy
+                    </a>
+                    . <span className="text-red-600">*</span>
+                  </span>
+                </label>
+                {fieldErrors.consent && (
+                  <p className="text-xs text-red-600 mt-1.5">{fieldErrors.consent}</p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-[#1C2331] hover:bg-[#273145] disabled:opacity-60 text-[#FAF7F2] font-semibold text-sm rounded-xl shadow-sm transition-all cursor-pointer"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#C5A059]" />
+                      Submitting Finance Enquiry...
+                    </>
+                  ) : (
+                    <>
+                      Submit Finance Enquiry
+                      <ArrowRight className="w-4 h-4 text-[#C5A059]" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Concise Disclaimer Below Form */}
+              <p className="text-[11px] text-stone-500 leading-relaxed pt-2 border-t border-[#E5DEC9]">
+                Note: We never ask for Aadhaar, PAN, bank account numbers, salary slips, credit card details or OTPs on this online form. Submitting a finance enquiry is free of charge and subject to eligibility, verification and the applicable finance provider&apos;s terms and approval.
+              </p>
+            </form>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
+  // =========================================================================
+  // INVALID /LOANS/:SLUG -> 404 NOT FOUND VIEW
+  // =========================================================================
+  if (isInvalidLoanSubpage) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] text-[#1C2331] py-16 sm:py-24">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white border border-[#E5DEC9] rounded-3xl p-8 sm:p-12 text-center shadow-xs">
+            <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-3 font-mono">
+              404 • PAGE NOT FOUND
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#1C2331] mb-4">
+              Finance Assistance Page Not Found
+            </h1>
+            <p className="text-stone-600 text-base sm:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
+              The finance page you are looking for does not exist or may have moved. You can explore Royal Epic Loans main finance assistance hub or select one of our four dedicated finance guidance pages below:
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+              <a
+                href="/loans"
+                onClick={(e) => handleLinkNavigation(e, '/loans')}
+                className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#1C2331] hover:bg-[#273145] text-[#FAF7F2] font-semibold text-sm rounded-xl transition-all"
+              >
+                Return to Royal Epic Loans Hub
+                <ArrowRight className="w-4 h-4 text-[#C5A059]" />
+              </a>
+              <a
+                href="/"
+                onClick={(e) => handleLinkNavigation(e, '/')}
+                className="inline-flex items-center gap-2 px-6 py-3.5 bg-[#FAF7F2] hover:bg-[#F4EFE6] text-[#1C2331] border border-[#D6C7B2] font-semibold text-sm rounded-xl transition-all"
+              >
+                Go to Homepage
+              </a>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left pt-8 border-t border-[#EAE3D5]">
+              {LOANS_SERVICE_PAGES.map((page) => (
+                <a
+                  key={page.slug}
+                  href={page.path}
+                  onClick={(e) => handleLinkNavigation(e, page.path)}
+                  className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <h2 className="text-sm font-serif font-bold text-[#1C2331]">{page.h1}</h2>
+                    <p className="text-xs text-stone-500 mt-0.5">{page.badgeText}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-[#8C6D3B] shrink-0" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // DEDICATED SERVICE LANDING PAGE VIEW (/loans/:slug)
+  // =========================================================================
+  if (activeServicePage) {
+    const heroVisual = SERVICE_HERO_IMAGES[activeServicePage.slug] || {
+      src: loansHeroImage,
+      alt: activeServicePage.h1,
+    };
+    const siblingPages = LOANS_SERVICE_PAGES.filter((p) => p.slug !== activeServicePage.slug);
+
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] text-[#1C2331]">
+        {/* Breadcrumb Navigation */}
+        <nav
+          aria-label="Breadcrumb"
+          className="bg-[#F4EFE6] border-b border-[#E5DEC9] py-3 px-4 sm:px-6 lg:px-8"
+        >
+          <ol className="max-w-7xl mx-auto flex flex-wrap items-center gap-1.5 text-xs text-stone-600">
+            <li>
+              <a
+                href="/"
+                onClick={(e) => handleLinkNavigation(e, '/')}
+                className="hover:text-[#1C2331] underline decoration-[#C5A059]/40 underline-offset-4"
+              >
+                Home
+              </a>
+            </li>
+            <li>
+              <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+            </li>
+            <li>
+              <a
+                href="/loans"
+                onClick={(e) => handleLinkNavigation(e, '/loans')}
+                className="hover:text-[#1C2331] underline decoration-[#C5A059]/40 underline-offset-4"
+              >
+                Loans
+              </a>
+            </li>
+            <li>
+              <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+            </li>
+            <li className="font-semibold text-[#1C2331]" aria-current="page">
+              {activeServicePage.h1}
+            </li>
+          </ol>
+        </nav>
+
+        {/* Dedicated Service Hero */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF7F2] via-[#F7F2E9] to-[#F3EDE2] border-b border-[#E5DEC9] pt-8 pb-14 sm:py-16 lg:py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+              <div className="lg:col-span-6 space-y-5">
+                <div className="inline-flex items-center gap-2.5">
+                  <span className="w-7 h-[1.5px] bg-[#C5A059]" />
+                  <span className="text-xs font-bold uppercase tracking-[0.22em] text-[#8C6D3B] font-mono">
+                    {activeServicePage.badgeText}
+                  </span>
+                </div>
+
+                <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-serif font-bold text-[#1C2331] leading-[1.16] tracking-tight">
+                  {activeServicePage.h1}
+                </h1>
+
+                <p className="text-base sm:text-lg text-stone-600 leading-relaxed">
+                  {activeServicePage.heroSubtitle}
+                </p>
+
+                <p className="text-xs sm:text-sm text-[#8C6D3B] font-medium bg-[#F4EFE6] border border-[#E5DEC9] rounded-xl px-4 py-3 leading-relaxed">
+                  {activeServicePage.heroSupportNote}
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      scrollToEnquiryForm(activeServicePage.financePurpose, 'Website Loans Page')
+                    }
+                    className="inline-flex items-center justify-center gap-2.5 px-7 py-4 bg-[#1C2331] hover:bg-[#273145] text-[#FAF7F2] font-semibold text-sm rounded-xl shadow-sm transition-all cursor-pointer"
+                  >
+                    Enquire for {activeServicePage.shortLabel}
+                    <ArrowRight className="w-4 h-4 text-[#C5A059]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRequestCallbackClick}
+                    className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-white/90 hover:bg-white text-[#1C2331] border border-[#D6C7B2] font-semibold text-sm rounded-xl transition-all cursor-pointer"
+                  >
+                    <Phone className="w-4 h-4 text-[#8C6D3B]" />
+                    Request a Callback
+                  </button>
+                </div>
+
+                <p className="text-xs text-stone-500 leading-relaxed pt-2 border-t border-[#E5DEC9]/80">
+                  Royal Epic provides finance enquiry assistance and customer guidance only. All finance options are subject to eligibility, verification and the applicable finance provider&apos;s assessment.
+                </p>
+              </div>
+
+              <div className="lg:col-span-6">
+                <div className="relative rounded-2xl overflow-hidden border border-[#E5DEC9] shadow-lg bg-stone-200 aspect-[16/10]">
+                  <img
+                    src={heroVisual.src}
+                    alt={heroVisual.alt}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1C2331]/40 via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 bg-[#FAF7F2]/95 backdrop-blur-md border border-[#E5DEC9] rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-mono uppercase tracking-widest text-[#8C6D3B] font-semibold">
+                        Bengaluru Finance Enquiry Desk
+                      </p>
+                      <p className="text-sm font-serif font-bold text-[#1C2331] mt-0.5">
+                        Preselected Purpose: {activeServicePage.financePurpose}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        scrollToEnquiryForm(activeServicePage.financePurpose, 'Website Loans Page')
+                      }
+                      className="text-xs font-semibold text-[#8C6D3B] hover:text-[#1C2331] inline-flex items-center gap-1 shrink-0 cursor-pointer"
+                    >
+                      Start Enquiry
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 1: Detailed Introduction & Overview */}
+        <section className="py-14 sm:py-18 bg-[#FAF7F2] border-b border-[#EAE3D5]">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-2.5 font-mono">
+              OVERVIEW &amp; GUIDANCE SCOPE
+            </span>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-[#1C2331] mb-6 leading-tight">
+              {activeServicePage.introHeading}
+            </h2>
+            <div className="space-y-4 text-stone-600 text-base sm:text-[17px] leading-relaxed">
+              {activeServicePage.introParagraphs.map((para, idx) => (
+                <p key={idx}>{para}</p>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 2: Who This Helps / Project Scopes Covered */}
+        <section className="py-14 sm:py-20 bg-[#F4EFE6] border-b border-[#E5DEC9]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mb-10 sm:mb-12">
+              <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-2 font-mono">
+                PROJECT SCENARIOS WE SUPPORT
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-[#1C2331] leading-tight">
+                {activeServicePage.whoThisHelpsHeading}
+              </h2>
+              <p className="text-stone-600 text-sm sm:text-base mt-3 leading-relaxed">
+                {activeServicePage.whoThisHelpsLead}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+              {activeServicePage.whoThisHelpsCards.map((card, idx) => (
+                <div
+                  key={idx}
+                  className="bg-[#FAF7F2] border border-[#E5DEC9] rounded-2xl p-6 sm:p-7 shadow-xs flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#8C6D3B] uppercase tracking-wider mb-2">
+                      <Layers className="w-4 h-4 text-[#8C6D3B]" />
+                      Scope {idx + 1}
+                    </div>
+                    <h3 className="text-xl font-serif font-bold text-[#1C2331] mb-2.5">
+                      {card.title}
+                    </h3>
+                    <p className="text-sm sm:text-[15px] text-stone-600 leading-relaxed mb-4">
+                      {card.description}
+                    </p>
+                    <ul className="space-y-2 border-t border-[#EAE3D5] pt-4">
+                      {card.points.map((pt, pIdx) => (
+                        <li
+                          key={pIdx}
+                          className="text-xs sm:text-sm text-stone-700 flex items-start gap-2.5 leading-relaxed"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-[#8C6D3B] shrink-0 mt-0.5" />
+                          <span>{pt}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 3: Stages & Milestones Breakdown */}
+        <section className="py-14 sm:py-20 bg-[#FAF7F2] border-b border-[#EAE3D5]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mb-10 sm:mb-12">
+              <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-2 font-mono">
+                PROJECT STAGES &amp; MILESTONE PLANNING
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-[#1C2331] leading-tight">
+                {activeServicePage.stagesHeading}
+              </h2>
+              <p className="text-stone-600 text-sm sm:text-base mt-3 leading-relaxed">
+                {activeServicePage.stagesLead}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {activeServicePage.stages.map((stage, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white border border-[#E5DEC9] rounded-2xl p-6 sm:p-7 shadow-xs"
+                >
+                  <span className="inline-block text-xs font-mono font-bold uppercase tracking-widest text-[#8C6D3B] bg-[#F4EFE6] px-3 py-1 rounded-md mb-3">
+                    {stage.stageNumber}
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-serif font-bold text-[#1C2331] mb-2">
+                    {stage.title}
+                  </h3>
+                  <p className="text-sm text-stone-600 leading-relaxed mb-4">
+                    {stage.summary}
+                  </p>
+                  <ul className="space-y-2 border-t border-[#F4EFE6] pt-3.5">
+                    {stage.details.map((detail, dIdx) => (
+                      <li
+                        key={dIdx}
+                        className="text-xs sm:text-sm text-stone-700 flex items-start gap-2 leading-relaxed"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] shrink-0 mt-2" />
+                        <span>{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4: Budget Guidance & Practical Tips */}
+        <section className="py-14 sm:py-20 bg-[#F4EFE6] border-b border-[#E5DEC9]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+              <div className="lg:col-span-6 space-y-4">
+                <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] font-mono">
+                  BUDGET &amp; REQUIREMENT PLANNING
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C2331] leading-tight">
+                  {activeServicePage.budgetGuidanceHeading}
+                </h2>
+                <div className="space-y-4 text-stone-600 text-sm sm:text-base leading-relaxed">
+                  {activeServicePage.budgetGuidanceParagraphs.map((para, idx) => (
+                    <p key={idx}>{para}</p>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {activeServicePage.budgetPlanningTips.map((tip, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-[#FAF7F2] border border-[#E5DEC9] rounded-2xl p-5 shadow-2xs"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#1C2331] text-[#C5A059] font-mono text-xs font-bold flex items-center justify-center mb-3">
+                      0{idx + 1}
+                    </div>
+                    <h3 className="text-base font-serif font-bold text-[#1C2331] mb-1.5">
+                      {tip.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                      {tip.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 5: Preparation Checklist & Local Bengaluru Context */}
+        <section className="py-14 sm:py-20 bg-[#FAF7F2] border-b border-[#EAE3D5]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+              {/* Preparation Checklist */}
+              <div className="lg:col-span-7 bg-white border border-[#E5DEC9] rounded-3xl p-6 sm:p-9 shadow-xs">
+                <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#8C6D3B] uppercase tracking-wider mb-2">
+                  <ClipboardCheck className="w-4 h-4 text-[#8C6D3B]" />
+                  Enquiry Readiness Checklist
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C2331] mb-3">
+                  {activeServicePage.preparationHeading}
+                </h2>
+                <p className="text-sm sm:text-base text-stone-600 leading-relaxed mb-6">
+                  {activeServicePage.preparationLead}
+                </p>
+                <ul className="space-y-3">
+                  {activeServicePage.preparationChecklist.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-start gap-3 text-sm text-stone-700 leading-relaxed bg-[#FAF7F2] border border-[#EAE3D5] rounded-xl p-3.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-[#8C6D3B] shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Bengaluru Local Context */}
+              <div className="lg:col-span-5 bg-[#F4EFE6] border border-[#E5DEC9] rounded-3xl p-6 sm:p-9 flex flex-col justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#8C6D3B] uppercase tracking-wider mb-2">
+                    <MapPin className="w-4 h-4 text-[#8C6D3B]" />
+                    Local Bengaluru Focus
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#1C2331] mb-4 leading-snug">
+                    {activeServicePage.bengaluruContextHeading}
+                  </h2>
+                  <div className="space-y-4 text-sm sm:text-[15px] text-stone-600 leading-relaxed">
+                    {activeServicePage.bengaluruContextParagraphs.map((para, idx) => (
+                      <p key={idx}>{para}</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-5 border-t border-[#DFD5C5]">
+                  <p className="text-xs font-mono uppercase tracking-wider text-[#8C6D3B] font-bold mb-1">
+                    Royal Epic Bengaluru Studio
+                  </p>
+                  <p className="text-xs text-stone-600 leading-relaxed">
+                    No. 10, Thanisandra Main Road, Nagawara, Bengaluru – 560045. Personal consultation for homeowners across North, East, South &amp; West Bengaluru.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 6: How Our 4-Step Enquiry Process Works */}
+        <section className="py-14 sm:py-18 bg-[#1C2331] text-[#FAF7F2] border-b border-stone-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mb-10 sm:mb-12">
+              <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#C5A059] mb-2 font-mono">
+                TRANSPARENT 4-STEP CONSULTATION
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white leading-tight">
+                {activeServicePage.howEnquiryWorksHeading}
+              </h2>
+              <p className="text-stone-300 text-sm sm:text-base mt-2.5 leading-relaxed">
+                {activeServicePage.howEnquiryWorksLead}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {activeServicePage.howEnquiryWorksSteps.map((stepItem, idx) => (
+                <div
+                  key={idx}
+                  className="bg-[#252E40] border border-stone-700/80 rounded-2xl p-6 flex flex-col justify-between"
+                >
+                  <div>
+                    <span className="inline-block text-xs font-mono font-bold text-[#C5A059] tracking-widest uppercase mb-3">
+                      {stepItem.step}
+                    </span>
+                    <h3 className="text-lg font-serif font-bold text-white mb-2.5">
+                      {stepItem.title}
+                    </h3>
+                    <p className="text-sm text-stone-300 leading-relaxed">
+                      {stepItem.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 7: Integrated Preselected Enquiry Form */}
+        {renderEnquiryFormSection(
+          activeServicePage.ctaHeading,
+          activeServicePage.ctaDescription
+        )}
+
+        {/* Section 8: Dedicated Page FAQs */}
+        <section className="py-14 sm:py-20 bg-[#FAF7F2] border-b border-[#EAE3D5]">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10 sm:mb-12">
+              <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-2 font-mono">
+                FREQUENTLY ASKED QUESTIONS
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-[#1C2331]">
+                Common Questions About {activeServicePage.h1}
+              </h2>
+            </div>
+
+            <div className="space-y-3.5">
+              {activeServicePage.faqs.map((faq, idx) => {
+                const isOpen = openFaqIndex === idx;
+                const panelId = `loan-service-faq-panel-${idx}`;
+                const buttonId = `loan-service-faq-btn-${idx}`;
+                return (
+                  <div
+                    key={idx}
+                    className="bg-white border border-[#E5DEC9] rounded-2xl overflow-hidden transition-colors"
+                  >
+                    <h3>
+                      <button
+                        id={buttonId}
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={panelId}
+                        onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                        className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 hover:bg-[#FAF7F2]/60 transition-colors cursor-pointer"
+                      >
+                        <span className="text-sm sm:text-base font-serif font-bold text-[#1C2331]">
+                          {faq.question}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-[#8C6D3B] shrink-0 transition-transform duration-200 ${
+                            isOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                    </h3>
+                    {isOpen && (
+                      <div
+                        id={panelId}
+                        role="region"
+                        aria-labelledby={buttonId}
+                        className="px-6 pb-5 pt-1 text-sm text-stone-600 leading-relaxed border-t border-[#F4EFE6]"
+                      >
+                        {faq.answer}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 9: Cross-Links to Other Finance Assistance Categories & Related Royal Epic Pages */}
+        <section className="py-12 sm:py-16 bg-white border-b border-[#EAE3D5]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+            {/* Other Finance Assistance Pages */}
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+                <div>
+                  <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-1.5 font-mono">
+                    ROYAL EPIC LOANS SECTION
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C2331]">
+                    Explore Other Finance Assistance Categories
+                  </h2>
+                </div>
+                <a
+                  href="/loans"
+                  onClick={(e) => handleLinkNavigation(e, '/loans')}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B] hover:text-[#1C2331]"
+                >
+                  View Main Royal Epic Loans Hub
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {siblingPages.map((sibling) => (
+                  <a
+                    key={sibling.slug}
+                    href={sibling.path}
+                    onClick={(e) => handleLinkNavigation(e, sibling.path)}
+                    className="group p-6 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-[#8C6D3B] font-semibold block mb-1.5">
+                        {sibling.badgeText}
+                      </span>
+                      <h3 className="text-lg font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-2">
+                        {sibling.h1}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-4">
+                        {sibling.heroSubtitle}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                      Explore {sibling.shortLabel} <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Related Royal Epic Services & Blog Guides */}
+            <div className="pt-8 border-t border-[#EAE3D5]">
+              <div className="max-w-3xl mb-6">
+                <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-1.5 font-mono">
+                  RELATED SERVICES &amp; PLANNING GUIDES
+                </span>
+                <h2 className="text-2xl font-serif font-bold text-[#1C2331]">
+                  Helpful Resources Across Royal Epic Interiors, Properties &amp; Design Journal
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {activeServicePage.relatedRoyalEpicLinks.map((linkItem, idx) => (
+                  <a
+                    key={idx}
+                    href={linkItem.href}
+                    onClick={(e) => handleLinkNavigation(e, linkItem.href)}
+                    className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-[#8C6D3B] font-semibold mb-1.5">
+                        <BookOpen className="w-3 h-3" />
+                        {linkItem.category}
+                      </span>
+                      <h3 className="text-base font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-1.5">
+                        {linkItem.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
+                        {linkItem.description}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                      Explore Resource <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 10: Mandatory Compliance & Privacy Disclaimer */}
+        <section className="py-10 bg-[#EFE9DD] text-stone-600">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-xs leading-relaxed">
+            <div>
+              <h3 className="font-bold text-[#1C2331] uppercase tracking-wider text-[11px] font-mono mb-1">
+                Finance Enquiry &amp; Regulatory Disclaimer
+              </h3>
+              <p>{activeServicePage.complianceNote}</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-[#1C2331] uppercase tracking-wider text-[11px] font-mono mb-1">
+                Privacy Notice
+              </h3>
+              <p>
+                The information submitted through this page is used solely by Royal Epic to review your finance enquiry and contact you regarding your requirement. We never collect Aadhaar, PAN, bank account numbers, OTPs or document uploads through this website form.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // MAIN /LOANS HUB PAGE VIEW
+  // =========================================================================
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#1C2331]">
       {/* =====================================================================
@@ -579,7 +1651,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
       </section>
 
       {/* =====================================================================
-          SECTION C – FINANCE SERVICES WE ASSIST WITH
+          SECTION C – FINANCE SERVICES WE ASSIST WITH (HUB CARDS WITH DEDICATED PAGE LINKS)
           ===================================================================== */}
       <section
         ref={servicesSectionRef}
@@ -595,7 +1667,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
               Finance Services We Assist With
             </h2>
             <p className="text-stone-600 text-sm sm:text-base mt-2.5 leading-relaxed">
-              Select the category that best matches your upcoming home construction, interior design, renovation or property requirement.
+              Explore our dedicated planning guides for each finance category below, or submit an enquiry directly for personal guidance from our Bengaluru team.
             </p>
           </div>
 
@@ -607,7 +1679,11 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
                   key={service.id}
                   className="group bg-[#FAF7F2] border border-[#E5DEC9] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
                 >
-                  <div className="relative aspect-[16/10] bg-stone-200 overflow-hidden">
+                  <a
+                    href={service.path}
+                    onClick={(e) => handleLinkNavigation(e, service.path)}
+                    className="relative aspect-[16/10] bg-stone-200 overflow-hidden block"
+                  >
                     <img
                       src={service.image}
                       alt={service.imageAlt}
@@ -620,26 +1696,39 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
                         {service.title}
                       </span>
                     </div>
-                  </div>
+                  </a>
 
                   <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                     <div>
                       <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#1C2331] mb-2.5">
-                        {service.title}
+                        <a
+                          href={service.path}
+                          onClick={(e) => handleLinkNavigation(e, service.path)}
+                          className="hover:text-[#8C6D3B] transition-colors"
+                        >
+                          {service.title}
+                        </a>
                       </h3>
                       <p className="text-sm sm:text-[15px] text-stone-600 leading-relaxed mb-6">
                         {service.description}
                       </p>
                     </div>
 
-                    <div className="pt-4 border-t border-[#EAE3D5] flex items-center justify-between">
+                    <div className="pt-4 border-t border-[#EAE3D5] flex flex-wrap items-center justify-between gap-3">
+                      <a
+                        href={service.path}
+                        onClick={(e) => handleLinkNavigation(e, service.path)}
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#8C6D3B] hover:text-[#1C2331] transition-colors"
+                      >
+                        Explore {service.title}
+                        <ArrowRight className="w-4 h-4" />
+                      </a>
                       <button
                         type="button"
                         onClick={() => handleServiceCardClick(service.purpose)}
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#1C2331] hover:text-[#8C6D3B] transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1C2331] hover:bg-[#273145] text-[#FAF7F2] text-xs font-semibold transition-colors cursor-pointer"
                       >
-                        Enquire for {service.title}
-                        <ArrowRight className="w-4 h-4 text-[#8C6D3B]" />
+                        Quick Enquire
                       </button>
                     </div>
                   </div>
@@ -730,365 +1819,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
       {/* =====================================================================
           SECTION F – FINANCE ENQUIRY FORM
           ===================================================================== */}
-      <section
-        ref={formSectionRef}
-        id="finance-enquiry-form"
-        className="py-14 sm:py-20 bg-[#F4EFE6] border-b border-[#E5DEC9]"
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-[#FAF7F2] border border-[#DFD5C5] rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm">
-            <div className="max-w-2xl mb-8">
-              <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-2 font-mono">
-                ROYAL EPIC LOANS ENQUIRY
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C2331] mb-2">
-                Let&apos;s Understand Your Requirements
-              </h2>
-              <p className="text-stone-600 text-sm sm:text-base">
-                Share a few details and our team will get in touch with you.
-              </p>
-            </div>
-
-            {submittedSuccess ? (
-              <div
-                role="status"
-                aria-live="polite"
-                className="bg-emerald-950/5 border border-emerald-800/30 rounded-2xl p-6 sm:p-8 text-left space-y-4"
-              >
-                <div className="flex items-start gap-3.5">
-                  <CheckCircle2 className="w-7 h-7 text-emerald-700 shrink-0 mt-0.5" />
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-serif font-bold text-[#1C2331]">
-                      Enquiry Received
-                    </h3>
-                    <p className="text-sm sm:text-base text-stone-700 leading-relaxed">
-                      Thank you for contacting Royal Epic Loans. Your enquiry has been received. Our team will review your requirements and get in touch with you.
-                    </p>
-                    {submittedReference && (
-                      <p className="text-xs font-mono text-stone-600 pt-1">
-                        Enquiry Reference: <strong className="text-[#1C2331]">{submittedReference}</strong>
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="pt-3 border-t border-emerald-800/15 flex flex-wrap items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubmittedSuccess(false);
-                      setSubmittedReference(null);
-                    }}
-                    className="text-xs font-semibold text-[#8C6D3B] hover:text-[#1C2331] underline cursor-pointer"
-                  >
-                    Submit another finance enquiry
-                  </button>
-                  {onNavigate && (
-                    <button
-                      type="button"
-                      onClick={() => onNavigate('/')}
-                      className="text-xs font-semibold text-stone-600 hover:text-[#1C2331] cursor-pointer"
-                    >
-                      Return to Royal Epic Homepage
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmitEnquiry} noValidate className="space-y-6">
-                {submitError && (
-                  <div
-                    role="alert"
-                    className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-2.5"
-                  >
-                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                    <span>{submitError}</span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {/* 1. Full Name (Required) */}
-                  <div>
-                    <label
-                      htmlFor="loan-full-name"
-                      className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
-                    >
-                      Full Name <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      ref={fullNameInputRef}
-                      id="loan-full-name"
-                      name="customer_name"
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => {
-                        setFullName(e.target.value);
-                        if (fieldErrors.fullName) {
-                          setFieldErrors((prev) => ({ ...prev, fullName: '' }));
-                        }
-                      }}
-                      placeholder="Enter your full name"
-                      className={`w-full px-4 py-3 rounded-xl bg-white border ${
-                        fieldErrors.fullName ? 'border-red-500' : 'border-[#D6C7B2]'
-                      } text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]`}
-                    />
-                    {fieldErrors.fullName && (
-                      <p className="text-xs text-red-600 mt-1">{fieldErrors.fullName}</p>
-                    )}
-                  </div>
-
-                  {/* 2. Mobile Number (Required) */}
-                  <div>
-                    <label
-                      htmlFor="loan-mobile-number"
-                      className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
-                    >
-                      Mobile Number <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      id="loan-mobile-number"
-                      name="mobile_number"
-                      type="tel"
-                      required
-                      value={mobileNumber}
-                      onChange={(e) => {
-                        setMobileNumber(e.target.value);
-                        if (fieldErrors.mobileNumber) {
-                          setFieldErrors((prev) => ({ ...prev, mobileNumber: '' }));
-                        }
-                      }}
-                      placeholder="e.g. 98450 12345"
-                      className={`w-full px-4 py-3 rounded-xl bg-white border ${
-                        fieldErrors.mobileNumber ? 'border-red-500' : 'border-[#D6C7B2]'
-                      } text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]`}
-                    />
-                    {fieldErrors.mobileNumber && (
-                      <p className="text-xs text-red-600 mt-1">{fieldErrors.mobileNumber}</p>
-                    )}
-                  </div>
-
-                  {/* 3. Email Address (Optional) */}
-                  <div>
-                    <label
-                      htmlFor="loan-email"
-                      className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
-                    >
-                      Email Address <span className="text-stone-400 font-normal">(Optional)</span>
-                    </label>
-                    <input
-                      id="loan-email"
-                      name="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (fieldErrors.email) {
-                          setFieldErrors((prev) => ({ ...prev, email: '' }));
-                        }
-                      }}
-                      placeholder="you@example.com"
-                      className={`w-full px-4 py-3 rounded-xl bg-white border ${
-                        fieldErrors.email ? 'border-red-500' : 'border-[#D6C7B2]'
-                      } text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]`}
-                    />
-                    {fieldErrors.email && (
-                      <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
-                    )}
-                  </div>
-
-                  {/* 4. Finance Purpose (Required) */}
-                  <div>
-                    <label
-                      htmlFor="loan-finance-purpose"
-                      className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
-                    >
-                      Finance Purpose <span className="text-red-600">*</span>
-                    </label>
-                    <select
-                      id="loan-finance-purpose"
-                      name="finance_purpose"
-                      required
-                      value={financePurpose}
-                      onChange={(e) => {
-                        setFinancePurpose(e.target.value);
-                        if (fieldErrors.financePurpose) {
-                          setFieldErrors((prev) => ({ ...prev, financePurpose: '' }));
-                        }
-                      }}
-                      className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
-                    >
-                      {FINANCE_PURPOSE_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErrors.financePurpose && (
-                      <p className="text-xs text-red-600 mt-1">{fieldErrors.financePurpose}</p>
-                    )}
-                  </div>
-
-                  {/* 5. Approximate Finance Requirement (Optional) */}
-                  <div>
-                    <label
-                      htmlFor="loan-approximate-amount"
-                      className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
-                    >
-                      Approximate Finance Requirement{' '}
-                      <span className="text-stone-400 font-normal">(Optional)</span>
-                    </label>
-                    <select
-                      id="loan-approximate-amount"
-                      name="approximate_amount"
-                      value={approximateAmount}
-                      onChange={(e) => setApproximateAmount(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
-                    >
-                      <option value="">Select approximate range</option>
-                      {APPROXIMATE_REQUIREMENT_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 6. City / Location (Optional) */}
-                  <div>
-                    <label
-                      htmlFor="loan-city"
-                      className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#8C6D3B]" />
-                        City / Location
-                      </span>{' '}
-                      <span className="text-stone-400 font-normal">(Optional)</span>
-                    </label>
-                    <input
-                      id="loan-city"
-                      name="city"
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="e.g. Thanisandra, Bengaluru"
-                      className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
-                    />
-                  </div>
-                </div>
-
-                {/* 7. Preferred Time to Contact (Optional) */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2">
-                    <span className="inline-flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-[#8C6D3B]" />
-                      Preferred Time to Contact
-                    </span>{' '}
-                    <span className="text-stone-400 font-normal">(Optional)</span>
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {PREFERRED_CONTACT_TIME_OPTIONS.map((timeOption) => (
-                      <button
-                        key={timeOption}
-                        type="button"
-                        onClick={() => setPreferredContactTime(timeOption)}
-                        className={`py-2.5 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                          preferredContactTime === timeOption
-                            ? 'bg-[#1C2331] text-white border-[#1C2331]'
-                            : 'bg-white text-stone-700 border-[#D6C7B2] hover:border-[#8C6D3B]'
-                        }`}
-                      >
-                        {timeOption}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 8. Project Details (Optional) */}
-                <div>
-                  <label
-                    htmlFor="loan-project-details"
-                    className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2"
-                  >
-                    Project Details <span className="text-stone-400 font-normal">(Optional)</span>
-                  </label>
-                  <textarea
-                    id="loan-project-details"
-                    name="project_details"
-                    rows={3}
-                    value={projectDetails}
-                    onChange={(e) => setProjectDetails(e.target.value)}
-                    placeholder="Briefly describe your home, construction or interior requirements..."
-                    className="w-full px-4 py-3 rounded-xl bg-white border border-[#D6C7B2] text-sm text-[#1C2331] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
-                  />
-                </div>
-
-                {/* 9. Consent Checkbox (Required) */}
-                <div className="pt-1">
-                  <label className="flex items-start gap-3 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={consent}
-                      onChange={(e) => {
-                        setConsent(e.target.checked);
-                        if (fieldErrors.consent) {
-                          setFieldErrors((prev) => ({ ...prev, consent: '' }));
-                        }
-                      }}
-                      className="mt-1 w-4 h-4 rounded border-stone-400 text-[#1C2331] focus:ring-[#C5A059]"
-                    />
-                    <span className="text-xs sm:text-sm text-stone-700 leading-relaxed">
-                      I agree to be contacted by Royal Epic regarding my finance enquiry and acknowledge the{' '}
-                      <a
-                        href="/privacy-policy"
-                        onClick={(e) => {
-                          if (onNavigate) {
-                            e.preventDefault();
-                            onNavigate('/privacy-policy');
-                          }
-                        }}
-                        className="underline font-semibold text-[#1C2331] hover:text-[#8C6D3B]"
-                      >
-                        Privacy Policy
-                      </a>
-                      . <span className="text-red-600">*</span>
-                    </span>
-                  </label>
-                  {fieldErrors.consent && (
-                    <p className="text-xs text-red-600 mt-1.5">{fieldErrors.consent}</p>
-                  )}
-                </div>
-
-                {/* Submit Button */}
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-[#1C2331] hover:bg-[#273145] disabled:opacity-60 text-[#FAF7F2] font-semibold text-sm rounded-xl shadow-sm transition-all cursor-pointer"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-[#C5A059]" />
-                        Submitting Finance Enquiry...
-                      </>
-                    ) : (
-                      <>
-                        Submit Finance Enquiry
-                        <ArrowRight className="w-4 h-4 text-[#C5A059]" />
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Concise Disclaimer Below Form */}
-                <p className="text-[11px] text-stone-500 leading-relaxed pt-2 border-t border-[#E5DEC9]">
-                  Note: We never ask for Aadhaar, PAN, bank account numbers, salary slips, credit card details or OTPs on this online form. Submitting a finance enquiry is free of charge and subject to eligibility, verification and the applicable finance provider&apos;s terms and approval.
-                </p>
-              </form>
-            )}
-          </div>
-        </div>
-      </section>
+      {renderEnquiryFormSection()}
 
       {/* =====================================================================
           SECTION G – FREQUENTLY ASKED QUESTIONS (FAQ ACCORDION)
@@ -1170,13 +1901,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <a
               href="/turnkey-interior-contractors-bangalore"
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                if (onNavigate) {
-                  e.preventDefault();
-                  onNavigate('/turnkey-interior-contractors-bangalore');
-                }
-              }}
+              onClick={(e) => handleLinkNavigation(e, '/turnkey-interior-contractors-bangalore')}
               className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
             >
               <div>
@@ -1194,13 +1919,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
 
             <a
               href="/home-interior-design-bangalore"
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                if (onNavigate) {
-                  e.preventDefault();
-                  onNavigate('/home-interior-design-bangalore');
-                }
-              }}
+              onClick={(e) => handleLinkNavigation(e, '/home-interior-design-bangalore')}
               className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
             >
               <div>
@@ -1218,13 +1937,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
 
             <a
               href="/modular-kitchen-bangalore"
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                if (onNavigate) {
-                  e.preventDefault();
-                  onNavigate('/modular-kitchen-bangalore');
-                }
-              }}
+              onClick={(e) => handleLinkNavigation(e, '/modular-kitchen-bangalore')}
               className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
             >
               <div>
@@ -1242,13 +1955,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
 
             <a
               href="/properties"
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                if (onNavigate) {
-                  e.preventDefault();
-                  onNavigate('/properties');
-                }
-              }}
+              onClick={(e) => handleLinkNavigation(e, '/properties')}
               className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
             >
               <div>
@@ -1266,13 +1973,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
 
             <a
               href="/blog/how-to-read-interior-design-quotation"
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                if (onNavigate) {
-                  e.preventDefault();
-                  onNavigate('/blog/how-to-read-interior-design-quotation');
-                }
-              }}
+              onClick={(e) => handleLinkNavigation(e, '/blog/how-to-read-interior-design-quotation')}
               className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
             >
               <div>
@@ -1290,13 +1991,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
 
             <a
               href="/blog/2bhk-3bhk-home-interior-planning-checklist"
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                if (onNavigate) {
-                  e.preventDefault();
-                  onNavigate('/blog/2bhk-3bhk-home-interior-planning-checklist');
-                }
-              }}
+              onClick={(e) => handleLinkNavigation(e, '/blog/2bhk-3bhk-home-interior-planning-checklist')}
               className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
             >
               <div>

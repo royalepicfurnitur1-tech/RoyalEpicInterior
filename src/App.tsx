@@ -703,7 +703,7 @@ export default function App() {
             onNavigateHome={() => navigateTo('/')}
           />
         ) : currentPath === '/loans' || currentPath.startsWith('/loans/') ? (
-          <PublicLoansPage onNavigate={navigateTo} />
+          <PublicLoansPage currentPath={currentPath} onNavigate={navigateTo} />
         ) : currentPath.startsWith('/products/') ? (
           (() => {
             const slug = currentPath.replace(/^\/products\//, '').split('?')[0].replace(/\/$/, '');
@@ -794,7 +794,7 @@ export default function App() {
             )}
 
             {activeTab === 'loans' && (
-              <PublicLoansPage onNavigate={navigateTo} />
+              <PublicLoansPage currentPath={currentPath} onNavigate={navigateTo} />
             )}
 
             {activeTab === 'services' && (

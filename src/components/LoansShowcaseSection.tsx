@@ -33,22 +33,54 @@ export const LoansShowcaseSection: React.FC<LoansShowcaseSectionProps> = ({ onNa
               From home construction to complete interiors and renovations, share your finance requirements with Royal Epic and let our team guide you through the next steps.
             </p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-stone-600 font-medium">
-              <span className="inline-flex items-center gap-1.5">
+              <a
+                href="/loans/home-construction-finance"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onNavigate('/loans/home-construction-finance');
+                }}
+                className="inline-flex items-center gap-1.5 hover:text-[#8C6D3B] transition-colors underline decoration-[#C5A059]/50 underline-offset-4"
+              >
                 <Home className="w-3.5 h-3.5 text-[#8C6D3B]" />
                 Home Construction Finance
-              </span>
-              <span className="inline-flex items-center gap-1.5">
+              </a>
+              <a
+                href="/loans/home-interior-finance"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onNavigate('/loans/home-interior-finance');
+                }}
+                className="inline-flex items-center gap-1.5 hover:text-[#8C6D3B] transition-colors underline decoration-[#C5A059]/50 underline-offset-4"
+              >
                 <Sparkles className="w-3.5 h-3.5 text-[#8C6D3B]" />
                 Home Interior Finance
-              </span>
-              <span className="inline-flex items-center gap-1.5">
+              </a>
+              <a
+                href="/loans/home-renovation-finance"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onNavigate('/loans/home-renovation-finance');
+                }}
+                className="inline-flex items-center gap-1.5 hover:text-[#8C6D3B] transition-colors underline decoration-[#C5A059]/50 underline-offset-4"
+              >
                 <Hammer className="w-3.5 h-3.5 text-[#8C6D3B]" />
                 Home Renovation Finance
-              </span>
-              <span className="inline-flex items-center gap-1.5">
+              </a>
+              <a
+                href="/loans/property-related-finance"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onNavigate('/loans/property-related-finance');
+                }}
+                className="inline-flex items-center gap-1.5 hover:text-[#8C6D3B] transition-colors underline decoration-[#C5A059]/50 underline-offset-4"
+              >
                 <Building2 className="w-3.5 h-3.5 text-[#8C6D3B]" />
                 Property-Related Finance
-              </span>
+              </a>
             </div>
           </div>
 
