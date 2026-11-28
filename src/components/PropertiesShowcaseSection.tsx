@@ -66,86 +66,118 @@ export const PropertiesShowcaseSection: React.FC<PropertiesShowcaseSectionProps>
           </div>
 
           <div className="shrink-0">
-            <button
-              type="button"
-              onClick={onExploreProperties}
+            <a
+              href="/properties"
+              onClick={(e) => {
+                e.preventDefault();
+                onExploreProperties();
+              }}
               className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-stone-900 hover:bg-amber-800 text-white text-sm font-semibold transition-colors shadow-sm"
             >
               <span>Explore Rental Properties</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </a>
           </div>
         </div>
 
         {/* Live Featured Properties Grid (if published listings exist) or Vertical Highlights */}
         {featuredProperties.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 mb-6">
-            {featuredProperties.map((prop) => (
-              <div
-                key={prop.property_id}
-                onClick={() => onSelectProperty(prop.slug)}
-                className="group bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all cursor-pointer flex flex-col"
-              >
-                <div className="relative h-52 bg-stone-100 overflow-hidden">
-                  <img
-                    src={prop.main_image}
-                    alt={prop.property_title}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded bg-stone-900/85 text-white text-[11px] font-semibold">
-                    {prop.property_category} • {prop.property_type}
-                  </span>
-                  <span className="absolute top-3 right-3 px-2.5 py-1 rounded bg-emerald-600 text-white text-[11px] font-semibold">
-                    Verified
-                  </span>
-                  <div className="absolute bottom-2.5 left-3 right-3 flex items-center gap-1 text-white text-xs font-medium">
-                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="truncate">{prop.locality}, Bengaluru</span>
-                  </div>
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-base font-serif font-bold text-stone-900 group-hover:text-amber-800 transition-colors line-clamp-1 mb-2">
-                      {prop.property_title}
-                    </h3>
-                    <div className="flex items-center gap-3 text-xs text-stone-600 mb-3">
-                      <span className="inline-flex items-center gap-1">
-                        <BedDouble className="w-3.5 h-3.5 text-amber-700" />
-                        {prop.bhk_type !== 'N/A' ? prop.bhk_type : prop.property_type}
-                      </span>
-                      {prop.built_up_area > 0 && (
-                        <span className="inline-flex items-center gap-1">
-                          <Maximize2 className="w-3.5 h-3.5 text-amber-700" />
-                          {prop.built_up_area} {prop.area_unit || 'sq.ft'}
-                        </span>
-                      )}
-                      <span className="inline-flex items-center gap-1">
-                        <Armchair className="w-3.5 h-3.5 text-amber-700" />
-                        {prop.furnishing_status}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-stone-400 block font-semibold">
-                        Monthly Rent
-                      </span>
-                      <span className="text-lg font-bold text-amber-800">
-                        ₹{Number(prop.monthly_rent || 0).toLocaleString('en-IN')}
-                        <span className="text-xs text-stone-500 font-normal">/mo</span>
-                      </span>
-                    </div>
-                    <span className="text-xs font-semibold text-stone-900 group-hover:text-amber-800">
-                      View Details →
+            {featuredProperties.map((prop) => {
+              const propHref = `/properties/${prop.slug}`;
+              return (
+                <article
+                  key={prop.property_id}
+                  onClick={() => onSelectProperty(prop.slug)}
+                  className="group bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all cursor-pointer flex flex-col"
+                >
+                  <a
+                    href={propHref}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onSelectProperty(prop.slug);
+                    }}
+                    className="relative h-52 bg-stone-100 overflow-hidden block"
+                  >
+                    <img
+                      src={prop.main_image}
+                      alt={`${prop.property_title} in ${prop.locality}, Bengaluru`}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded bg-stone-900/85 text-white text-[11px] font-semibold">
+                      {prop.property_category} • {prop.property_type}
                     </span>
+                    <span className="absolute top-3 right-3 px-2.5 py-1 rounded bg-emerald-600 text-white text-[11px] font-semibold">
+                      Verified
+                    </span>
+                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center gap-1 text-white text-xs font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">{prop.locality}, Bengaluru</span>
+                    </div>
+                  </a>
+
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-base font-serif font-bold text-stone-900 group-hover:text-amber-800 transition-colors line-clamp-1 mb-2">
+                        <a
+                          href={propHref}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onSelectProperty(prop.slug);
+                          }}
+                          className="hover:text-amber-800 transition-colors"
+                        >
+                          {prop.property_title}
+                        </a>
+                      </h3>
+                      <div className="flex items-center gap-3 text-xs text-stone-600 mb-3">
+                        <span className="inline-flex items-center gap-1">
+                          <BedDouble className="w-3.5 h-3.5 text-amber-700" />
+                          {prop.bhk_type !== 'N/A' ? prop.bhk_type : prop.property_type}
+                        </span>
+                        {prop.built_up_area > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <Maximize2 className="w-3.5 h-3.5 text-amber-700" />
+                            {prop.built_up_area} {prop.area_unit || 'sq.ft'}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1">
+                          <Armchair className="w-3.5 h-3.5 text-amber-700" />
+                          {prop.furnishing_status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-stone-400 block font-semibold">
+                          Monthly Rent
+                        </span>
+                        <span className="text-lg font-bold text-amber-800">
+                          ₹{Number(prop.monthly_rent || 0).toLocaleString('en-IN')}
+                          <span className="text-xs text-stone-500 font-normal">/mo</span>
+                        </span>
+                      </div>
+                      <a
+                        href={propHref}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onSelectProperty(prop.slug);
+                        }}
+                        className="text-xs font-semibold text-stone-900 group-hover:text-amber-800"
+                      >
+                        View Details →
+                      </a>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -206,13 +238,16 @@ export const PropertiesShowcaseSection: React.FC<PropertiesShowcaseSectionProps>
               Thanisandra • Hebbal • Whitefield • Indiranagar • HSR • Koramangala
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onExploreProperties}
+          <a
+            href="/properties"
+            onClick={(e) => {
+              e.preventDefault();
+              onExploreProperties();
+            }}
             className="text-amber-800 font-semibold hover:underline"
           >
             Browse All Bengaluru Rental Properties →
-          </button>
+          </a>
         </div>
       </div>
     </section>

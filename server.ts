@@ -17,6 +17,7 @@ import {
   injectSeoPageIntoHtml,
   injectPropertiesListIntoHtml,
   injectPropertyDetailIntoHtml,
+  injectPropertyNotFoundIntoHtml,
   injectLoansPageIntoHtml,
   injectBlogListIntoHtml,
   injectBlogPostIntoHtml,
@@ -486,11 +487,28 @@ async function startServer() {
     }
   }));
 
+  // Helper to resolve host-aware origin for royalepicinterior.com and royalepicinterior.in
+  const resolveRequestHostOrigin = (req: any): string => {
+    const host = (
+      (req.get("x-forwarded-host") || req.get("host") || "") +
+      " " +
+      String(req.query?.hostname || req.query?.host || "")
+    ).toLowerCase();
+    if (host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))) {
+      return "https://royalepicinterior.in";
+    }
+    if (host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))) {
+      return "https://royalepicinterior.com";
+    }
+    return SITE_URL;
+  };
+
   // =========================================================================
   // 1. PRIMARY SEO DISCOVERY ROUTES (MUST BE FIRST BEFORE ANY OTHER ROUTES/SPA)
   // =========================================================================
   app.get("/robots.txt", (req, res) => {
-    const robotsTxt = generateRobotsTxt();
+    const hostOrigin = resolveRequestHostOrigin(req);
+    const robotsTxt = generateRobotsTxt(hostOrigin);
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -518,18 +536,8 @@ async function startServer() {
   };
 
   app.get("/sitemap.xml", async (req, res) => {
+    const hostOrigin = resolveRequestHostOrigin(req);
     try {
-      const host = (
-        (req.get("x-forwarded-host") || req.get("host") || "") +
-        " " +
-        String(req.query.hostname || req.query.host || "")
-      ).toLowerCase();
-      const hostOrigin = host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
-        ? "https://royalepicinterior.in"
-        : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
-          ? "https://royalepicinterior.com"
-          : SITE_URL;
-
       const [liveProducts, publishedProperties] = await Promise.all([
         getLiveCatalogProducts(),
         getApprovedPublishedPropertiesForWebsite().catch(() => []),
@@ -540,15 +548,20 @@ async function startServer() {
       res.setHeader("X-Content-Type-Options", "nosniff");
       return res.status(200).send(sitemapXml);
     } catch (err) {
-      // In event of network timeout, serve pre-built public/sitemap.xml which contains all active products
+      // In event of network timeout, serve pre-built public/sitemap.xml localized to the request origin
       const publicSitemap = path.join(process.cwd(), "public", "sitemap.xml");
       if (fs.existsSync(publicSitemap)) {
+        const rawXml = fs.readFileSync(publicSitemap, "utf-8");
+        const localizedXml =
+          hostOrigin !== "https://royalepicinterior.com"
+            ? rawXml.replace(/https:\/\/royalepicinterior\.com/g, hostOrigin)
+            : rawXml;
         res.setHeader("Content-Type", "application/xml; charset=utf-8");
         res.setHeader("Cache-Control", "public, max-age=3600");
         res.setHeader("X-Content-Type-Options", "nosniff");
-        return res.status(200).send(fs.readFileSync(publicSitemap, "utf-8"));
+        return res.status(200).send(localizedXml);
       }
-      const sitemapXml = generateSitemapXml();
+      const sitemapXml = generateSitemapXml(undefined, hostOrigin);
       res.setHeader("Content-Type", "application/xml; charset=utf-8");
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.setHeader("X-Content-Type-Options", "nosniff");
@@ -582,12 +595,7 @@ async function startServer() {
       const slug = req.path;
       const pageData = SEO_PAGES[slug];
       if (pageData) {
-        const host = (req.get("host") || "").toLowerCase();
-        const hostOrigin = host.includes("royalepicinterior.in") || (host.endsWith(".in") && host.includes("royalepic"))
-          ? "https://royalepicinterior.in"
-          : host.includes("royalepicinterior.com") || (host.endsWith(".com") && host.includes("royalepic"))
-            ? "https://royalepicinterior.com"
-            : SITE_URL;
+        const hostOrigin = resolveRequestHostOrigin(req);
 
         const template = await getIndexHtmlTemplate(req.path);
         const enrichedHtml = injectSeoPageIntoHtml(template, pageData, slug, hostOrigin);
@@ -602,15 +610,16 @@ async function startServer() {
     next();
   });
 
-  // Product Catalog Route (/products) - Serves authentic application shell with canonical meta tags
+  // Product Catalog Route (/products) - Serves authentic application shell with host-aware canonical meta tags
   app.get("/products", async (req, res, next) => {
     try {
+      const hostOrigin = resolveRequestHostOrigin(req);
       let html = await getIndexHtmlTemplate(req.path || "/products");
       const rawCategory = typeof req.query.category === "string" ? req.query.category.trim() : "";
       const resolvedCat = rawCategory ? resolveCategoryDefinition(rawCategory) : null;
       const catalogCanonical = resolvedCat
-        ? `${SITE_URL}/products?category=${resolvedCat.slug}`
-        : `${SITE_URL}/products`;
+        ? `${hostOrigin}/products?category=${resolvedCat.slug}`
+        : `${hostOrigin}/products`;
       const catalogTitle = resolvedCat
         ? `${resolvedCat.name} | Royal Epic Interior & Furniture Bengaluru`
         : 'Product Catalog | Luxury Handcrafted Furniture & Architectural Doors | Royal Epic Interior Bengaluru';
@@ -629,6 +638,9 @@ async function startServer() {
       } else {
         html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
       }
+      if (hostOrigin !== "https://royalepicinterior.com") {
+        html = html.replace(/https:\/\/royalepicinterior\.com/g, hostOrigin);
+      }
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
@@ -642,10 +654,14 @@ async function startServer() {
     }
   });
 
-  // Homepage Route (/) - Serves authentic application shell with branded loader and clean cache control
+  // Homepage Route (/) - Serves authentic application shell with host-aware canonical and schema URLs
   app.get("/", async (req, res, next) => {
     try {
-      const template = await getIndexHtmlTemplate(req.originalUrl || "/");
+      const hostOrigin = resolveRequestHostOrigin(req);
+      let template = await getIndexHtmlTemplate(req.originalUrl || "/");
+      if (hostOrigin !== "https://royalepicinterior.com") {
+        template = template.replace(/https:\/\/royalepicinterior\.com/g, hostOrigin);
+      }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
       res.setHeader("Pragma", "no-cache");
@@ -689,17 +705,7 @@ async function startServer() {
   // Royal Epic Properties Listing Route (/properties) - Host-Aware Self-Canonical & Structured Data
   app.get("/properties", async (req, res, next) => {
     try {
-      const host = (
-        (req.get("x-forwarded-host") || req.get("host") || "") +
-        " " +
-        String(req.query.hostname || req.query.host || "")
-      ).toLowerCase();
-      const hostOrigin = host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
-        ? "https://royalepicinterior.in"
-        : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
-          ? "https://royalepicinterior.com"
-          : SITE_URL;
-
+      const hostOrigin = resolveRequestHostOrigin(req);
       const template = await getIndexHtmlTemplate(req.originalUrl || "/properties");
       const publishedProperties = await getApprovedPublishedPropertiesForWebsite().catch(() => []);
       const enrichedHtml = injectPropertiesListIntoHtml(template, publishedProperties, hostOrigin);
@@ -722,23 +728,31 @@ async function startServer() {
     }
 
     try {
-      const host = (
-        (req.get("x-forwarded-host") || req.get("host") || "") +
-        " " +
-        String(req.query.hostname || req.query.host || "")
-      ).toLowerCase();
-      const hostOrigin = host.includes("royalepicinterior.in") || (host.includes(".in") && host.includes("royalepic"))
-        ? "https://royalepicinterior.in"
-        : host.includes("royalepicinterior.com") || (host.includes(".com") && host.includes("royalepic"))
-          ? "https://royalepicinterior.com"
-          : SITE_URL;
-
+      const hostOrigin = resolveRequestHostOrigin(req);
       const slug = req.params.slug;
-      const property = await findPublicPropertyBySlugOrId(slug);
+      const [property, publishedProperties] = await Promise.all([
+        findPublicPropertyBySlugOrId(slug),
+        getApprovedPublishedPropertiesForWebsite().catch(() => []),
+      ]);
       const template = await getIndexHtmlTemplate(req.originalUrl || `/properties/${slug}`);
 
       if (property) {
-        const enrichedHtml = injectPropertyDetailIntoHtml(template, property, hostOrigin);
+        const similarProperties = Array.isArray(publishedProperties)
+          ? publishedProperties
+              .filter(
+                (p: any) =>
+                  p &&
+                  p.slug !== property.slug &&
+                  p.property_id !== property.property_id
+              )
+              .slice(0, 3)
+          : [];
+        const enrichedHtml = injectPropertyDetailIntoHtml(
+          template,
+          property,
+          hostOrigin,
+          similarProperties
+        );
         res.setHeader("Content-Type", "text/html; charset=utf-8");
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
         res.setHeader("Pragma", "no-cache");
@@ -746,14 +760,14 @@ async function startServer() {
         res.setHeader("X-Content-Type-Options", "nosniff");
         return res.status(200).send(enrichedHtml);
       } else {
-        // Still inject host-aware self-canonical for the SPA route
-        const fallbackHtml = injectPropertiesListIntoHtml(template, [], hostOrigin).replace(
-          new RegExp(`${hostOrigin}/properties`, 'g'),
-          `${hostOrigin}/properties/${slug.replace(/[^a-zA-Z0-9_-]/g, '')}`
-        );
+        // Return HTTP 404 Not Found with noindex, follow and canonical pointing to /properties
+        const notFoundHtml = injectPropertyNotFoundIntoHtml(template, hostOrigin);
         res.setHeader("Content-Type", "text/html; charset=utf-8");
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
-        return res.status(200).send(fallbackHtml);
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(404).send(notFoundHtml);
       }
     } catch (err: any) {
       console.warn("[PropertyDetailSSR] Error rendering property detail HTML:", err?.message || err);

@@ -131,21 +131,112 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
     };
   }, [propertySlug]);
 
-  // Update SEO Title, Meta Description, Self-Canonical & JSON-LD when property loads
+  // Update SEO Title, Meta Description, Self-Canonical, OG & Twitter tags when property loads or notFound is true
   useEffect(() => {
-    if (!property) return;
     const origin = resolveHostOrigin();
+
+    if (notFound) {
+      const notFoundTitle = 'Property No Longer Available | Royal Epic Properties';
+      const notFoundDesc =
+        'This property listing is no longer available or has been rented out. Explore active verified rental properties across Bengaluru with Royal Epic Properties.';
+      const propertiesCanonical = `${origin}/properties`;
+
+      document.title = notFoundTitle;
+
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', notFoundDesc);
+
+      let metaRobots = document.querySelector('meta[name="robots"]');
+      if (!metaRobots) {
+        metaRobots = document.createElement('meta');
+        metaRobots.setAttribute('name', 'robots');
+        document.head.appendChild(metaRobots);
+      }
+      metaRobots.setAttribute('content', 'noindex, follow');
+
+      let canonicalLink = document.querySelector('link[rel="canonical"]');
+      if (!canonicalLink) {
+        canonicalLink = document.createElement('link');
+        canonicalLink.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonicalLink);
+      }
+      canonicalLink.setAttribute('href', propertiesCanonical);
+      return;
+    }
+
+    if (!property) return;
+
     const canonicalUrl = `${origin}/properties/${property.slug}`;
+    const rawTitle = String(property.property_title || '').trim();
+    const locality = String(property.locality || 'Bengaluru').trim();
+    const city = String(property.city || 'Bengaluru').trim();
+    const bhkType =
+      property.bhk_type && property.bhk_type !== 'N/A' ? String(property.bhk_type).trim() : '';
+    const propType = String(property.property_type || 'Property').trim();
     const bhkOrType =
-      property.bhk_type && property.bhk_type !== 'N/A'
-        ? `${property.bhk_type} ${property.property_type}`
-        : property.property_type;
-    const locality = property.locality || 'Bengaluru';
-    const pageTitle = `${property.property_title || `${bhkOrType} for Rent`} in ${locality}, Bengaluru | Royal Epic Properties`;
-    const rentFormatted = Number(property.monthly_rent || 0).toLocaleString('en-IN');
-    const pageDesc =
-      property.description?.slice(0, 220) ||
-      `Verified ${bhkOrType} available for rent in ${locality}, Bengaluru. Monthly rent: ₹${rentFormatted}. Furnishing: ${property.furnishing_status}. Request a site visit with Royal Epic Properties.`;
+      bhkType && !propType.toLowerCase().includes(bhkType.toLowerCase())
+        ? `${bhkType} ${propType}`
+        : propType;
+
+    const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let baseTitle = rawTitle
+      .replace(new RegExp(`\\s+in\\s+${esc(locality)}(?:,\\s*${esc(city)})?$`, 'i'), '')
+      .replace(new RegExp(`\\s+in\\s+${esc(city)}$`, 'i'), '')
+      .trim();
+
+    if (!baseTitle) {
+      baseTitle = bhkOrType || 'Rental Property';
+    }
+
+    if (/^\d+\s*(?:BHK|RK)$/i.test(baseTitle) && property.property_category !== 'Commercial') {
+      baseTitle = `${baseTitle} Flat`;
+    }
+
+    const hasForRent = /\bfor\s+rent\b/i.test(baseTitle);
+    const titleWithIntent = hasForRent ? baseTitle : `${baseTitle} for Rent`;
+    const locationPhrase =
+      locality.toLowerCase() === city.toLowerCase() ? city : `${locality}, ${city}`;
+    const pageTitle = `${titleWithIntent} in ${locationPhrase} | Royal Epic Properties`;
+
+    const rentNum = Number(property.monthly_rent || (property as any).expected_monthly_rent || 0);
+    const rentPhrase = rentNum > 0 ? ` at ₹${rentNum.toLocaleString('en-IN')}/month` : '';
+    const furnishing =
+      property.furnishing_status && String(property.furnishing_status).trim()
+        ? `${String(property.furnishing_status).trim()} `
+        : '';
+    const areaNum = Number(property.built_up_area || property.carpet_area || 0);
+    const areaPhrase = areaNum > 0 ? ` (${areaNum} ${property.area_unit || 'sq.ft'})` : '';
+    const amenitiesList = Array.isArray(property.amenities)
+      ? property.amenities.filter(Boolean).slice(0, 3)
+      : [];
+    const amenitiesPhrase =
+      amenitiesList.length > 0 ? ` Includes ${amenitiesList.join(', ')}.` : '';
+
+    const customDesc = String(
+      property.description || (property as any).property_description || ''
+    ).trim();
+    const isGenericDefaultDesc =
+      !customDesc ||
+      /^Verified\s+.*available\s+for\s+rent\s+in\s+.*Managed\s+by\s+Royal\s+Epic\s+Properties\.?$/i.test(
+        customDesc
+      );
+
+    const generatedDesc = `Verified ${furnishing}${baseTitle.toLowerCase().includes('for rent') ? baseTitle : `${baseTitle} for rent`}${areaPhrase} in ${locationPhrase}${rentPhrase}.${amenitiesPhrase} Schedule an assisted site visit with Royal Epic Properties.`;
+
+    const pageDesc = (
+      isGenericDefaultDesc
+        ? generatedDesc
+        : `${customDesc}${rentPhrase ? ` Monthly rent:${rentPhrase.replace(' at', '')}.` : ''}${amenitiesPhrase}`
+    )
+      .replace(/<[^>]*>?/gm, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 160);
 
     document.title = pageTitle;
 
@@ -157,6 +248,14 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
     }
     metaDesc.setAttribute('content', pageDesc);
 
+    let metaRobots = document.querySelector('meta[name="robots"]');
+    if (!metaRobots) {
+      metaRobots = document.createElement('meta');
+      metaRobots.setAttribute('name', 'robots');
+      document.head.appendChild(metaRobots);
+    }
+    metaRobots.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1');
+
     let canonicalLink = document.querySelector('link[rel="canonical"]');
     if (!canonicalLink) {
       canonicalLink = document.createElement('link');
@@ -164,6 +263,10 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
       document.head.appendChild(canonicalLink);
     }
     canonicalLink.setAttribute('href', canonicalUrl);
+
+    const ogImg = property.main_image?.startsWith('http')
+      ? property.main_image
+      : `${origin}${property.main_image || '/images/royal-epic-properties-og.jpg'}`;
 
     const setOg = (propName: string, val: string) => {
       let tag = document.querySelector(`meta[property="${propName}"]`);
@@ -177,8 +280,24 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
     setOg('og:title', pageTitle);
     setOg('og:description', pageDesc);
     setOg('og:url', canonicalUrl);
-    setOg('og:image', property.main_image);
-  }, [property]);
+    setOg('og:image', ogImg);
+
+    const setTwitter = (name: string, val: string) => {
+      let tag =
+        document.querySelector(`meta[name="${name}"]`) ||
+        document.querySelector(`meta[property="${name}"]`);
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', val);
+    };
+    setTwitter('twitter:title', pageTitle);
+    setTwitter('twitter:description', pageDesc);
+    setTwitter('twitter:url', canonicalUrl);
+    setTwitter('twitter:image', ogImg);
+  }, [property, notFound]);
 
   const scrollToEnquiryForm = (prefillVisitRequest: boolean = false) => {
     if (prefillVisitRequest && !preferredVisitDate) {
@@ -287,14 +406,18 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
             This property may have been rented out, unpublished, or the link has changed. Explore
             other active verified rental properties across Bengaluru.
           </p>
-          <button
-            type="button"
-            onClick={onBackToList}
+          <a
+            href="/properties"
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              onBackToList();
+            }}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-sm font-semibold transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Browse Available Properties
-          </button>
+          </a>
         </div>
       </div>
     );
@@ -323,38 +446,49 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
       <div className="bg-white border-b border-stone-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => {
-                if (onNavigateHome) onNavigateHome();
-                else window.location.href = '/';
+            <a
+              href="/"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigateHome) {
+                  e.preventDefault();
+                  onNavigateHome();
+                }
               }}
               className="hover:text-amber-700 transition-colors font-medium"
             >
               Home
-            </button>
+            </a>
             <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
-            <button
-              type="button"
-              onClick={onBackToList}
+            <a
+              href="/properties"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                onBackToList();
+              }}
               className="hover:text-amber-700 transition-colors font-medium"
             >
               Properties
-            </button>
+            </a>
             <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
             <span className="text-stone-900 font-semibold truncate max-w-xs sm:max-w-md">
               {property.property_title}
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={onBackToList}
+          <a
+            href="/properties"
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              onBackToList();
+            }}
             className="inline-flex items-center gap-1.5 text-amber-800 font-semibold hover:underline"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to All Properties
-          </button>
+          </a>
         </div>
       </div>
 
@@ -1010,26 +1144,35 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
                   Similar Verified Properties
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={onBackToList}
+              <a
+                href="/properties"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onBackToList();
+                }}
                 className="text-xs sm:text-sm font-semibold text-amber-800 hover:underline"
               >
                 View All Properties →
-              </button>
+              </a>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {similarProperties.map((sim) => (
-                <div
+                <a
                   key={sim.property_id}
-                  onClick={() => onSelectProperty(sim.slug)}
+                  href={`/properties/${sim.slug}`}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                    e.preventDefault();
+                    onSelectProperty(sim.slug);
+                  }}
                   className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md hover:border-amber-500/50 transition-all cursor-pointer flex flex-col"
                 >
                   <div className="h-48 bg-stone-100 relative overflow-hidden">
                     <img
                       src={sim.main_image}
-                      alt={sim.property_title}
+                      alt={`${sim.property_title} in ${sim.locality || 'Bengaluru'}`}
                       className="w-full h-full object-cover"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-black/70 text-white text-[11px] font-medium">
@@ -1053,7 +1196,7 @@ export const PublicPropertyDetailPage: React.FC<PublicPropertyDetailPageProps> =
                       <span className="text-xs font-semibold text-stone-800">View Details →</span>
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>

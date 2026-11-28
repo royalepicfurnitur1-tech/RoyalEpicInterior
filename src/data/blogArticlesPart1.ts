@@ -326,6 +326,16 @@ export const BLOG_ARTICLES_PART_1: BlogPost[] = [
         url: '/modular-kitchen-bangalore',
         description: 'Custom ergonomic kitchens engineered with IS 710 BWR ply, HDHMR and German hardware.',
       },
+      {
+        title: 'Home Interior & Renovation Finance Assistance',
+        url: '/loans',
+        description: 'Explore finance enquiry assistance for turnkey home interiors, modular kitchens and renovation projects in Bengaluru.',
+      },
+      {
+        title: 'Verified Rental Properties in Bengaluru',
+        url: '/properties',
+        description: 'Browse verified 1BHK, 2BHK and 3BHK apartments, independent houses and commercial spaces for rent across Bengaluru.',
+      },
     ],
     ctaConfig: {
       heading: 'Planning Your Home Interiors?',

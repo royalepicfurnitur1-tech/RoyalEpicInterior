@@ -75,13 +75,14 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
   const [sortBy, setSortBy] = useState<'recent' | 'rent_asc' | 'rent_desc'>('recent');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
 
-  // Sync SEO Title, Meta Description, Self-Canonical & JSON-LD
+  // Sync SEO Title, Meta Description, Self-Canonical, OG & Twitter tags
   useEffect(() => {
     const origin = resolveHostOrigin();
     const canonicalUrl = `${origin}/properties`;
-    const pageTitle = 'Rental Properties in Bengaluru | Royal Epic Properties';
+    const pageTitle = 'Rental Properties in Bangalore & Bengaluru | Royal Epic';
     const pageDesc =
-      'Explore verified residential and commercial rental properties in Bengaluru with Royal Epic Properties. Browse apartments, villas, offices and retail spaces.';
+      'Explore verified 1BHK, 2BHK & 3BHK flats, houses, villas and commercial spaces for rent in Bengaluru. Get assistance with property site visits.';
+    const ogImage = `${origin}/images/royal-epic-properties-og.jpg`;
 
     document.title = pageTitle;
 
@@ -92,6 +93,14 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
       document.head.appendChild(metaDesc);
     }
     metaDesc.setAttribute('content', pageDesc);
+
+    let metaRobots = document.querySelector('meta[name="robots"]');
+    if (!metaRobots) {
+      metaRobots = document.createElement('meta');
+      metaRobots.setAttribute('name', 'robots');
+      document.head.appendChild(metaRobots);
+    }
+    metaRobots.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1');
 
     let canonicalLink = document.querySelector('link[rel="canonical"]');
     if (!canonicalLink) {
@@ -114,6 +123,23 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
     setOg('og:description', pageDesc);
     setOg('og:url', canonicalUrl);
     setOg('og:type', 'website');
+    setOg('og:image', ogImage);
+
+    const setTwitter = (name: string, val: string) => {
+      let tag =
+        document.querySelector(`meta[name="${name}"]`) ||
+        document.querySelector(`meta[property="${name}"]`);
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', val);
+    };
+    setTwitter('twitter:title', pageTitle);
+    setTwitter('twitter:description', pageDesc);
+    setTwitter('twitter:url', canonicalUrl);
+    setTwitter('twitter:image', ogImage);
   }, []);
 
   const fetchPublishedProperties = async () => {
@@ -306,16 +332,19 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
       <div className="bg-white border-b border-stone-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between text-xs text-stone-500">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (onNavigateHome) onNavigateHome();
-                else window.location.href = '/';
+            <a
+              href="/"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigateHome) {
+                  e.preventDefault();
+                  onNavigateHome();
+                }
               }}
               className="hover:text-amber-700 transition-colors font-medium"
             >
               Home
-            </button>
+            </a>
             <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
             <span className="text-stone-900 font-semibold">Royal Epic Properties</span>
           </div>
@@ -347,15 +376,15 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                 <span>RENTAL PROPERTIES IN BENGALURU</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-serif font-bold tracking-tight text-[#1A1D24] leading-[1.12] mb-5">
-                Discover Your
-                <span className="block text-[#B8924A] mt-1">Next Home</span>
+              <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-serif font-bold tracking-tight text-[#1A1D24] leading-[1.14] mb-4">
+                Verified Rental Properties
+                <span className="block text-[#B8924A] mt-1">in Bengaluru</span>
               </h1>
 
               <p className="text-stone-600 text-base sm:text-[17px] leading-relaxed mb-7">
-                Explore verified residential and commercial rental properties across Bengaluru. Find
-                apartments, homes, villas, offices and retail spaces with expert assistance from the
-                Royal Epic Properties team.
+                Explore verified 1BHK, 2BHK and 3BHK flats, independent houses, villas, offices and
+                commercial spaces for rent across Bengaluru. Enjoy transparent rental details and
+                accompanied site visits with the Royal Epic Properties advisory desk.
               </p>
 
               {/* Three Simple Trust Indicators with Clean Line Icons */}
@@ -765,11 +794,20 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                   onClick={() => onSelectProperty(prop.slug)}
                   className="group bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all duration-300 flex flex-col cursor-pointer"
                 >
-                  {/* Main Property Image */}
-                  <div className="relative h-60 w-full bg-stone-100 overflow-hidden">
+                    {/* Main Property Image */}
+                  <a
+                    href={`/properties/${prop.slug}`}
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onSelectProperty(prop.slug);
+                    }}
+                    className="relative h-60 w-full bg-stone-100 overflow-hidden block"
+                  >
                     <img
                       src={prop.main_image}
-                      alt={prop.property_title}
+                      alt={`${prop.property_title} in ${prop.locality || 'Bengaluru'}`}
                       loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -804,14 +842,24 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                         {prop.property_id}
                       </span>
                     </div>
-                  </div>
+                  </a>
 
                   {/* Card Body */}
                   <div className="p-5 flex-1 flex flex-col justify-between">
                     <div>
                       {/* Title */}
                       <h2 className="text-lg font-serif font-bold text-stone-900 group-hover:text-amber-800 transition-colors line-clamp-1 mb-2">
-                        {prop.property_title}
+                        <a
+                          href={`/properties/${prop.slug}`}
+                          onClick={(e) => {
+                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onSelectProperty(prop.slug);
+                          }}
+                        >
+                          {prop.property_title}
+                        </a>
                       </h2>
 
                       {/* Monthly Rent & Security Deposit */}
@@ -901,9 +949,11 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                           ? `Available: ${prop.available_from}`
                           : 'Ready for Immediate Move-in'}
                       </span>
-                      <button
-                        type="button"
+                      <a
+                        href={`/properties/${prop.slug}`}
                         onClick={(e) => {
+                          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                          e.preventDefault();
                           e.stopPropagation();
                           onSelectProperty(prop.slug);
                         }}
@@ -911,7 +961,7 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
                       >
                         View Details
                         <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </article>
@@ -919,6 +969,143 @@ export const PublicPropertiesPage: React.FC<PublicPropertiesPageProps> = ({
             })}
           </div>
         )}
+      </section>
+
+      {/* Bengaluru Rental Coverage & Property Categories Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="bg-white rounded-2xl border border-[#E6E0D4] p-6 sm:p-9 shadow-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-7 space-y-3">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9A7835] block">
+                LOCAL RENTAL ASSISTANCE IN BENGALURU
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1A1D24]">
+                Residential &amp; Commercial Rentals Across Key Bengaluru Localities
+              </h2>
+              <p className="text-stone-600 text-sm sm:text-base leading-relaxed">
+                Royal Epic Properties helps families, working professionals and businesses find
+                verified rental homes and commercial spaces across Bengaluru — including HSR Layout,
+                Thanisandra, Hebbal, Yelahanka, Manyata Tech Park, Whitefield, Indiranagar,
+                Koramangala, Sarjapur Road, Marathahalli, Bellandur and JP Nagar.
+              </p>
+              <p className="text-stone-600 text-sm sm:text-base leading-relaxed">
+                Every public listing on our website is reviewed by our Bengaluru property desk for
+                availability, configuration, monthly rent, security deposit, furnishing status and
+                amenities before being published. Owner contact details and private building numbers
+                are kept confidential while our advisors coordinate smooth, accompanied site visits.
+              </p>
+            </div>
+
+            <div className="lg:col-span-5 bg-[#FAF8F5] border border-[#E6DFD1] rounded-2xl p-5 sm:p-6 space-y-4">
+              <h3 className="text-base sm:text-lg font-serif font-bold text-[#1A1D24]">
+                Explore Related Royal Epic Services
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                Moving into a new home or commercial space in Bengaluru? Explore our interior design,
+                furniture and finance assistance verticals:
+              </p>
+              <ul className="space-y-2.5 text-xs sm:text-sm">
+                <li>
+                  <a
+                    href="/home-interior-design-bangalore"
+                    className="inline-flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-200/90 hover:border-[#B8924A] text-stone-800 font-semibold transition-colors"
+                  >
+                    <span>Home Interior Design in Bengaluru</span>
+                    <ArrowUpRight className="w-4 h-4 text-[#9A7835]" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/modular-kitchen-bangalore"
+                    className="inline-flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-200/90 hover:border-[#B8924A] text-stone-800 font-semibold transition-colors"
+                  >
+                    <span>Modular Kitchen Design &amp; Wardrobes</span>
+                    <ArrowUpRight className="w-4 h-4 text-[#9A7835]" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/loans"
+                    className="inline-flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-200/90 hover:border-[#B8924A] text-stone-800 font-semibold transition-colors"
+                  >
+                    <span>Home Construction, Interior &amp; Renovation Finance Assistance</span>
+                    <ArrowUpRight className="w-4 h-4 text-[#9A7835]" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/products"
+                    className="inline-flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-200/90 hover:border-[#B8924A] text-stone-800 font-semibold transition-colors"
+                  >
+                    <span>Bespoke Furniture &amp; Decor Catalogue</span>
+                    <ArrowUpRight className="w-4 h-4 text-[#9A7835]" />
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Frequently Asked Questions Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="bg-white rounded-2xl border border-[#E6E0D4] p-6 sm:p-9 shadow-sm">
+          <div className="max-w-3xl mb-6">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9A7835] block mb-1.5">
+              FREQUENTLY ASKED QUESTIONS
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1A1D24]">
+              Renting a Verified Property in Bengaluru with Royal Epic
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="p-5 rounded-xl bg-[#FAF8F5] border border-[#E8E2D5]">
+              <h3 className="text-base font-serif font-bold text-[#1A1D24] mb-1.5">
+                How does Royal Epic Properties verify rental listings in Bengaluru?
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                Every property published on Royal Epic Properties undergoes a 4-point verification check covering owner identity, ownership authorization, current vacancy status, and direct permission to advertise.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#FAF8F5] border border-[#E8E2D5]">
+              <h3 className="text-base font-serif font-bold text-[#1A1D24] mb-1.5">
+                What types of rental properties are available on Royal Epic Properties?
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                We list verified residential properties—including 1 BHK, 2 BHK, and 3 BHK flats, independent houses, and gated villas—as well as commercial offices, retail shops, and showrooms across Bengaluru.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#FAF8F5] border border-[#E8E2D5]">
+              <h3 className="text-base font-serif font-bold text-[#1A1D24] mb-1.5">
+                How do I schedule a site visit for a listed property?
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                Open any available property listing and submit the site visit request form with your preferred date and time, or call our Bengaluru property desk at +91 70261 19311 for an accompanied visit.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#FAF8F5] border border-[#E8E2D5]">
+              <h3 className="text-base font-serif font-bold text-[#1A1D24] mb-1.5">
+                Why are exact street addresses and owner phone numbers not displayed publicly?
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                To protect resident and homeowner privacy and prevent unsolicited spam calls, exact door numbers and owner contact details are kept confidential. Our property advisors coordinate all enquiries and accompanied visits directly.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#FAF8F5] border border-[#E8E2D5] md:col-span-2">
+              <h3 className="text-base font-serif font-bold text-[#1A1D24] mb-1.5">
+                Can property owners in Bengaluru list their flat, villa, or commercial space for rent?
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                Yes. Property owners in Bengaluru can contact Royal Epic Properties at +91 70261 19311 or submit their requirement to have our team verify, photograph, and showcase their property to genuine tenants.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Bottom Assistance Banner */}

@@ -3,10 +3,14 @@ User-agent: *
 Allow: /
 Allow: /products
 Allow: /products/*
+Allow: /properties
+Allow: /properties/*
+Allow: /loans
 Allow: /our-services
 Allow: /portfolio
 Allow: /completed-projects
 Allow: /blog
+Allow: /blog/*
 Allow: /about-us
 Allow: /contact-us
 Allow: /get-free-quote
@@ -14,8 +18,10 @@ Allow: /customer-reviews
 Allow: /faq
 Allow: /track-order
 
-# Disallow private administrative & user dashboard paths from search engine indexing
+# Disallow private administrative, CRM & user dashboard paths from search engine indexing
 Disallow: /admin
+Disallow: /telecaller
+Disallow: /crm
 Disallow: /developer
 Disallow: /dev
 Disallow: /customer-dashboard

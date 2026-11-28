@@ -2,17 +2,25 @@ import fs from 'fs';
 import path from 'path';
 import { generateSitemapXml, generateRobotsTxt } from '../src/utils/sitemap.ts';
 import { getLiveCatalogProducts } from '../src/server/productHtmlRenderer.ts';
+import '../src/server/crmRoutes.ts';
+import { getApprovedPublishedPropertiesForWebsite } from '../src/server/propertyCrmRoutes.ts';
 
 async function buildSitemapAndRobots() {
   let products: any[] = [];
+  let publishedProperties: any[] = [];
   try {
-    products = await getLiveCatalogProducts();
-    console.log(`Fetched ${products.length} live products for automated sitemap.`);
+    [products, publishedProperties] = await Promise.all([
+      getLiveCatalogProducts(),
+      getApprovedPublishedPropertiesForWebsite().catch(() => []),
+    ]);
+    console.log(
+      `Fetched ${products.length} live products and ${publishedProperties.length} published properties for automated sitemap.`
+    );
   } catch (err: any) {
-    console.warn(`Warning fetching live products for sitemap: ${err?.message}`);
+    console.warn(`Warning fetching live data for sitemap: ${err?.message}`);
   }
 
-  const xmlContent = generateSitemapXml(products);
+  const xmlContent = generateSitemapXml(products, undefined, publishedProperties);
   const robotsContent = generateRobotsTxt();
 
   // 1. Write to public/ directory

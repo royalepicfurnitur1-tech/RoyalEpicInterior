@@ -53,14 +53,18 @@ export const LoansShowcaseSection: React.FC<LoansShowcaseSectionProps> = ({ onNa
           </div>
 
           <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3">
-            <button
-              type="button"
-              onClick={handleExploreClick}
+            <a
+              href="/loans"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                handleExploreClick();
+              }}
               className="inline-flex items-center justify-center gap-2.5 px-7 py-4 bg-[#1C2331] hover:bg-[#283246] text-[#FAF7F2] rounded-xl font-semibold text-sm transition-all shadow-sm cursor-pointer"
             >
               Explore Finance Options
               <ArrowRight className="w-4 h-4 text-[#C5A059]" />
-            </button>
+            </a>
             <span className="text-[11px] text-stone-500 text-center lg:text-right max-w-xs">
               Personal enquiry review &amp; guidance by our Bengaluru team.
             </span>

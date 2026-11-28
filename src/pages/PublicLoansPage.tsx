@@ -255,9 +255,9 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
 
   // Host-aware SEO & Canonical tag synchronization
   useEffect(() => {
-    const pageTitle = 'Royal Epic Loans | Home Construction, Interior & Renovation Finance Enquiries';
+    const pageTitle = 'Home Interior & Construction Finance Assistance | Royal Epic';
     const metaDesc =
-      'Explore finance options for home construction, home interiors and renovation with Royal Epic. Share your requirements and receive personal enquiry assistance.';
+      'Explore home construction, interior and renovation finance enquiry assistance in Bengaluru. Share your requirements with Royal Epic for personal guidance.';
     document.title = pageTitle;
 
     const origin =
@@ -265,6 +265,7 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
         ? window.location.origin
         : 'https://royalepicinterior.com';
     const selfCanonicalUrl = `${origin}/loans`;
+    const ogImageUrl = `${origin}/images/royal-epic-loans-og.jpg`;
 
     let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!canonicalEl) {
@@ -281,6 +282,45 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
       document.head.appendChild(descEl);
     }
     descEl.setAttribute('content', metaDesc);
+
+    let robotsEl = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!robotsEl) {
+      robotsEl = document.createElement('meta');
+      robotsEl.setAttribute('name', 'robots');
+      document.head.appendChild(robotsEl);
+    }
+    robotsEl.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1');
+
+    const setOg = (prop: string, val: string) => {
+      let tag = document.querySelector(`meta[property="${prop}"]`);
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('property', prop);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', val);
+    };
+    setOg('og:title', pageTitle);
+    setOg('og:description', metaDesc);
+    setOg('og:url', selfCanonicalUrl);
+    setOg('og:type', 'website');
+    setOg('og:image', ogImageUrl);
+
+    const setTwitter = (name: string, val: string) => {
+      let tag =
+        document.querySelector(`meta[name="${name}"]`) ||
+        document.querySelector(`meta[property="${name}"]`);
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', val);
+    };
+    setTwitter('twitter:title', pageTitle);
+    setTwitter('twitter:description', metaDesc);
+    setTwitter('twitter:url', selfCanonicalUrl);
+    setTwitter('twitter:image', ogImageUrl);
 
     trackLoansEvent('loans_page_view', { page_location: selfCanonicalUrl });
   }, []);
@@ -442,9 +482,13 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-serif font-bold text-[#1C2331] leading-[1.16] tracking-tight">
-                Your Dream Home. The Right Financial Direction.
+              <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-serif font-bold text-[#1C2331] leading-[1.16] tracking-tight">
+                Home Construction, Interior &amp; Renovation Finance Assistance in Bengaluru
               </h1>
+
+              <p className="text-sm sm:text-base font-serif font-semibold text-[#8C6D3B]">
+                Your Dream Home. The Right Financial Direction.
+              </p>
 
               <p className="text-base sm:text-lg text-stone-600 leading-relaxed max-w-xl">
                 Whether you are constructing a new home, designing complete interiors or planning a home upgrade, Royal Epic helps you explore suitable finance options tailored to your goals. Share your requirements with us and our team will personally guide you.
@@ -1102,6 +1146,171 @@ export const PublicLoansPage: React.FC<PublicLoansPageProps> = ({ onNavigate }) 
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          SECTION G2 – RELATED ROYAL EPIC SERVICES & PLANNING GUIDES
+          ===================================================================== */}
+      <section className="py-12 sm:py-16 bg-white border-b border-[#EAE3D5]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mb-8">
+            <span className="inline-block text-[11px] font-bold uppercase tracking-[0.22em] text-[#8C6D3B] mb-2 font-mono">
+              COMPLETE HOME ECOSYSTEM IN BENGALURU
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C2331]">
+              Explore Related Royal Epic Services &amp; Planning Guides
+            </h2>
+            <p className="text-stone-600 text-sm sm:text-base mt-2 leading-relaxed">
+              Planning a construction, interior fit-out, or property requirement in Bengaluru? Explore our interior design, property rental and budgeting resources:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <a
+              href="/turnkey-interior-contractors-bangalore"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/turnkey-interior-contractors-bangalore');
+                }
+              }}
+              className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-1.5">
+                  Turnkey Interior Contractors in Bengaluru
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
+                  End-to-end civil, electrical, false ceiling, modular kitchen and wardrobe execution under a single project timeline.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                Explore Turnkey Execution <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </a>
+
+            <a
+              href="/home-interior-design-bangalore"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/home-interior-design-bangalore');
+                }
+              }}
+              className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-1.5">
+                  Home Interior Design in Bengaluru
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
+                  Bespoke 2BHK, 3BHK, villa and independent residential interior design crafted at our Thanisandra studio.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                Explore Home Interiors <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </a>
+
+            <a
+              href="/modular-kitchen-bangalore"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/modular-kitchen-bangalore');
+                }
+              }}
+              className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-1.5">
+                  Modular Kitchen Design in Bengaluru
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
+                  Custom BWR marine plywood, HDHMR and Acrylic/PU modular kitchens engineered for Indian cooking workflows.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                Explore Modular Kitchens <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </a>
+
+            <a
+              href="/properties"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/properties');
+                }
+              }}
+              className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-1.5">
+                  Verified Rental Properties in Bengaluru
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
+                  Browse verified 1BHK, 2BHK &amp; 3BHK apartments, houses, villas and commercial spaces for rent across Bengaluru.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                Browse Rental Listings <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </a>
+
+            <a
+              href="/blog/how-to-read-interior-design-quotation"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/blog/how-to-read-interior-design-quotation');
+                }
+              }}
+              className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-1.5">
+                  How to Read an Interior Design Quotation (BOQ)
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
+                  Learn how to evaluate material specifications, hardware grades and payment milestones before planning your interior budget.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                Read Budgeting Guide <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </a>
+
+            <a
+              href="/blog/2bhk-3bhk-home-interior-planning-checklist"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/blog/2bhk-3bhk-home-interior-planning-checklist');
+                }
+              }}
+              className="group p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] hover:border-[#8C6D3B] transition-all flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1C2331] group-hover:text-[#8C6D3B] transition-colors mb-1.5">
+                  2BHK &amp; 3BHK Home Interior Planning Checklist
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
+                  A room-by-room guide to space planning, electrical points, cabinetry budgeting and execution sequencing in Bengaluru.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8C6D3B]">
+                Read Planning Checklist <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </a>
           </div>
         </div>
       </section>

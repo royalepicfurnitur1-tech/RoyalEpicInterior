@@ -975,8 +975,171 @@ export function injectSeoPageIntoHtml(
 }
 
 /**
+ * Helper to update Open Graph and Twitter meta tags in-place without duplicating tags,
+ * and localize global index.html JSON-LD domain references to the active request origin.
+ */
+function applyCleanSocialMetaAndOrigin(
+  inputHtml: string,
+  params: {
+    title: string;
+    description: string;
+    canonicalUrl: string;
+    ogImage: string;
+    ogType?: string;
+    effectiveOrigin: string;
+  }
+): string {
+  const { title, description, canonicalUrl, ogImage, ogType = 'website', effectiveOrigin } = params;
+  const cleanTitle = escapeHtml(title);
+  const cleanDesc = escapeHtml(description);
+  const cleanUrl = escapeHtml(canonicalUrl);
+  const cleanImg = escapeHtml(ogImage);
+
+  let html = inputHtml
+    .replace(/<meta\s+property=["']og:title["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+property=["']og:description["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+property=["']og:url["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+property=["']og:image["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+property=["']og:type["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+name=["']twitter:title["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+name=["']twitter:description["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+name=["']twitter:url["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+name=["']twitter:image["'][^>]*>\s*/gi, '');
+
+  const socialBlock = `
+    <meta property="og:type" content="${escapeHtml(ogType)}" />
+    <meta property="og:title" content="${cleanTitle}" />
+    <meta property="og:description" content="${cleanDesc}" />
+    <meta property="og:url" content="${cleanUrl}" />
+    <meta property="og:image" content="${cleanImg}" />
+    <meta name="twitter:title" content="${cleanTitle}" />
+    <meta name="twitter:description" content="${cleanDesc}" />
+    <meta name="twitter:url" content="${cleanUrl}" />
+    <meta name="twitter:image" content="${cleanImg}" />`;
+
+  html = html.replace('</head>', `${socialBlock}\n  </head>`);
+
+  // Localize global index.html JSON-LD references so .in and .com have consistent host-aware schema URLs
+  if (effectiveOrigin && effectiveOrigin !== 'https://royalepicinterior.com') {
+    html = html.replace(/https:\/\/royalepicinterior\.com/g, effectiveOrigin);
+  }
+
+  return html;
+}
+
+/**
+ * Helper to build clean, non-duplicative SEO Title and Meta Description for individual property pages
+ * strictly from verified public property fields.
+ */
+export function buildPropertyDetailSeoMeta(property: any): {
+  pageTitle: string;
+  cleanDesc: string;
+  headingSubtitle: string;
+} {
+  const rawTitle = String(property?.property_title || '').trim();
+  const locality = String(property?.locality || 'Bengaluru').trim();
+  const city = String(property?.city || 'Bengaluru').trim();
+  const bhkType =
+    property?.bhk_type && property.bhk_type !== 'N/A' ? String(property.bhk_type).trim() : '';
+  const propType = String(property?.property_type || 'Property').trim();
+  const bhkOrType =
+    bhkType && !propType.toLowerCase().includes(bhkType.toLowerCase())
+      ? `${bhkType} ${propType}`
+      : propType;
+
+  // Escape regex special chars for safe locality deduplication
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Remove trailing "in <locality>" or "in <city>" from rawTitle to prevent "in HSR Layout in HSR Layout"
+  let baseTitle = rawTitle
+    .replace(new RegExp(`\\s+in\\s+${esc(locality)}(?:,\\s*${esc(city)})?$`, 'i'), '')
+    .replace(new RegExp(`\\s+in\\s+${esc(city)}$`, 'i'), '')
+    .trim();
+
+  if (!baseTitle) {
+    baseTitle = bhkOrType || 'Rental Property';
+  }
+
+  // Add "Flat" if baseTitle is just "1 BHK" / "2 BHK" / "3 BHK" and category is Residential
+  if (/^\d+\s*(?:BHK|RK)$/i.test(baseTitle) && property?.property_category !== 'Commercial') {
+    baseTitle = `${baseTitle} Flat`;
+  }
+
+  const hasForRent = /\bfor\s+rent\b/i.test(baseTitle);
+  const titleWithIntent = hasForRent ? baseTitle : `${baseTitle} for Rent`;
+
+  const locationPhrase =
+    locality.toLowerCase() === city.toLowerCase() ? city : `${locality}, ${city}`;
+
+  const pageTitle = `${titleWithIntent} in ${locationPhrase} | Royal Epic Properties`;
+
+  // Build unique meta description from genuine fields
+  const rentNum = Number(property?.monthly_rent || property?.expected_monthly_rent || 0);
+  const rentPhrase = rentNum > 0 ? ` at ₹${rentNum.toLocaleString('en-IN')}/month` : '';
+  const furnishing =
+    property?.furnishing_status && String(property.furnishing_status).trim()
+      ? `${String(property.furnishing_status).trim()} `
+      : '';
+  const areaNum = Number(property?.built_up_area || property?.carpet_area || 0);
+  const areaPhrase =
+    areaNum > 0 ? ` (${areaNum} ${property?.area_unit || 'sq.ft'})` : '';
+  const amenitiesList = Array.isArray(property?.amenities)
+    ? property.amenities.filter(Boolean).slice(0, 3)
+    : [];
+  const amenitiesPhrase =
+    amenitiesList.length > 0 ? ` Includes ${amenitiesList.join(', ')}.` : '';
+
+  const customDesc = String(property?.description || property?.property_description || '').trim();
+  const isGenericDefaultDesc =
+    !customDesc ||
+    /^Verified\s+.*available\s+for\s+rent\s+in\s+.*Managed\s+by\s+Royal\s+Epic\s+Properties\.?$/i.test(
+      customDesc
+    );
+
+  const generatedDesc = `Verified ${furnishing}${baseTitle.toLowerCase().includes('for rent') ? baseTitle : `${baseTitle} for rent`}${areaPhrase} in ${locationPhrase}${rentPhrase}.${amenitiesPhrase} Schedule an assisted site visit with Royal Epic Properties.`;
+
+  const cleanDesc = (isGenericDefaultDesc ? generatedDesc : `${customDesc}${rentPhrase ? ` Monthly rent:${rentPhrase.replace(' at', '')}.` : ''}${amenitiesPhrase}`)
+    .replace(/<[^>]*>?/gm, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+
+  const headingSubtitle = `${furnishing ? `${furnishing}• ` : ''}${locationPhrase}${rentNum > 0 ? ` • ₹${rentNum.toLocaleString('en-IN')}/month` : ''}`;
+
+  return { pageTitle, cleanDesc, headingSubtitle };
+}
+
+export const PROPERTIES_PAGE_FAQS = [
+  {
+    question: 'How does Royal Epic Properties verify rental listings in Bengaluru?',
+    answer:
+      'Every property published on Royal Epic Properties undergoes a 4-point verification check covering owner identity, ownership authorization, current vacancy status, and direct permission to advertise.',
+  },
+  {
+    question: 'What types of rental properties are available on Royal Epic Properties?',
+    answer:
+      'We list verified residential properties—including 1 BHK, 2 BHK, and 3 BHK flats, independent houses, and gated villas—as well as commercial offices, retail shops, and showrooms across Bengaluru.',
+  },
+  {
+    question: 'How do I schedule a site visit for a listed property?',
+    answer:
+      'Open any available property listing and submit the site visit request form with your preferred date and time, or call our Bengaluru property desk at +91 70261 19311 for an accompanied visit.',
+  },
+  {
+    question: 'Why are exact street addresses and owner phone numbers not displayed publicly?',
+    answer:
+      'To protect resident and homeowner privacy and prevent unsolicited spam calls, exact door numbers and owner contact details are kept confidential. Our property advisors coordinate all enquiries and accompanied visits directly.',
+  },
+  {
+    question: 'Can property owners in Bengaluru list their flat, villa, or commercial space for rent?',
+    answer:
+      'Yes. Property owners in Bengaluru can contact Royal Epic Properties at +91 70261 19311 or submit their requirement to have our team verify, photograph, and showcase their property to genuine tenants.',
+  },
+];
+
+/**
  * Render public property listing index (/properties) HTML with host-aware self-canonical URL,
- * Open Graph meta tags, and Schema.org structured data.
+ * Open Graph & Twitter meta tags, Schema.org structured data, and semantic SSR HTML inside #root.
  */
 export function injectPropertiesListIntoHtml(
   templateHtml: string,
@@ -985,12 +1148,12 @@ export function injectPropertiesListIntoHtml(
 ): string {
   const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
   const canonicalUrl = `${effectiveOrigin}/properties`;
-  const pageTitle = 'Rental Properties in Bengaluru | Royal Epic Properties';
+  const pageTitle = 'Rental Properties in Bangalore & Bengaluru | Royal Epic';
   const pageDesc =
-    'Explore verified residential and commercial rental properties in Bengaluru with Royal Epic Properties. Browse apartments, villas, offices and retail spaces.';
+    'Explore verified 1BHK, 2BHK & 3BHK flats, houses, villas and commercial spaces for rent in Bengaluru. Get assistance with property site visits.';
   const ogImage =
     (Array.isArray(properties) && properties[0]?.main_image) ||
-    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+    `${effectiveOrigin}/images/royal-epic-properties-og.jpg`;
 
   let html = templateHtml;
 
@@ -1013,26 +1176,19 @@ export function injectPropertiesListIntoHtml(
     html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
   }
 
-  // 4. Open Graph & Twitter tags
-  const ogTags = `
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
-    <meta property="og:description" content="${escapeHtml(pageDesc)}" />
-    <meta property="og:url" content="${canonicalUrl}" />
-    <meta property="og:image" content="${escapeHtml(ogImage)}" />
-    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
-    <meta name="twitter:description" content="${escapeHtml(pageDesc)}" />
-    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
-  `;
-  html = html
-    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
-    .replace('</head>', `${ogTags}\n  </head>`);
+  // 4. Open Graph & Twitter tags (in-place replacement, no duplicates)
+  html = applyCleanSocialMetaAndOrigin(html, {
+    title: pageTitle,
+    description: pageDesc,
+    canonicalUrl,
+    ogImage,
+    ogType: 'website',
+    effectiveOrigin,
+  });
 
-  // 5. Schema.org Structured Data (CollectionPage + ItemList + BreadcrumbList)
-  const listItems = (Array.isArray(properties) ? properties.slice(0, 30) : []).map((p, idx) => ({
+  // 5. Schema.org Structured Data (CollectionPage + ItemList + BreadcrumbList + FAQPage)
+  const validProperties = Array.isArray(properties) ? properties : [];
+  const listItems = validProperties.slice(0, 30).map((p, idx) => ({
     '@type': 'ListItem',
     position: idx + 1,
     url: `${effectiveOrigin}/properties/${p.slug}`,
@@ -1050,6 +1206,7 @@ export function injectPropertiesListIntoHtml(
         '@type': 'RealEstateAgent',
         name: 'Royal Epic Properties (A Division of Royal Epic Interiors)',
         url: canonicalUrl,
+        image: ogImage,
         telephone: '+91-7026119311',
         areaServed: {
           '@type': 'City',
@@ -1080,45 +1237,139 @@ export function injectPropertiesListIntoHtml(
         },
       ],
     },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: PROPERTIES_PAGE_FAQS.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    },
   ];
 
   const jsonLdScript = `\n    <!-- Royal Epic Properties Structured Data -->\n    <script type="application/ld+json" id="properties-list-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
   html = html.replace('</head>', `${jsonLdScript}</head>`);
 
   // 6. Hydrate initial properties payload for instant render
-  const initialScript = `<script>window.__INITIAL_PROPERTIES__ = ${JSON.stringify(Array.isArray(properties) ? properties : [])};</script>`;
+  const initialScript = `<script>window.__INITIAL_PROPERTIES__ = ${JSON.stringify(validProperties)};</script>`;
   html = html.replace('</head>', `  ${initialScript}\n  </head>`);
 
-  return html;
+  // 7. Semantic Pre-rendered HTML inside <div id="root"> for search engine crawlers
+  const propertyCardsHtml =
+    validProperties.length > 0
+      ? validProperties
+          .map((p) => {
+            const rentNum = Number(p.monthly_rent || 0);
+            const rentText = rentNum > 0 ? `₹${rentNum.toLocaleString('en-IN')}/month` : 'Rent on Request';
+            const propUrl = `/properties/${escapeHtml(String(p.slug || ''))}`;
+            const locText = `${escapeHtml(p.locality || 'Bengaluru')}, ${escapeHtml(p.city || 'Bengaluru')}`;
+            const amenitiesText =
+              Array.isArray(p.amenities) && p.amenities.length > 0
+                ? `<p style="font-size: 12px; color: #57534e; margin: 6px 0 0 0;">Amenities: ${escapeHtml(p.amenities.slice(0, 4).join(', '))}</p>`
+                : '';
+            return `
+              <article style="border: 1px solid #e7e5e4; border-radius: 16px; overflow: hidden; background: #ffffff; display: flex; flex-direction: column;">
+                <a href="${propUrl}" style="display: block; text-decoration: none; color: inherit;">
+                  <img src="${escapeHtml(p.main_image || ogImage)}" alt="${escapeHtml(p.property_title || 'Rental Property')} in ${locText}" loading="lazy" style="width: 100%; height: 220px; object-fit: cover; display: block;" />
+                </a>
+                <div style="padding: 20px;">
+                  <span style="font-size: 11px; font-weight: 600; color: #9a7835; text-transform: uppercase;">${escapeHtml(p.property_category || 'Residential')} • ${escapeHtml(p.property_type || '2 BHK')}</span>
+                  <h3 style="font-size: 18px; font-weight: 700; margin: 6px 0 8px 0;">
+                    <a href="${propUrl}" style="color: #1c1917; text-decoration: none;">${escapeHtml(p.property_title || 'Rental Property')}</a>
+                  </h3>
+                  <p style="font-size: 13px; color: #57534e; margin: 0 0 8px 0;">Location: ${locText} • ${escapeHtml(p.furnishing_status || 'Semi-Furnished')}</p>
+                  <p style="font-size: 16px; font-weight: 700; color: #b45309; margin: 0 0 10px 0;">Monthly Rent: ${escapeHtml(rentText)}</p>
+                  ${amenitiesText}
+                  <div style="margin-top: 14px;">
+                    <a href="${propUrl}" style="display: inline-block; padding: 8px 16px; background: #1c1917; color: #ffffff; border-radius: 10px; font-size: 12px; font-weight: 600; text-decoration: none;">View Details</a>
+                  </div>
+                </div>
+              </article>
+            `;
+          })
+          .join('')
+      : `<p style="font-size: 14px; color: #57534e;">Contact the Royal Epic Properties Bengaluru desk at +91 70261 19311 for currently available verified rental homes and commercial spaces.</p>`;
+
+  const faqsHtml = PROPERTIES_PAGE_FAQS.map(
+    (f) => `
+      <div style="border: 1px solid #e7e5e4; border-radius: 12px; padding: 16px; margin-bottom: 12px; background: #ffffff;">
+        <h3 style="font-size: 16px; font-weight: 700; color: #1c1917; margin: 0 0 6px 0;">${escapeHtml(f.question)}</h3>
+        <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">${escapeHtml(f.answer)}</p>
+      </div>
+    `
+  ).join('');
+
+  const preRenderedBody = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #FAF8F5; color: #1c1917; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <nav aria-label="Breadcrumb" style="background: #ffffff; border-bottom: 1px solid #e7e5e4; padding: 12px 24px; font-size: 13px;">
+          <div style="max-width: 1280px; margin: 0 auto;">
+            <a href="/" style="color: #57534e; text-decoration: none;">Home</a> &gt;
+            <span style="color: #1c1917; font-weight: 600;">Royal Epic Properties</span>
+          </div>
+        </nav>
+
+        <section style="max-width: 1280px; margin: 0 auto; padding: 40px 24px;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #9A7835; display: block; margin-bottom: 8px;">Rental Properties in Bengaluru &amp; Bangalore</span>
+          <h1 style="font-size: 36px; font-weight: 800; color: #1A1D24; margin: 0 0 16px 0;">Verified Rental Properties in Bengaluru</h1>
+          <p style="font-size: 16px; line-height: 1.7; color: #57534e; max-width: 840px; margin: 0 0 28px 0;">
+            Explore identity-verified 1 BHK, 2 BHK, and 3 BHK flats, independent houses, gated villas, commercial offices, and retail spaces available for rent across Bengaluru. Every listing on Royal Epic Properties is checked for ownership authorization and active availability, with accompanied site visits coordinated by our Bengaluru team.
+          </p>
+
+          <h2 style="font-size: 24px; font-weight: 700; color: #1c1917; margin: 0 0 20px 0;">Available Verified Rental Listings in Bengaluru</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-bottom: 48px;">
+            ${propertyCardsHtml}
+          </div>
+
+          <section style="background: #ffffff; border: 1px solid #e7e5e4; border-radius: 16px; padding: 28px; margin-bottom: 40px;">
+            <h2 style="font-size: 22px; font-weight: 700; color: #1c1917; margin: 0 0 12px 0;">Flats, Houses, Villas &amp; Commercial Spaces for Rent Across Bengaluru</h2>
+            <p style="font-size: 14px; line-height: 1.7; color: #57534e; margin: 0 0 12px 0;">
+              Whether you are searching for a semi-furnished family flat, a furnished apartment near major technology corridors, an independent house, or a commercial office floorplate, Royal Epic Properties provides transparent rental terms and personal site visit assistance across North, East, and South Bengaluru—including Thanisandra, Hebbal, Yelahanka, HSR Layout, Whitefield, Indiranagar, Koramangala, Sarjapur Road, Marathahalli, Bellandur, and JP Nagar.
+            </p>
+            <p style="font-size: 14px; line-height: 1.7; color: #57534e; margin: 0;">
+              Moving into a new home or upgrading a property? Explore <a href="/loans" style="color: #9A7835; font-weight: 600;">Royal Epic Loans for Home &amp; Interior Finance Assistance</a>, <a href="/home-interior-design-bangalore" style="color: #9A7835; font-weight: 600;">Home Interior Design in Bengaluru</a>, <a href="/modular-kitchen-bangalore" style="color: #9A7835; font-weight: 600;">Factory Modular Kitchens</a>, and <a href="/products" style="color: #9A7835; font-weight: 600;">Custom Handcrafted Furniture</a>.
+            </p>
+          </section>
+
+          <section style="margin-bottom: 40px;">
+            <h2 style="font-size: 22px; font-weight: 700; color: #1c1917; margin: 0 0 16px 0;">Frequently Asked Questions — Renting with Royal Epic Properties</h2>
+            ${faqsHtml}
+          </section>
+        </section>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', preRenderedBody);
 }
 
 /**
  * Render public single property detail (/properties/:propertySlug) HTML with host-aware
- * self-canonical URL, Open Graph meta tags, and Schema.org RealEstateListing structured data.
+ * self-canonical URL, Open Graph & Twitter meta tags, Schema.org RealEstateListing structured data,
+ * and semantic SSR HTML inside #root.
  * Never includes private owner contact data or full street addresses.
  */
 export function injectPropertyDetailIntoHtml(
   templateHtml: string,
   property: any,
-  hostOrigin: string = SITE_URL
+  hostOrigin: string = SITE_URL,
+  similarProperties: any[] = []
 ): string {
   const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
   const slug = property.slug || property.property_id;
   const canonicalUrl = `${effectiveOrigin}/properties/${slug}`;
-  const bhkOrType = property.bhk_type && property.bhk_type !== 'N/A'
-    ? `${property.bhk_type} ${property.property_type}`
-    : property.property_type || 'Property';
   const locality = property.locality || 'Bengaluru';
-  const pageTitle = `${property.property_title || `${bhkOrType} for Rent`} in ${locality}, Bengaluru | Royal Epic Properties`;
+  const city = property.city || 'Bengaluru';
 
-  const rentFormatted = Number(property.monthly_rent || 0).toLocaleString('en-IN');
-  const rawDesc =
-    property.description ||
-    `Verified ${bhkOrType} available for rent in ${locality}, Bengaluru. Monthly Rent: ₹${rentFormatted}. Furnishing: ${property.furnishing_status || 'Semi-Furnished'}. Schedule a site visit with Royal Epic Properties.`;
-  const cleanDesc = rawDesc.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 240);
+  const { pageTitle, cleanDesc } = buildPropertyDetailSeoMeta(property);
+
   const ogImage =
     property.main_image ||
-    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
+    `${effectiveOrigin}/images/royal-epic-properties-og.jpg`;
 
   let html = templateHtml;
 
@@ -1141,56 +1392,58 @@ export function injectPropertyDetailIntoHtml(
     html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
   }
 
-  // 4. Open Graph & Twitter tags
-  const ogTags = `
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
-    <meta property="og:description" content="${escapeHtml(cleanDesc)}" />
-    <meta property="og:url" content="${canonicalUrl}" />
-    <meta property="og:image" content="${escapeHtml(ogImage)}" />
-    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
-    <meta name="twitter:description" content="${escapeHtml(cleanDesc)}" />
-    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
-  `;
-  html = html
-    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
-    .replace('</head>', `${ogTags}\n  </head>`);
+  // 4. Open Graph & Twitter tags (in-place replacement, no duplicates)
+  html = applyCleanSocialMetaAndOrigin(html, {
+    title: pageTitle,
+    description: cleanDesc,
+    canonicalUrl,
+    ogImage,
+    ogType: 'website',
+    effectiveOrigin,
+  });
 
   // 5. Schema.org RealEstateListing + BreadcrumbList (strictly approximate location only, no owner details)
-  const structuredData = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'RealEstateListing',
-      name: property.property_title,
-      description: cleanDesc,
-      url: canonicalUrl,
-      identifier: property.property_id,
-      image: Array.isArray(property.images) && property.images.length > 0
+  const rentNum = Number(property.monthly_rent || 0);
+  const listingSchema: Record<string, any> = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: property.property_title,
+    description: cleanDesc,
+    url: canonicalUrl,
+    identifier: property.property_id,
+    image:
+      Array.isArray(property.images) && property.images.length > 0
         ? property.images.map((img: any) => img.url)
         : [ogImage],
-      datePosted: property.created_at,
-      offers: {
-        '@type': 'Offer',
-        price: Number(property.monthly_rent || 0),
-        priceCurrency: 'INR',
-        availability: 'https://schema.org/InStock',
-        url: canonicalUrl,
-      },
-      contentLocation: {
-        '@type': 'Place',
-        name: `${locality}, Bengaluru`,
-        address: {
-          '@type': 'PostalAddress',
-          addressLocality: locality,
-          addressRegion: 'Bengaluru, Karnataka',
-          postalCode: property.pincode || undefined,
-          addressCountry: 'IN',
-        },
+    datePosted: property.created_at,
+    contentLocation: {
+      '@type': 'Place',
+      name: `${locality}, ${city}`,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: locality,
+        addressRegion: `${city}, Karnataka`,
+        ...(property.pincode ? { postalCode: property.pincode } : {}),
+        addressCountry: 'IN',
       },
     },
+  };
+
+  if (rentNum > 0) {
+    listingSchema.offers = {
+      '@type': 'Offer',
+      price: rentNum,
+      priceCurrency: 'INR',
+      availability:
+        property.availability_status === 'Temporarily On Hold'
+          ? 'https://schema.org/LimitedAvailability'
+          : 'https://schema.org/InStock',
+      url: canonicalUrl,
+    };
+  }
+
+  const structuredData = [
+    listingSchema,
     {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
@@ -1224,12 +1477,227 @@ export function injectPropertyDetailIntoHtml(
   const initialScript = `<script>window.__INITIAL_PROPERTY_DETAIL__ = ${JSON.stringify(property)};</script>`;
   html = html.replace('</head>', `  ${initialScript}\n  </head>`);
 
-  return html;
+  // 7. Semantic Pre-rendered HTML inside <div id="root"> for search engine crawlers
+  const configText =
+    property.bhk_type && property.bhk_type !== 'N/A'
+      ? `${property.bhk_type} (${property.property_type || 'Residential'})`
+      : property.property_type || 'Property';
+  const publicAmenities = Array.isArray(property.amenities) ? property.amenities.filter(Boolean) : [];
+  const similarList = Array.isArray(similarProperties) ? similarProperties.slice(0, 3) : [];
+
+  const similarHtml =
+    similarList.length > 0
+      ? `
+        <section style="margin-top: 36px; padding-top: 24px; border-top: 1px solid #e7e5e4;">
+          <h2 style="font-size: 20px; font-weight: 700; color: #1c1917; margin: 0 0 16px 0;">Similar Verified Properties in Bengaluru</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+            ${similarList
+              .map(
+                (sim) => `
+              <article style="border: 1px solid #e7e5e4; border-radius: 12px; padding: 16px; background: #ffffff;">
+                <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 6px 0;">
+                  <a href="/properties/${escapeHtml(sim.slug)}" style="color: #1c1917; text-decoration: none;">${escapeHtml(sim.property_title)}</a>
+                </h3>
+                <p style="font-size: 13px; color: #57534e; margin: 0 0 8px 0;">${escapeHtml(sim.locality || 'Bengaluru')}, ${escapeHtml(sim.city || 'Bengaluru')} • ${escapeHtml(sim.furnishing_status || 'Semi-Furnished')}</p>
+                ${Number(sim.monthly_rent) > 0 ? `<p style="font-size: 15px; font-weight: 700; color: #b45309; margin: 0 0 10px 0;">₹${Number(sim.monthly_rent).toLocaleString('en-IN')}/month</p>` : ''}
+                <a href="/properties/${escapeHtml(sim.slug)}" style="font-size: 12px; font-weight: 600; color: #9a7835; text-decoration: underline;">View Property Details →</a>
+              </article>
+            `
+              )
+              .join('')}
+          </div>
+        </section>
+      `
+      : '';
+
+  const preRenderedDetail = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #FAF8F5; color: #1c1917; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <nav aria-label="Breadcrumb" style="background: #ffffff; border-bottom: 1px solid #e7e5e4; padding: 12px 24px; font-size: 13px;">
+          <div style="max-width: 1280px; margin: 0 auto;">
+            <a href="/" style="color: #57534e; text-decoration: none;">Home</a> &gt;
+            <a href="/properties" style="color: #57534e; text-decoration: none;">Properties</a> &gt;
+            <span style="color: #1c1917; font-weight: 600;">${escapeHtml(property.property_title)}</span>
+          </div>
+        </nav>
+
+        <article style="max-width: 1280px; margin: 0 auto; padding: 36px 24px;">
+          <header style="background: #ffffff; border: 1px solid #e7e5e4; border-radius: 16px; padding: 28px; margin-bottom: 24px;">
+            <span style="font-size: 12px; font-weight: 700; color: #9a7835; text-transform: uppercase;">${escapeHtml(property.property_category || 'Residential')} • ${escapeHtml(configText)}</span>
+            <h1 style="font-size: 32px; font-weight: 800; color: #1c1917; margin: 8px 0 8px 0;">${escapeHtml(property.property_title)}</h1>
+            <p style="font-size: 15px; color: #57534e; margin: 0 0 16px 0;">Approximate Location: ${escapeHtml(locality)}, ${escapeHtml(city)}${property.pincode ? ` - ${escapeHtml(property.pincode)}` : ''}</p>
+            ${rentNum > 0 ? `<p style="font-size: 24px; font-weight: 800; color: #b45309; margin: 0;">Monthly Rent: ₹${rentNum.toLocaleString('en-IN')} / month</p>` : ''}
+            ${Number(property.security_deposit) > 0 ? `<p style="font-size: 14px; color: #57534e; margin: 6px 0 0 0;">Security Deposit: ₹${Number(property.security_deposit).toLocaleString('en-IN')}</p>` : ''}
+          </header>
+
+          <div style="margin-bottom: 24px;">
+            <img src="${escapeHtml(ogImage)}" alt="${escapeHtml(property.property_title)} for rent in ${escapeHtml(locality)}, ${escapeHtml(city)}" style="width: 100%; max-height: 480px; object-fit: cover; border-radius: 16px; display: block;" />
+          </div>
+
+          <section style="background: #ffffff; border: 1px solid #e7e5e4; border-radius: 16px; padding: 28px; margin-bottom: 24px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: #1c1917; margin: 0 0 12px 0;">Property Overview &amp; Specifications</h2>
+            <ul style="list-style: none; padding: 0; margin: 0 0 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 14px; color: #44403c;">
+              <li><strong>Configuration:</strong> ${escapeHtml(configText)}</li>
+              <li><strong>Furnishing Status:</strong> ${escapeHtml(property.furnishing_status || 'Semi-Furnished')}</li>
+              <li><strong>Locality:</strong> ${escapeHtml(locality)}, ${escapeHtml(city)}</li>
+              ${Number(property.built_up_area) > 0 ? `<li><strong>Built-up Area:</strong> ${Number(property.built_up_area)} ${escapeHtml(property.area_unit || 'sq.ft')}</li>` : ''}
+              ${property.parking_availability ? `<li><strong>Parking:</strong> ${escapeHtml(property.parking_availability)}</li>` : ''}
+              ${property.available_from ? `<li><strong>Available From:</strong> ${escapeHtml(property.available_from)}</li>` : ''}
+            </ul>
+
+            <h2 style="font-size: 20px; font-weight: 700; color: #1c1917; margin: 0 0 10px 0;">About This Property</h2>
+            <p style="font-size: 15px; line-height: 1.7; color: #44403c; margin: 0;">${escapeHtml(property.description || cleanDesc)}</p>
+          </section>
+
+          ${
+            publicAmenities.length > 0
+              ? `
+            <section style="background: #ffffff; border: 1px solid #e7e5e4; border-radius: 16px; padding: 28px; margin-bottom: 24px;">
+              <h2 style="font-size: 20px; font-weight: 700; color: #1c1917; margin: 0 0 12px 0;">Amenities &amp; Features</h2>
+              <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #44403c; line-height: 1.8;">
+                ${publicAmenities.map((a: string) => `<li>${escapeHtml(a)}</li>`).join('')}
+              </ul>
+            </section>
+          `
+              : ''
+          }
+
+          <div style="margin-top: 24px;">
+            <a href="/properties" style="display: inline-block; padding: 10px 20px; background: #1c1917; color: #ffffff; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none;">← Browse All Verified Properties in Bengaluru</a>
+          </div>
+
+          ${similarHtml}
+        </article>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', preRenderedDetail);
 }
 
 /**
+ * Render HTTP 404/410 Not Found HTML for non-existent, unpublished, rented, or removed property URLs.
+ * Sets <meta name="robots" content="noindex, follow" />, canonical to /properties (never self-referencing to a missing slug),
+ * and pre-renders a helpful explanation with a crawlable link back to /properties.
+ */
+export function injectPropertyNotFoundIntoHtml(
+  templateHtml: string,
+  hostOrigin: string = SITE_URL
+): string {
+  const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
+  const propertiesHubUrl = `${effectiveOrigin}/properties`;
+  const pageTitle = 'Property No Longer Available | Royal Epic Properties';
+  const pageDesc =
+    'This property listing is no longer available or the link has changed. Explore currently available verified rental properties in Bengaluru with Royal Epic Properties.';
+  const ogImage = `${effectiveOrigin}/images/royal-epic-properties-og.jpg`;
+
+  let html = templateHtml;
+
+  // 1. <title>
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`);
+
+  // 2. <meta name="description">
+  const metaDescTag = `<meta name="description" content="${escapeHtml(pageDesc)}" />`;
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']description["'][^>]*>/i, metaDescTag);
+  } else {
+    html = html.replace('</head>', `  ${metaDescTag}\n  </head>`);
+  }
+
+  // 3. <meta name="robots" content="noindex, follow" /> (Prevent Soft-404 indexing)
+  const robotsNoIndexTag = `<meta name="robots" content="noindex, follow" />`;
+  if (/<meta\s+name=["']robots["'][^>]*>/i.test(html)) {
+    html = html.replace(/<meta\s+name=["']robots["'][^>]*>/i, robotsNoIndexTag);
+  } else {
+    html = html.replace('</head>', `  ${robotsNoIndexTag}\n  </head>`);
+  }
+
+  // 4. Canonical points to /properties hub, NEVER self-referencing a non-existent property URL
+  const canonicalTag = `<link rel="canonical" href="${propertiesHubUrl}" />`;
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(html)) {
+    html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, canonicalTag);
+  } else {
+    html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  }
+
+  // 5. Clean Open Graph & Twitter metadata
+  html = applyCleanSocialMetaAndOrigin(html, {
+    title: pageTitle,
+    description: pageDesc,
+    canonicalUrl: propertiesHubUrl,
+    ogImage,
+    ogType: 'website',
+    effectiveOrigin,
+  });
+
+  // 6. Semantic pre-rendered not-found message with crawlable link to /properties
+  const notFoundBody = `
+    <div id="root">
+      <main style="min-height: 80vh; background-color: #FAF8F5; color: #1c1917; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; padding: 48px 24px;">
+        <div style="background: #ffffff; border: 1px solid #e7e5e4; border-radius: 16px; padding: 40px; max-width: 540px; width: 100%; text-align: center;">
+          <h1 style="font-size: 26px; font-weight: 800; color: #1c1917; margin: 0 0 12px 0;">Property No Longer Available</h1>
+          <p style="font-size: 15px; line-height: 1.6; color: #57534e; margin: 0 0 24px 0;">
+            This property may have been rented out, unpublished, or the link has changed. Explore our active verified residential and commercial rental properties across Bengaluru.
+          </p>
+          <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <a href="/properties" style="display: inline-block; padding: 12px 24px; background: #b45309; color: #ffffff; border-radius: 12px; font-size: 14px; font-weight: 600; text-decoration: none;">Browse Available Properties</a>
+            <a href="/" style="display: inline-block; padding: 12px 24px; background: #f5f5f4; color: #1c1917; border-radius: 12px; font-size: 14px; font-weight: 600; text-decoration: none;">Return to Homepage</a>
+          </div>
+        </div>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', notFoundBody);
+}
+
+const LOANS_SSR_FAQS = [
+  {
+    question: 'What types of finance enquiries can I submit through Royal Epic Loans?',
+    answer:
+      'You can submit enquiries related to home construction finance, home interior finance, home renovation finance and property-related finance requirements.',
+  },
+  {
+    question: 'How do I get details about available finance options?',
+    answer:
+      'Simply submit your requirement using the enquiry form on this page. Our team will review your details and contact you personally to discuss suitable options.',
+  },
+  {
+    question: 'Do I need to upload documents on the website?',
+    answer:
+      'No. You do not need to upload any financial or identity documents on the website. The online form only collects basic contact and requirement details so our team can get in touch with you.',
+  },
+  {
+    question: 'Can I enquire about finance specifically for home interiors or modular kitchen work?',
+    answer:
+      'Yes. You can select Home Interior Finance or Home Renovation Finance in the enquiry form and briefly mention your interior requirements.',
+  },
+  {
+    question: 'Can I submit an enquiry if I am still in the planning stage?',
+    answer:
+      'Yes. Even if you are still planning your construction or interior project and are unsure of the exact amount, you can select "Not Sure Yet" and our team will guide you during the call.',
+  },
+  {
+    question: 'How soon will the Royal Epic team contact me after I submit an enquiry?',
+    answer:
+      'Our team reviews new enquiries promptly and will contact you during working hours, taking your preferred contact time into consideration wherever possible.',
+  },
+  {
+    question: 'Is submitting a finance enquiry free of charge?',
+    answer:
+      'Yes. Submitting an enquiry through the Royal Epic Loans page is completely free and carries no obligation.',
+  },
+  {
+    question: 'Does submitting an enquiry guarantee finance approval?',
+    answer:
+      "No. Submitting an enquiry allows our team to understand your requirement and guide you. All finance options are subject to eligibility, verification and the applicable finance provider's terms and approval.",
+  },
+];
+
+/**
  * Render public Royal Epic Loans page (/loans) HTML with host-aware self-canonical URL,
- * Open Graph meta tags, and accurate Schema.org WebPage + Service + FAQPage structured data.
+ * Open Graph & Twitter meta tags, accurate Schema.org WebPage + Service + BreadcrumbList + FAQPage structured data,
+ * and semantic SSR HTML inside #root.
  * Never claims Royal Epic is a bank or direct lender.
  */
 export function injectLoansPageIntoHtml(
@@ -1238,10 +1706,10 @@ export function injectLoansPageIntoHtml(
 ): string {
   const effectiveOrigin = (hostOrigin || SITE_URL).replace(/\/+$/, '');
   const canonicalUrl = `${effectiveOrigin}/loans`;
-  const pageTitle = 'Royal Epic Loans | Home Construction, Interior & Renovation Finance Enquiries';
+  const pageTitle = 'Home Interior & Construction Finance Assistance | Royal Epic';
   const metaDesc =
-    'Explore finance options for home construction, home interiors and renovation with Royal Epic. Share your requirements and receive personal enquiry assistance.';
-  const ogImage = `${effectiveOrigin}/og-banner.jpg`;
+    'Explore home construction, interior and renovation finance enquiry assistance in Bengaluru. Share your requirements with Royal Epic for personal guidance.';
+  const ogImage = `${effectiveOrigin}/images/royal-epic-loans-og.jpg`;
 
   let html = templateHtml;
 
@@ -1264,25 +1732,17 @@ export function injectLoansPageIntoHtml(
     html = html.replace('</head>', `  ${canonicalTag}\n  </head>`);
   }
 
-  // 4. Open Graph & Twitter tags
-  const ogTags = `
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
-    <meta property="og:description" content="${escapeHtml(metaDesc)}" />
-    <meta property="og:url" content="${canonicalUrl}" />
-    <meta property="og:image" content="${escapeHtml(ogImage)}" />
-    <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
-    <meta name="twitter:description" content="${escapeHtml(metaDesc)}" />
-    <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
-  `;
-  html = html
-    .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, '')
-    .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, '')
-    .replace('</head>', `${ogTags}\n  </head>`);
+  // 4. Open Graph & Twitter tags (in-place replacement, no duplicates)
+  html = applyCleanSocialMetaAndOrigin(html, {
+    title: pageTitle,
+    description: metaDesc,
+    canonicalUrl,
+    ogImage,
+    ogType: 'website',
+    effectiveOrigin,
+  });
 
-  // 5. Accurate Schema.org WebPage, Service & BreadcrumbList structured data
+  // 5. Accurate Schema.org WebPage, Service, BreadcrumbList & FAQPage structured data
   const structuredData = [
     {
       '@context': 'https://schema.org',
@@ -1290,11 +1750,22 @@ export function injectLoansPageIntoHtml(
       name: pageTitle,
       description: metaDesc,
       url: canonicalUrl,
+      primaryImageOfPage: {
+        '@type': 'ImageObject',
+        url: ogImage,
+      },
       mainEntity: {
         '@type': 'Service',
         name: 'Royal Epic Loans – Home Construction, Interior & Renovation Finance Enquiry Assistance',
         description:
-          'Personal enquiry guidance for customers exploring finance options for home construction, home interiors, renovation and property-related requirements.',
+          'Personal enquiry guidance in Bengaluru for customers exploring finance options for home construction, home interiors, renovation and property-related requirements.',
+        image: ogImage,
+        serviceType: [
+          'Home Construction Finance Enquiry Assistance',
+          'Home Interior Finance Enquiry Assistance',
+          'Home Renovation Finance Enquiry Assistance',
+          'Property-Related Finance Guidance',
+        ],
         provider: {
           '@type': 'Organization',
           name: 'Royal Epic Interiors',
@@ -1325,12 +1796,103 @@ export function injectLoansPageIntoHtml(
         },
       ],
     },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: LOANS_SSR_FAQS.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    },
   ];
 
   const jsonLdScript = `\n    <!-- Royal Epic Loans Structured Data -->\n    <script type="application/ld+json" id="loans-page-schema">\n${JSON.stringify(structuredData, null, 2)}\n    </script>\n  `;
   html = html.replace('</head>', `${jsonLdScript}</head>`);
 
-  return html;
+  // 6. Semantic Pre-rendered HTML inside <div id="root"> for search engine crawlers
+  const preRenderedLoans = `
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #FAF7F2; color: #1C2331; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <nav aria-label="Breadcrumb" style="background: #ffffff; border-bottom: 1px solid #E5DEC9; padding: 12px 24px; font-size: 13px;">
+          <div style="max-width: 1280px; margin: 0 auto;">
+            <a href="/" style="color: #57534e; text-decoration: none;">Home</a> &gt;
+            <span style="color: #1C2331; font-weight: 600;">Royal Epic Loans</span>
+          </div>
+        </nav>
+
+        <section style="max-width: 1280px; margin: 0 auto; padding: 48px 24px;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: #8C6D3B; display: block; margin-bottom: 10px;">Royal Epic Loans • Your Dream Home. The Right Financial Direction.</span>
+          <h1 style="font-size: 36px; font-weight: 800; color: #1C2331; margin: 0 0 16px 0;">Home Construction, Interior &amp; Renovation Finance Assistance in Bengaluru</h1>
+          <p style="font-size: 16px; line-height: 1.7; color: #57534e; max-width: 840px; margin: 0 0 24px 0;">
+            Whether you are constructing a new home, designing complete interiors or planning a home upgrade in Bengaluru, Royal Epic helps you explore suitable finance options tailored to your goals. Share your requirements with us and our team will personally guide you.
+          </p>
+
+          <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 32px 0 16px 0;">Finance Services We Assist With</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 40px;">
+            <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Home Construction Finance</h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Planning to build an independent house or residential property? Share your construction plans and approximate requirement with us, and our team will connect with you to discuss suitable finance options.</p>
+            </article>
+            <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Home Interior Finance</h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Designing your new apartment, villa or independent home? Explore finance support for turnkey home interiors, modular kitchens, wardrobes, furniture and complete interior execution.</p>
+            </article>
+            <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Home Renovation Finance</h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Upgrading your existing home, remodelling key rooms or modernising your interiors? Submit an enquiry to explore finance options for home improvement and renovation work.</p>
+            </article>
+            <article style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #1C2331; margin: 0 0 8px 0;">Property-Related Finance</h3>
+              <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">Looking for financial guidance related to a residential property requirement? Share your details and our team will review your enquiry and guide you appropriately.</p>
+            </article>
+          </div>
+
+          <h2 style="font-size: 24px; font-weight: 700; color: #1C2331; margin: 0 0 16px 0;">How Your Finance Enquiry Works</h2>
+          <ol style="font-size: 14px; line-height: 1.8; color: #57534e; margin: 0 0 36px 0; padding-left: 20px;">
+            <li><strong>Submit Your Enquiry:</strong> Fill in the enquiry form with your basic contact details and finance requirement.</li>
+            <li><strong>Our Team Connects With You:</strong> A Royal Epic representative will call you to understand your requirement in detail.</li>
+            <li><strong>Requirement Review:</strong> We review your project type, approximate budget and preferred timeline.</li>
+            <li><strong>Personal Guidance:</strong> Our team guides you on the suitable next steps based on your requirement.</li>
+          </ol>
+
+          <section style="background: #ffffff; border: 1px solid #E5DEC9; border-radius: 16px; padding: 24px; margin-bottom: 36px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: #1C2331; margin: 0 0 12px 0;">Explore Related Royal Epic Services &amp; Planning Guides</h2>
+            <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+              <li><a href="/turnkey-interior-contractors-bangalore" style="color: #8C6D3B; font-weight: 600;">Turnkey Interior Contractors in Bengaluru</a></li>
+              <li><a href="/home-interior-design-bangalore" style="color: #8C6D3B; font-weight: 600;">Home Interior Design Services Bengaluru</a></li>
+              <li><a href="/modular-kitchen-bangalore" style="color: #8C6D3B; font-weight: 600;">Factory Modular Kitchen Design in Bengaluru</a></li>
+              <li><a href="/services/heritage-homes" style="color: #8C6D3B; font-weight: 600;">Heritage Homes &amp; Traditional Architecture</a></li>
+              <li><a href="/properties" style="color: #8C6D3B; font-weight: 600;">Royal Epic Properties — Verified Rental Listings in Bengaluru</a></li>
+              <li><a href="/blog/how-to-read-interior-design-quotation" style="color: #8C6D3B; font-weight: 600;">How to Read an Interior Design Quotation &amp; BOQ Before Booking</a></li>
+              <li><a href="/blog/2bhk-3bhk-home-interior-planning-checklist" style="color: #8C6D3B; font-weight: 600;">Complete Home Interior Planning Checklist for 2BHK &amp; 3BHK Homeowners</a></li>
+            </ul>
+          </section>
+
+          <section style="margin-bottom: 32px;">
+            <h2 style="font-size: 22px; font-weight: 700; color: #1C2331; margin: 0 0 16px 0;">Frequently Asked Questions About Royal Epic Loans</h2>
+            ${LOANS_SSR_FAQS.map(
+              (f) => `
+              <div style="border: 1px solid #E5DEC9; border-radius: 12px; padding: 16px; margin-bottom: 12px; background: #ffffff;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #1C2331; margin: 0 0 6px 0;">${escapeHtml(f.question)}</h3>
+                <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin: 0;">${escapeHtml(f.answer)}</p>
+              </div>
+            `
+            ).join('')}
+          </section>
+
+          <p style="font-size: 12px; color: #78716c; line-height: 1.6; border-top: 1px solid #E5DEC9; padding-top: 16px;">
+            <strong>Finance Enquiry Disclaimer:</strong> Royal Epic Loans is a customer enquiry and assistance service provided by Royal Epic. Submitting an enquiry on this page does not constitute a sanction, offer or guarantee of finance. All finance options are subject to customer eligibility, document verification and the terms, conditions and approval of the applicable finance provider.
+          </p>
+        </section>
+      </main>
+    </div>
+  `;
+
+  return html.replace('<div id="root"></div>', preRenderedLoans);
 }
 
 /**

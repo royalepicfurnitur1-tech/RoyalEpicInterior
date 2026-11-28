@@ -150,11 +150,23 @@ export function generateSitemapXml(products?: any[], siteBaseUrl?: string, publi
   }
 
   // 3. Individual active published property URLs (Royal Epic Properties)
+  // Properties passed from getApprovedPublishedPropertiesForWebsite() have already passed isPropertyPubliclyVisible().
+  // Double-check listing_status === 'Published' and exclude Rented, Unavailable, Occupied, or Archived listings.
   if (Array.isArray(publishedProperties)) {
     for (const prop of publishedProperties) {
       if (!prop || !prop.slug) continue;
-      if (prop.availability_status && prop.availability_status !== 'Published') continue;
-      const fullLoc = `${effectiveBaseUrl}/properties/${prop.slug}`;
+      if (prop.is_archived || prop.listing_status === 'Archived') continue;
+      if (prop.listing_status && prop.listing_status !== 'Published') continue;
+      if (
+        prop.availability_status === 'Rented' ||
+        prop.availability_status === 'Unavailable' ||
+        prop.availability_status === 'Occupied'
+      ) {
+        continue;
+      }
+      const cleanSlug = String(prop.slug).trim().replace(/^\/+|\/+$/g, '');
+      if (!cleanSlug) continue;
+      const fullLoc = `${effectiveBaseUrl}/properties/${cleanSlug}`;
       addUrlNode(fullLoc, 'daily', '0.90');
     }
   }
@@ -165,8 +177,9 @@ ${urlNodes.join('\n')}
 </urlset>`;
 }
 
-export function generateRobotsTxt(): string {
-  return `# Robots.txt for Royal Epic Interior & Furniture (https://royalepicinterior.com)
+export function generateRobotsTxt(siteBaseUrl?: string): string {
+  const effectiveBaseUrl = (siteBaseUrl || SITE_URL).replace(/\/+$/, '');
+  return `# Robots.txt for Royal Epic Interior & Furniture (${effectiveBaseUrl})
 User-agent: *
 Allow: /
 Allow: /products
@@ -186,8 +199,10 @@ Allow: /customer-reviews
 Allow: /faq
 Allow: /track-order
 
-# Disallow private administrative & user dashboard paths from search engine indexing
+# Disallow private administrative, CRM & user dashboard paths from search engine indexing
 Disallow: /admin
+Disallow: /telecaller
+Disallow: /crm
 Disallow: /developer
 Disallow: /dev
 Disallow: /customer-dashboard
@@ -198,6 +213,6 @@ Disallow: /products-hub
 Disallow: /api/
 
 # Sitemap location for Search Engine Crawlers
-Sitemap: ${SITE_URL}/sitemap.xml
+Sitemap: ${effectiveBaseUrl}/sitemap.xml
 `;
 }
